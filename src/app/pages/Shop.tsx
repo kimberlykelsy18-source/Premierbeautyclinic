@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, ChevronDown, Star, ShoppingBag, LayoutGrid, List, X } from 'lucide-react';
+import { Search, Filter, ChevronDown, Star, ShoppingBag, ShoppingCart, LayoutGrid, List, X, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { Link, useSearchParams } from 'react-router';
+import { useFeedback } from '../components/Feedback';
 
 const ALL_PRODUCTS = [
   { id: '1', name: 'Glow Boosting Serum', price: 3500, image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=400', category: 'Serums', skinType: 'All', stock: 12, brand: 'Premier' },
@@ -238,7 +239,7 @@ export function Shop() {
 
           {/* Product Grid */}
           <div className="flex-grow">
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-12">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 md:gap-x-6 gap-y-8 md:gap-y-12">
               {filteredProducts.map((product) => (
                 <motion.div 
                   layout
@@ -247,38 +248,54 @@ export function Shop() {
                   key={product.id}
                   className="flex flex-col group"
                 >
-                  <Link to={`/shop/${product.id}`} className="relative aspect-[4/5] overflow-hidden bg-gray-100 mb-6 rounded-2xl">
+                  <Link to={`/shop/${product.id}`} className="relative aspect-[3/4] md:aspect-[4/5] overflow-hidden bg-gray-100 mb-3 md:mb-6 rounded-xl md:rounded-2xl">
                     <img 
                       src={product.image} 
                       alt={product.name} 
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
+                    
+                    {/* Quick Add Icon (Mobile) */}
                     <button 
                       onClick={(e) => {
                         e.preventDefault();
                         addToCart({ ...product, description: '' });
                       }}
-                      className="absolute bottom-6 left-6 right-6 bg-white py-4 rounded-full text-[12px] font-bold uppercase tracking-widest transform translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 shadow-xl active:scale-95"
+                      className="md:hidden absolute bottom-2 right-2 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform z-10"
+                    >
+                      <ShoppingCart className="w-5 h-5" />
+                    </button>
+                    
+                    {/* Quick Add Button (Desktop Hover) */}
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        addToCart({ ...product, description: '' });
+                      }}
+                      className="hidden md:block absolute bottom-4 lg:bottom-6 left-4 lg:left-6 right-4 lg:right-6 bg-white py-3 lg:py-4 rounded-full text-[11px] lg:text-[12px] font-bold uppercase tracking-widest transform translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 shadow-xl active:scale-95"
                     >
                       Quick Add
                     </button>
+                    
                     {product.skinType !== 'All' && (
-                      <span className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                        Best for {product.skinType}
+                      <span className="absolute top-2 left-2 md:top-4 md:left-4 bg-white/90 backdrop-blur px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[8px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                        {product.skinType}
                       </span>
                     )}
                   </Link>
-                  <div className="flex flex-col">
-                    <p className="text-[11px] text-gray-400 uppercase tracking-widest mb-2">{product.category}</p>
-                    <h3 className="text-[16px] font-medium mb-1 hover:text-[#6D4C91] transition-colors">{product.name}</h3>
-                    <div className="mb-2">
+                  <div className="flex flex-col px-1">
+                    <p className="text-[9px] md:text-[11px] text-gray-400 uppercase tracking-widest mb-1 md:mb-2">{product.category}</p>
+                    <Link to={`/shop/${product.id}`}>
+                      <h3 className="text-[13px] md:text-[16px] font-medium mb-1 hover:text-[#6D4C91] transition-colors line-clamp-2">{product.name}</h3>
+                    </Link>
+                    <div className="mb-1 md:mb-2">
                       {product.stock <= 5 ? (
-                        <span className="text-[10px] text-red-500 font-bold uppercase tracking-tighter">Low Stock</span>
+                        <span className="text-[8px] md:text-[10px] text-red-500 font-bold uppercase tracking-tighter">Low Stock</span>
                       ) : (
-                        <span className="text-[10px] text-green-600 font-bold uppercase tracking-tighter">In Stock</span>
+                        <span className="text-[8px] md:text-[10px] text-green-600 font-bold uppercase tracking-tighter">In Stock</span>
                       )}
                     </div>
-                    <p className="text-[15px] font-bold">{formatPrice(product.price)}</p>
+                    <p className="text-[14px] md:text-[15px] font-bold">{formatPrice(product.price)}</p>
                   </div>
                 </motion.div>
               ))}

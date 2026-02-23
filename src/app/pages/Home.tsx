@@ -60,9 +60,9 @@ export function Home() {
   }, [navigate]);
 
   return (
-    <div className="pt-[80px] md:pt-[100px]">
+    <div className="pt-[70px] md:pt-[100px]">
       {/* Hero Section */}
-      <section className="relative h-[60vh] md:h-[75vh] lg:h-[85vh] flex items-center overflow-hidden">
+      <section className="relative h-[50vh] md:h-[75vh] lg:h-[85vh] flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img 
             src={HERO_IMG} 
@@ -79,18 +79,18 @@ export function Home() {
             transition={{ duration: 0.8 }}
             className="max-w-xl text-white"
           >
-            <h1 className="text-[36px] md:text-[52px] lg:text-[72px] font-serif leading-[1.1] mb-4 md:mb-6 italic">
+            <h1 className="text-[28px] md:text-[52px] lg:text-[72px] font-serif leading-[1.1] mb-3 md:mb-6 italic">
               Experience Your <br />
               Best Skin Ever
             </h1>
-            <p className="text-[15px] md:text-[18px] lg:text-[20px] mb-6 md:mb-10 text-white/90 font-light leading-relaxed">
+            <p className="text-[13px] md:text-[18px] lg:text-[20px] mb-5 md:mb-10 text-white/90 font-light leading-relaxed">
               Dermatologist-approved skincare tailored for your unique skin journey. Professional results, simplified.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-              <Link to="/shop" className="bg-white text-[#1A1A1A] px-8 md:px-10 py-4 rounded-full text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] hover:text-white transition-all duration-300 flex items-center justify-center">
-                Shop Collection <ArrowRight className="ml-2 w-4 h-4" />
+              <Link to="/shop" className="bg-white text-[#1A1A1A] px-6 md:px-10 py-3 md:py-4 rounded-full text-[11px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] hover:text-white transition-all duration-300 flex items-center justify-center active:scale-95">
+                Shop Collection <ArrowRight className="ml-2 w-3 h-3 md:w-4 md:h-4" />
               </Link>
-              <Link to="/book" className="bg-transparent border-2 border-white text-white px-8 md:px-10 py-4 rounded-full text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-white hover:text-[#1A1A1A] transition-all duration-300 flex items-center justify-center">
+              <Link to="/book" className="bg-transparent border-2 border-white text-white px-6 md:px-10 py-3 md:py-4 rounded-full text-[11px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-white hover:text-[#1A1A1A] transition-all duration-300 flex items-center justify-center active:scale-95">
                 Book Consultation
               </Link>
             </div>
@@ -99,55 +99,55 @@ export function Home() {
       </section>
 
       {/* Feature Section */}
-      <section className="py-12 md:py-20 bg-white">
+      <section className="py-10 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12">
             <div className="text-center group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-[#FDFBF7] rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-[#6D4C91] group-hover:text-white transition-colors duration-300">
-                <ShieldCheck className="w-7 h-7 md:w-8 md:h-8" />
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-[#FDFBF7] rounded-full flex items-center justify-center mx-auto mb-3 md:mb-6 group-hover:bg-[#6D4C91] group-hover:text-white transition-colors duration-300">
+                <ShieldCheck className="w-6 h-6 md:w-8 md:h-8" />
               </div>
-              <h3 className="text-[16px] md:text-[18px] font-bold mb-2 md:mb-3 uppercase tracking-wider">Expert Curated</h3>
-              <p className="text-gray-500 text-[14px] md:text-[15px] leading-relaxed">Handpicked by clinical experts for safety and efficacy.</p>
+              <h3 className="text-[14px] md:text-[18px] font-bold mb-2 md:mb-3 uppercase tracking-wider">Expert Curated</h3>
+              <p className="text-gray-500 text-[12px] md:text-[15px] leading-relaxed">Handpicked by clinical experts for safety and efficacy.</p>
             </div>
             <div className="text-center group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-[#FDFBF7] rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-[#6D4C91] group-hover:text-white transition-colors duration-300">
-                <Sparkles className="w-7 h-7 md:w-8 md:h-8" />
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-[#FDFBF7] rounded-full flex items-center justify-center mx-auto mb-3 md:mb-6 group-hover:bg-[#6D4C91] group-hover:text-white transition-colors duration-300">
+                <Sparkles className="w-6 h-6 md:w-8 md:h-8" />
               </div>
-              <h3 className="text-[16px] md:text-[18px] font-bold mb-2 md:mb-3 uppercase tracking-wider">Personalized Care</h3>
-              <p className="text-gray-500 text-[14px] md:text-[15px] leading-relaxed">Advanced skin analysis to find exactly what your skin needs.</p>
+              <h3 className="text-[14px] md:text-[18px] font-bold mb-2 md:mb-3 uppercase tracking-wider">Personalized Care</h3>
+              <p className="text-gray-500 text-[12px] md:text-[15px] leading-relaxed">Advanced skin analysis to find exactly what your skin needs.</p>
             </div>
             <div className="text-center group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-[#FDFBF7] rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-[#6D4C91] group-hover:text-white transition-colors duration-300">
-                <Calendar className="w-7 h-7 md:w-8 md:h-8" />
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-[#FDFBF7] rounded-full flex items-center justify-center mx-auto mb-3 md:mb-6 group-hover:bg-[#6D4C91] group-hover:text-white transition-colors duration-300">
+                <Calendar className="w-6 h-6 md:w-8 md:h-8" />
               </div>
-              <h3 className="text-[16px] md:text-[18px] font-bold mb-2 md:mb-3 uppercase tracking-wider">Clinical Services</h3>
-              <p className="text-gray-500 text-[14px] md:text-[15px] leading-relaxed">Professional facial treatments and consultations.</p>
+              <h3 className="text-[14px] md:text-[18px] font-bold mb-2 md:mb-3 uppercase tracking-wider">Clinical Services</h3>
+              <p className="text-gray-500 text-[12px] md:text-[15px] leading-relaxed">Professional facial treatments and consultations.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Featured Products */}
-      <section className="py-16 md:py-24 bg-[#FDFBF7]">
+      <section className="py-12 md:py-24 bg-[#FDFBF7]">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 md:mb-12 gap-4 md:gap-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-12 gap-3 md:gap-6">
             <div>
-              <p className="text-[#6D4C91] text-[12px] md:text-[14px] font-bold uppercase tracking-widest mb-2 md:mb-3">Our Favorites</p>
-              <h2 className="text-[32px] md:text-[42px] font-serif leading-tight">The Glow Edit</h2>
+              <p className="text-[#6D4C91] text-[11px] md:text-[14px] font-bold uppercase tracking-widest mb-1 md:mb-3">Our Favorites</p>
+              <h2 className="text-[26px] md:text-[42px] font-serif leading-tight">The Glow Edit</h2>
             </div>
-            <Link to="/shop" className="text-[13px] md:text-[14px] font-bold uppercase tracking-widest border-b-2 border-[#1A1A1A] pb-1 hover:text-[#6D4C91] hover:border-[#6D4C91] transition-colors self-start md:self-auto">
+            <Link to="/shop" className="text-[11px] md:text-[14px] font-bold uppercase tracking-widest border-b-2 border-[#1A1A1A] pb-1 hover:text-[#6D4C91] hover:border-[#6D4C91] transition-colors self-start md:self-auto">
               View All Products
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-10">
             {FEATURED_PRODUCTS.map((product) => (
               <motion.div 
                 key={product.id}
                 whileHover={{ y: -10 }}
                 className="flex flex-col group"
               >
-                <Link to={`/shop/${product.id}`} className="relative aspect-[4/5] overflow-hidden bg-gray-100 mb-4 md:mb-6 rounded-xl md:rounded-2xl">
+                <Link to={`/shop/${product.id}`} className="relative aspect-[4/5] overflow-hidden bg-gray-100 mb-3 md:mb-6 rounded-xl md:rounded-2xl">
                   <img 
                     src={product.image} 
                     alt={product.name} 
@@ -159,23 +159,23 @@ export function Home() {
                       e.preventDefault();
                       addToCart({ ...product, description: product.description });
                     }}
-                    className="absolute bottom-3 md:bottom-6 left-3 md:left-6 right-3 md:right-6 bg-white py-3 md:py-4 rounded-full text-[11px] md:text-[12px] font-bold uppercase tracking-widest transform translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 shadow-xl flex items-center justify-center space-x-2"
+                    className="absolute bottom-3 md:bottom-6 left-3 md:left-6 right-3 md:right-6 bg-white py-2.5 md:py-4 rounded-full text-[10px] md:text-[12px] font-bold uppercase tracking-widest transform translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 shadow-xl flex items-center justify-center space-x-1 md:space-x-2 active:scale-95"
                   >
                     <ShoppingBag className="w-3 h-3 md:w-4 md:h-4" />
                     <span>Quick Add</span>
                   </button>
                 </Link>
                 <div className="flex flex-col items-center text-center px-1">
-                  <p className="text-[10px] md:text-[11px] text-gray-400 uppercase tracking-widest mb-1 md:mb-2">{product.category}</p>
-                  <h3 className="text-[14px] md:text-[16px] font-medium mb-1 group-hover:text-[#6D4C91] transition-colors leading-tight">{product.name}</h3>
-                  <div className="mb-2">
+                  <p className="text-[9px] md:text-[11px] text-gray-400 uppercase tracking-widest mb-1 md:mb-2">{product.category}</p>
+                  <h3 className="text-[12px] md:text-[16px] font-medium mb-1 group-hover:text-[#6D4C91] transition-colors leading-tight">{product.name}</h3>
+                  <div className="mb-1 md:mb-2">
                     {product.stock <= 5 ? (
-                      <span className="text-[9px] md:text-[10px] text-red-500 font-bold uppercase tracking-tighter">Low Stock</span>
+                      <span className="text-[8px] md:text-[10px] text-red-500 font-bold uppercase tracking-tighter">Low Stock</span>
                     ) : (
-                      <span className="text-[9px] md:text-[10px] text-green-600 font-bold uppercase tracking-tighter">In Stock</span>
+                      <span className="text-[8px] md:text-[10px] text-green-600 font-bold uppercase tracking-tighter">In Stock</span>
                     )}
                   </div>
-                  <p className="text-[14px] md:text-[15px] font-bold">{formatPrice(product.price)}</p>
+                  <p className="text-[13px] md:text-[15px] font-bold">{formatPrice(product.price)}</p>
                 </div>
               </motion.div>
             ))}
@@ -184,38 +184,38 @@ export function Home() {
       </section>
 
       {/* Services Section */}
-      <section className="py-24 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <section className="py-12 md:py-24 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center">
             <div className="relative">
-              <div className="aspect-[3/4] rounded-[40px] overflow-hidden">
+              <div className="aspect-[3/4] rounded-2xl md:rounded-[40px] overflow-hidden">
                 <img src={SERVICE_IMG} alt="Service" className="w-full h-full object-cover" />
               </div>
-              <div className="absolute -bottom-8 -right-8 bg-[#6D4C91] p-10 rounded-2xl text-white hidden md:block">
-                <p className="text-[24px] font-serif italic mb-2">98% Success Rate</p>
-                <p className="text-[14px] text-white/80">In clinical skin analysis treatments.</p>
+              <div className="absolute -bottom-4 -right-4 md:-bottom-8 md:-right-8 bg-[#6D4C91] p-6 md:p-10 rounded-xl md:rounded-2xl text-white hidden sm:block">
+                <p className="text-[18px] md:text-[24px] font-serif italic mb-1 md:mb-2">98% Success Rate</p>
+                <p className="text-[12px] md:text-[14px] text-white/80">In clinical skin analysis treatments.</p>
               </div>
             </div>
             <div>
-              <p className="text-[#6D4C91] text-[14px] font-bold uppercase tracking-widest mb-4">Professional Expertise</p>
-              <h2 className="text-[48px] font-serif leading-tight mb-8 italic">
+              <p className="text-[#6D4C91] text-[11px] md:text-[14px] font-bold uppercase tracking-widest mb-2 md:mb-4">Professional Expertise</p>
+              <h2 className="text-[28px] md:text-[48px] font-serif leading-tight mb-4 md:mb-8 italic">
                 Beyond Products: <br />
                 Clinical Skin Solutions
               </h2>
-              <p className="text-gray-600 text-[17px] leading-relaxed mb-10">
+              <p className="text-gray-600 text-[14px] md:text-[17px] leading-relaxed mb-6 md:mb-10">
                 Certified professionals providing in-depth skin analysis and customized treatments to address your specific concerns.
               </p>
-              <ul className="space-y-4 mb-12">
+              <ul className="space-y-3 md:space-y-4 mb-8 md:mb-12">
                 {['Virtual & In-person Consultations', 'Detailed Skin Analysis Reports', 'Professional Grade Facial Treatments'].map(item => (
-                  <li key={item} className="flex items-center text-[16px] font-medium">
-                    <div className="w-6 h-6 rounded-full bg-[#FDFBF7] flex items-center justify-center mr-4 text-[#6D4C91]">
-                      <Sparkles className="w-4 h-4" />
+                  <li key={item} className="flex items-center text-[13px] md:text-[16px] font-medium">
+                    <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-[#FDFBF7] flex items-center justify-center mr-3 md:mr-4 text-[#6D4C91] flex-shrink-0">
+                      <Sparkles className="w-3 h-3 md:w-4 md:h-4" />
                     </div>
                     {item}
                   </li>
                 ))}
               </ul>
-              <Link to="/book" className="bg-[#1A1A1A] text-white px-12 py-5 rounded-full text-[14px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] transition-all duration-300 inline-block shadow-lg">
+              <Link to="/book" className="bg-[#1A1A1A] text-white px-8 md:px-12 py-3.5 md:py-5 rounded-full text-[11px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] transition-all duration-300 inline-block shadow-lg active:scale-95">
                 Explore Services
               </Link>
             </div>
@@ -224,17 +224,17 @@ export function Home() {
       </section>
 
       {/* Newsletter */}
-      <section className="bg-[#F3F1ED] py-20">
-        <div className="max-w-4xl mx-auto px-8 text-center">
-          <h2 className="text-[32px] font-serif mb-6 italic">Join the Beauty Circle</h2>
-          <p className="text-gray-500 mb-10 text-[16px]">Sign up for skincare tips and early access to new launches.</p>
-          <form className="flex flex-col sm:flex-row gap-4">
+      <section className="bg-[#F3F1ED] py-12 md:py-20">
+        <div className="max-w-4xl mx-auto px-4 md:px-8 text-center">
+          <h2 className="text-[24px] md:text-[32px] font-serif mb-3 md:mb-6 italic">Join the Beauty Circle</h2>
+          <p className="text-gray-500 mb-6 md:mb-10 text-[13px] md:text-[16px]">Sign up for skincare tips and early access to new launches.</p>
+          <form className="flex flex-col sm:flex-row gap-3 md:gap-4">
             <input 
               type="email" 
               placeholder="Your email address" 
-              className="flex-grow px-8 py-4 rounded-full bg-white outline-none text-[15px]"
+              className="flex-grow px-6 md:px-8 py-3 md:py-4 rounded-full bg-white outline-none text-[13px] md:text-[15px]"
             />
-            <button className="bg-[#6D4C91] text-white px-10 py-4 rounded-full text-[14px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-colors whitespace-nowrap">
+            <button className="bg-[#6D4C91] text-white px-6 md:px-10 py-3 md:py-4 rounded-full text-[11px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-colors whitespace-nowrap active:scale-95">
               Subscribe
             </button>
           </form>

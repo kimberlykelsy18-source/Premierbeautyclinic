@@ -84,14 +84,14 @@ export function Navbar() {
       </div>
 
       {/* Main Navbar */}
-      <nav className={`transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'bg-white/90 backdrop-blur-md py-4'}`}>
-        <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between">
+      <nav className={`transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'bg-white/90 backdrop-blur-md py-3 md:py-4'}`}>
+        <div className="max-w-7xl mx-auto px-3 md:px-8 flex items-center justify-between">
           {/* Mobile Menu Toggle */}
           <button 
-            className="md:hidden p-2 -ml-2"
+            className="md:hidden p-2 -ml-2 z-10"
             onClick={() => setIsMobileMenuOpen(true)}
           >
-            <Menu className="w-6 h-6" />
+            <Menu className="w-5 h-5" />
           </button>
 
           {/* Left Navigation (Desktop) */}
@@ -111,14 +111,18 @@ export function Navbar() {
           </div>
 
           {/* Logo */}
-          <Link to="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
-            <div className="bg-[#1A1A1A] px-4 py-2 rounded-xl">
-              <img src={logo} alt="Premier Beauty Clinic" className="h-10 md:h-12 w-auto object-contain" />
+          <Link to="/" className="md:absolute md:left-1/2 md:-translate-x-1/2 flex-shrink-0">
+            <div className="bg-[#1A1A1A] rounded-full p-2 md:p-3 flex items-center justify-center">
+              <img 
+                src={logo} 
+                alt="Premier Beauty Clinic" 
+                className="h-7 md:h-10 w-auto object-contain" 
+              />
             </div>
           </Link>
 
           {/* Right Navigation */}
-          <div className="flex items-center space-x-2 md:space-x-6">
+          <div className="flex items-center space-x-1 md:space-x-6 z-10">
             <button 
               onClick={() => setIsSearchOpen(true)}
               className="p-2 hover:text-[#6D4C91] transition-colors"
@@ -246,8 +250,8 @@ export function Navbar() {
               <div className="p-6 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-8">
                   <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>
-                    <div className="bg-[#1A1A1A] px-3 py-1.5 rounded-xl">
-                      <img src={logo} alt="Logo" className="h-8" />
+                    <div className="bg-[#1A1A1A] rounded-full p-2 flex items-center justify-center">
+                      <img src={logo} alt="Logo" className="h-8 w-auto object-contain" />
                     </div>
                   </Link>
                   <button onClick={() => setIsMobileMenuOpen(false)}>
