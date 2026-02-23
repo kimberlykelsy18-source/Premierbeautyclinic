@@ -21,6 +21,14 @@ interface User {
   location?: string;
   phone?: string;
   marketingEmails?: boolean;
+  // Saved address fields
+  savedAddress?: {
+    county: string;
+    city: string;
+    streetAddress: string;
+    building?: string;
+    additionalInfo?: string;
+  };
 }
 
 export interface ShippingRegion {

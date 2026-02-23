@@ -60,6 +60,7 @@ export function Account() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<string | null>(null);
@@ -71,6 +72,34 @@ export function Account() {
     phone: user?.phone || '',
     location: user?.location || ''
   });
+
+  // Address form data
+  const [addressData, setAddressData] = useState({
+    county: user?.savedAddress?.county || '',
+    city: user?.savedAddress?.city || '',
+    streetAddress: user?.savedAddress?.streetAddress || '',
+    building: user?.savedAddress?.building || '',
+    additionalInfo: user?.savedAddress?.additionalInfo || ''
+  });
+
+  // Update form data when user changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        location: user.location || ''
+      });
+      setAddressData({
+        county: user.savedAddress?.county || '',
+        city: user.savedAddress?.city || '',
+        streetAddress: user.savedAddress?.streetAddress || '',
+        building: user.savedAddress?.building || '',
+        additionalInfo: user.savedAddress?.additionalInfo || ''
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -117,6 +146,37 @@ export function Account() {
       showFeedback('success', 'Profile Updated', 'Your profile information has been saved successfully.');
     } catch (error) {
       showFeedback('error', 'Update Failed', 'There was an error updating your profile. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveAddress = async () => {
+    if (!addressData.county || !addressData.city || !addressData.streetAddress) {
+      showFeedback('error', 'Missing Information', 'Please fill in all required address fields.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      updateUser({
+        savedAddress: {
+          county: addressData.county,
+          city: addressData.city,
+          streetAddress: addressData.streetAddress,
+          building: addressData.building,
+          additionalInfo: addressData.additionalInfo
+        }
+      });
+
+      setIsEditingAddress(false);
+      showFeedback('success', 'Address Saved', 'Your delivery address has been saved and will be used for future orders.');
+    } catch (error) {
+      showFeedback('error', 'Update Failed', 'There was an error saving your address. Please try again.');
     } finally {
       setIsLoading(false);
     }

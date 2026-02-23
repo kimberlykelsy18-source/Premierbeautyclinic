@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { ArrowLeft, CheckCircle2, Truck, ShieldCheck, MapPin } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Truck, ShieldCheck, MapPin, CreditCard, Smartphone, Edit2, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
@@ -9,29 +9,195 @@ import logo from 'figma:asset/9f791e938296bf5db89926ddac1d6fc1b167f150.png';
 import mpesaLogo from 'figma:asset/3a3966f7b64f454c098d92c9bd69154ee90678bd.png';
 
 export function Checkout() {
-  const { cart, formatPrice, getShippingFee, shippingRegions, clearCart } = useStore();
+  const { cart, formatPrice, getShippingFee, shippingRegions, clearCart, user, updateUser } = useStore();
   const { showFeedback } = useFeedback();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('mpesa');
+  const [showMpesaConfirm, setShowMpesaConfirm] = useState(false);
+  const [mpesaPhone, setMpesaPhone] = useState('');
+  const [isEditingMpesaPhone, setIsEditingMpesaPhone] = useState(false);
+  const [awaitingPayment, setAwaitingPayment] = useState(false);
   const navigate = useNavigate();
 
-  // Form data
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    county: '',
-    city: '',
-    streetAddress: '',
-    building: '',
-    additionalInfo: ''
+  // Card payment state
+  const [cardData, setCardData] = useState({
+    number: '',
+    expiry: '',
+    cvv: '',
+    name: ''
+  });
+  const [cardType, setCardType] = useState<'visa' | 'mastercard' | 'unknown'>('unknown');
+
+  // Form data - Initialize with user data if logged in
+  const [formData, setFormData] = useState(() => {
+    if (user) {
+      // Split name into first and last name
+      const nameParts = user.name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      return {
+        firstName,
+        lastName,
+        email: user.email || '',
+        phone: user.phone || '',
+        county: user.savedAddress?.county || '',
+        city: user.savedAddress?.city || '',
+        streetAddress: user.savedAddress?.streetAddress || '',
+        building: user.savedAddress?.building || '',
+        additionalInfo: user.savedAddress?.additionalInfo || ''
+      };
+    }
+    
+    return {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      county: '',
+      city: '',
+      streetAddress: '',
+      building: '',
+      additionalInfo: ''
+    };
   });
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const shipping = formData.county ? getShippingFee(formData.county) : 0;
   const total = subtotal + shipping;
+
+  // Card formatting helpers
+  const formatCardNumber = (value: string) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const matches = v.match(/\d{4,16}/g);
+    const match = (matches && matches[0]) || '';
+    const parts = [];
+
+    for (let i = 0; i < match.length; i += 4) {
+      parts.push(match.substring(i, i + 4));
+    }
+
+    if (parts.length) {
+      return parts.join(' ');
+    } else {
+      return value;
+    }
+  };
+
+  const formatExpiry = (value: string) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    
+    if (v.length >= 2) {
+      return `${v.substring(0, 2)}/${v.substring(2, 4)}`;
+    }
+    
+    return v;
+  };
+
+  const detectCardType = (number: string) => {
+    const sanitized = number.replace(/\s+/g, '');
+    
+    // Visa: starts with 4
+    if (/^4/.test(sanitized)) {
+      return 'visa';
+    }
+    // Mastercard: starts with 51-55 or 2221-2720
+    if (/^5[1-5]/.test(sanitized) || /^2(22[1-9]|2[3-9][0-9]|[3-6][0-9]{2}|7[0-1][0-9]|720)/.test(sanitized)) {
+      return 'mastercard';
+    }
+    
+    return 'unknown';
+  };
+
+  const handleCardNumberChange = (value: string) => {
+    const formatted = formatCardNumber(value);
+    setCardData({ ...cardData, number: formatted });
+    setCardType(detectCardType(formatted));
+  };
+
+  const handleExpiryChange = (value: string) => {
+    const formatted = formatExpiry(value);
+    setCardData({ ...cardData, expiry: formatted });
+  };
+
+  const handleInitiateMpesa = () => {
+    // Set M-Pesa phone to user's phone number
+    setMpesaPhone(formData.phone);
+    setShowMpesaConfirm(true);
+  };
+
+  const handleConfirmMpesaPayment = async () => {
+    if (!mpesaPhone || mpesaPhone.length < 10) {
+      showFeedback('error', 'Invalid Phone Number', 'Please enter a valid M-Pesa phone number.');
+      return;
+    }
+
+    setAwaitingPayment(true);
+    setIsLoading(true);
+
+    try {
+      // Show STK Push notification
+      showFeedback(
+        'success',
+        'STK Push Sent!',
+        `Please check your phone (${mpesaPhone}) and enter your M-Pesa PIN to complete payment.`
+      );
+
+      // Simulate waiting for payment confirmation
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      // Simulate payment success
+      showFeedback(
+        'success',
+        'Payment Confirmed!',
+        'Your M-Pesa payment was successful. Processing your order...'
+      );
+
+      // Wait a moment then complete order
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Save address and complete order
+      if (user) {
+        updateUser({
+          name: `${formData.firstName} ${formData.lastName}`,
+          phone: formData.phone,
+          savedAddress: {
+            county: formData.county,
+            city: formData.city,
+            streetAddress: formData.streetAddress,
+            building: formData.building,
+            additionalInfo: formData.additionalInfo
+          }
+        });
+      }
+
+      // Clear cart
+      clearCart();
+
+      // Show final success
+      showFeedback(
+        'success',
+        'Order Placed Successfully!',
+        `Your order has been confirmed. A confirmation has been sent to ${formData.email}`
+      );
+
+      // Navigate to shop
+      setTimeout(() => {
+        navigate('/shop');
+      }, 2000);
+    } catch (error) {
+      showFeedback(
+        'error',
+        'Payment Failed',
+        'M-Pesa payment was not completed. Please try again.'
+      );
+    } finally {
+      setIsLoading(false);
+      setAwaitingPayment(false);
+      setShowMpesaConfirm(false);
+    }
+  };
 
   const handlePlaceOrder = async () => {
     setIsLoading(true);
@@ -40,14 +206,29 @@ export function Checkout() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      // Save address to user profile if logged in
+      if (user) {
+        updateUser({
+          name: `${formData.firstName} ${formData.lastName}`,
+          phone: formData.phone,
+          savedAddress: {
+            county: formData.county,
+            city: formData.city,
+            streetAddress: formData.streetAddress,
+            building: formData.building,
+            additionalInfo: formData.additionalInfo
+          }
+        });
+      }
+      
       // Clear cart
       clearCart();
       
       // Show success feedback
       showFeedback(
         'success',
-        'Order Placed Successfully!',
-        `Your order has been confirmed. A confirmation email has been sent to ${formData.email}`
+        'Payment Successful!',
+        `Your card payment was processed successfully. Order confirmation sent to ${formData.email}`
       );
       
       // Navigate to shop after 2 seconds
@@ -131,6 +312,18 @@ export function Checkout() {
               {step === 1 && (
                 <motion.div key="shipping" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                   <h2 className="text-[28px] md:text-[32px] font-serif mb-6 md:mb-8 italic">Where should we send it?</h2>
+                  
+                  {/* Logged in notice */}
+                  {user && (
+                    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start space-x-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[13px] md:text-[14px] font-bold text-green-900 mb-1">Welcome back, {user.name.split(' ')[0]}!</p>
+                        <p className="text-[12px] md:text-[13px] text-green-700">We've pre-filled your contact details. Please add your delivery address below.</p>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="space-y-5 md:space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                       <div>
@@ -306,6 +499,8 @@ export function Checkout() {
                             type="text" 
                             placeholder="1234 5678 9012 3456"
                             maxLength={19}
+                            value={cardData.number}
+                            onChange={(e) => handleCardNumberChange(e.target.value)}
                             className="w-full px-5 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-blue-500 outline-none transition-all text-[15px] md:text-[16px]" 
                           />
                         </div>
@@ -316,6 +511,8 @@ export function Checkout() {
                               type="text" 
                               placeholder="MM/YY"
                               maxLength={5}
+                              value={cardData.expiry}
+                              onChange={(e) => handleExpiryChange(e.target.value)}
                               className="w-full px-5 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-blue-500 outline-none transition-all text-[15px] md:text-[16px]" 
                             />
                           </div>
@@ -325,6 +522,8 @@ export function Checkout() {
                               type="text" 
                               placeholder="123"
                               maxLength={3}
+                              value={cardData.cvv}
+                              onChange={(e) => setCardData({...cardData, cvv: e.target.value})}
                               className="w-full px-5 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-blue-500 outline-none transition-all text-[15px] md:text-[16px]" 
                             />
                           </div>
@@ -376,20 +575,119 @@ export function Checkout() {
                       </div>
                     </div>
 
+                    {/* Payment Method Summary */}
+                    <div className="bg-[#FDFBF7] p-5 md:p-8 rounded-2xl md:rounded-3xl">
+                      <h3 className="text-[14px] font-bold uppercase tracking-widest mb-4 md:mb-6 flex items-center">
+                        {paymentMethod === 'mpesa' ? <Smartphone className="w-4 h-4 mr-2 text-[#6D4C91]"/> : <CreditCard className="w-4 h-4 mr-2 text-[#6D4C91]"/>}
+                        Payment Method
+                      </h3>
+                      
+                      {paymentMethod === 'mpesa' ? (
+                        <div>
+                          <div className="flex items-center space-x-3 mb-4">
+                            <img src={mpesaLogo} alt="M-Pesa" className="h-8" />
+                            <span className="text-[15px] md:text-[16px] font-bold">M-Pesa STK Push</span>
+                          </div>
+                          
+                          {!showMpesaConfirm && !awaitingPayment && (
+                            <div className="mt-4">
+                              <p className="text-[13px] md:text-[14px] text-gray-600 mb-4">
+                                When you click "Confirm Payment", an STK push will be sent to:
+                              </p>
+                              <div className="bg-white p-4 rounded-xl border border-gray-200 flex items-center justify-between">
+                                {isEditingMpesaPhone ? (
+                                  <input
+                                    type="tel"
+                                    value={mpesaPhone}
+                                    onChange={(e) => setMpesaPhone(e.target.value)}
+                                    placeholder="07XX XXX XXX"
+                                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 outline-none focus:border-[#6D4C91] text-[15px]"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span className="text-[16px] md:text-[18px] font-bold">{mpesaPhone || formData.phone}</span>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    if (isEditingMpesaPhone) {
+                                      setIsEditingMpesaPhone(false);
+                                    } else {
+                                      setMpesaPhone(formData.phone);
+                                      setIsEditingMpesaPhone(true);
+                                    }
+                                  }}
+                                  className="ml-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                  {isEditingMpesaPhone ? <Check className="w-4 h-4 text-green-600" /> : <Edit2 className="w-4 h-4 text-gray-500" />}
+                                </button>
+                              </div>
+                              <p className="text-[11px] md:text-[12px] text-gray-400 mt-2 italic">
+                                Make sure your phone is on and nearby to complete the payment.
+                              </p>
+                            </div>
+                          )}
+
+                          {awaitingPayment && (
+                            <div className="mt-4 p-5 bg-green-50 border border-green-200 rounded-xl">
+                              <div className="flex items-start space-x-3">
+                                <div className="animate-pulse">
+                                  <Smartphone className="w-6 h-6 text-green-600" />
+                                </div>
+                                <div>
+                                  <p className="text-[14px] md:text-[15px] font-bold text-green-900 mb-2">
+                                    STK Push Sent!
+                                  </p>
+                                  <p className="text-[13px] md:text-[14px] text-green-700">
+                                    Please check your phone ({mpesaPhone || formData.phone}) and enter your M-Pesa PIN to complete payment.
+                                  </p>
+                                  <div className="mt-3 flex items-center space-x-2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent"></div>
+                                    <span className="text-[12px] text-green-600 font-medium">Waiting for payment confirmation...</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-3">
+                          {cardType === 'visa' && (
+                            <svg className="w-12 h-8" viewBox="0 0 48 32" fill="none">
+                              <rect width="48" height="32" rx="4" fill="#1434CB" />
+                              <path d="M17 10h14M17 16h14M17 22h8" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                          )}
+                          {cardType === 'mastercard' && (
+                            <svg className="w-12 h-8" viewBox="0 0 48 32" fill="none">
+                              <rect width="48" height="32" rx="4" fill="#EB001B" />
+                              <circle cx="20" cy="16" r="8" fill="#FF5F00" />
+                              <circle cx="28" cy="16" r="8" fill="#F79E1B" />
+                            </svg>
+                          )}
+                          <div>
+                            <p className="text-[15px] md:text-[16px] font-bold">
+                              {cardType === 'visa' ? 'Visa' : cardType === 'mastercard' ? 'Mastercard' : 'Card'} •••• {cardData.number.slice(-4)}
+                            </p>
+                            <p className="text-[13px] text-gray-500">Expires {cardData.expiry}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex gap-3 md:gap-4">
                       <button 
                         onClick={() => setStep(2)} 
-                        disabled={isLoading}
+                        disabled={isLoading || awaitingPayment}
                         className="flex-1 py-4 md:py-5 rounded-full border border-gray-200 text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all disabled:opacity-50"
                       >
                         Back
                       </button>
                       <ButtonWithLoading
                         isLoading={isLoading}
-                        onClick={handlePlaceOrder}
+                        onClick={paymentMethod === 'mpesa' ? handleConfirmMpesaPayment : handlePlaceOrder}
                         className="flex-[2] bg-[#6D4C91] text-white py-4 md:py-5 rounded-full text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all shadow-xl"
                       >
-                        Place Order — {formatPrice(total)}
+                        {paymentMethod === 'mpesa' ? 'Confirm Payment' : `Pay ${formatPrice(total)}`}
                       </ButtonWithLoading>
                     </div>
                   </div>
