@@ -5,8 +5,8 @@ import { Link, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
 import { ButtonWithLoading } from '../components/Loading';
-import logo from 'figma:asset/9f791e938296bf5db89926ddac1d6fc1b167f150.png';
-import mpesaLogo from 'figma:asset/3a3966f7b64f454c098d92c9bd69154ee90678bd.png';
+import logo from '../../assets/logo.png';
+import mpesaLogo from '../../assets/mpesa.png';
 
 export function Checkout() {
   const { cart, formatPrice, getShippingFee, shippingRegions, clearCart, user, updateUser } = useStore();

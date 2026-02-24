@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Calendar, Clock, User, ClipboardCheck, ArrowRight, CheckCircle2, Sparkles, ShieldCheck, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import mpesaLogo from 'figma:asset/3a3966f7b64f454c098d92c9bd69154ee90678bd.png';
+import mpesaLogo from '../../assets/mpesa.png';
 import { useStore } from '../context/StoreContext';
 import { useNavigate } from 'react-router';
 

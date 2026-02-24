@@ -3,7 +3,7 @@ import { LayoutDashboard, ShoppingCart, CalendarDays, Box, Users, Settings, LogO
 import { useStore } from '../../context/StoreContext';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import logo from 'figma:asset/9f791e938296bf5db89926ddac1d6fc1b167f150.png';
+import logo from '../../../assets/logo.png';
 
 export function DashboardLayout() {
   const { user, logout } = useStore();

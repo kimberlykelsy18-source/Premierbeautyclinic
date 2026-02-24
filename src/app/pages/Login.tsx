@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
 import { ButtonWithLoading } from '../components/Loading';
 import { TermsModal } from '../components/TermsModal';
-import logo from 'figma:asset/9f791e938296bf5db89926ddac1d6fc1b167f150.png';
+import logo from '../../assets/logo.png';
 
 type ViewMode = 'signup' | 'login' | 'forgot-password';
 type PortalMode = 'customer' | 'employee' | 'admin';

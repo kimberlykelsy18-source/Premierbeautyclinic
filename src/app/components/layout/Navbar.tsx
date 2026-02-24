@@ -4,7 +4,7 @@ import { Search, ShoppingBag, User, Menu, X, ChevronDown, Heart, Phone, Globe } 
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../../context/StoreContext';
 import { CURRENCIES } from '../../context/StoreContext';
-import logo from 'figma:asset/9f791e938296bf5db89926ddac1d6fc1b167f150.png';
+import logo from '../../../assets/logo.png';
 
 const CATEGORIES = [
   {

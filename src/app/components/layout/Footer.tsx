@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { Mail, Phone, MapPin, Instagram } from 'lucide-react';
-import logo from 'figma:asset/9f791e938296bf5db89926ddac1d6fc1b167f150.png';
+import logo from '../../../assets/logo.png';
 
 // TikTok SVG icon component since it's not in lucide-react
 const TikTokIcon = () => (
