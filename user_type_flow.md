@@ -1,0 +1,1 @@
+Remember to turn the JWT on the edge function.

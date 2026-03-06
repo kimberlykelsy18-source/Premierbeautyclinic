@@ -8,8 +8,6 @@ export function Cart() {
   const navigate = useNavigate();
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const shipping = subtotal > 5000 ? 0 : 500;
-  const total = subtotal + shipping;
 
   if (cart.length === 0) {
     return (
@@ -93,15 +91,12 @@ export function Cart() {
                   </div>
                   <div className="flex justify-between text-[15px] md:text-[16px]">
                     <span className="text-gray-500">Shipping</span>
-                    <span className="font-bold">{shipping === 0 ? 'FREE' : formatPrice(shipping)}</span>
+                    <span className="text-gray-400 italic text-[13px] md:text-[14px]">Calculated at checkout</span>
                   </div>
-                  {shipping > 0 && (
-                    <p className="text-[11px] md:text-[12px] text-gray-400 italic">Free shipping on orders over KES 5,000</p>
-                  )}
                 </div>
                 <div className="flex justify-between items-center mb-8 md:mb-10">
-                  <span className="text-[18px] md:text-[20px] font-bold uppercase tracking-widest">Total</span>
-                  <span className="text-[24px] md:text-[28px] font-bold text-[#6D4C91]">{formatPrice(total)}</span>
+                  <span className="text-[18px] md:text-[20px] font-bold uppercase tracking-widest">Subtotal</span>
+                  <span className="text-[24px] md:text-[28px] font-bold text-[#6D4C91]">{formatPrice(subtotal)}</span>
                 </div>
                 <button 
                   onClick={() => navigate('/checkout')}

@@ -7,9 +7,20 @@ import { useFeedback } from '../components/Feedback';
 import { ButtonWithLoading } from '../components/Loading';
 import logo from '../../assets/logo.png';
 import mpesaLogo from '../../assets/mpesa.png';
+import { apiFetch } from '../lib/api';
+
+// Convert any common Kenyan phone format to the 254XXXXXXXXX format Daraja requires.
+// Examples: 0712345678 → 254712345678, +254712345678 → 254712345678
+function normalizeMpesaPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('0') && digits.length === 10) return '254' + digits.slice(1);
+  if (digits.startsWith('254') && digits.length === 12) return digits;
+  if (digits.startsWith('7') && digits.length === 9) return '254' + digits;
+  return digits; // return as-is and let the backend/Safaricom reject if invalid
+}
 
 export function Checkout() {
-  const { cart, formatPrice, getShippingFee, shippingRegions, clearCart, user, updateUser } = useStore();
+  const { cart, formatPrice, getShippingFee, shippingRegions, clearCart, user, updateUser, token, sessionId } = useStore();
   const { showFeedback } = useFeedback();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -127,75 +138,106 @@ export function Checkout() {
     setShowMpesaConfirm(true);
   };
 
+  // Poll GET /payment/status/:id every 3 seconds until the backend receives
+  // Safaricom's callback and marks the payment as 'paid' or 'failed'.
+  // Gives up after 2 minutes (40 attempts) and returns 'timeout'.
+  const pollPaymentStatus = async (checkoutRequestId: string): Promise<'paid' | 'failed' | 'timeout'> => {
+    for (let attempt = 0; attempt < 40; attempt++) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const data = await apiFetch(`/payment/status/${checkoutRequestId}`, {}, token, sessionId);
+        if (data.status === 'paid') return 'paid';
+        if (data.status === 'failed') return 'failed';
+        // 'pending' → keep polling
+      } catch {
+        // Network hiccup — ignore and keep trying
+      }
+    }
+    return 'timeout';
+  };
+
   const handleConfirmMpesaPayment = async () => {
-    if (!mpesaPhone || mpesaPhone.length < 10) {
+    const rawPhone = mpesaPhone || formData.phone;
+    if (!rawPhone || rawPhone.replace(/\D/g, '').length < 9) {
       showFeedback('error', 'Invalid Phone Number', 'Please enter a valid M-Pesa phone number.');
       return;
     }
+
+    // Normalize to 254XXXXXXXXX — the format Daraja requires
+    const normalizedPhone = normalizeMpesaPhone(rawPhone);
 
     setAwaitingPayment(true);
     setIsLoading(true);
 
     try {
-      // Show STK Push notification
+      // Step 1: Create the order in the database and trigger STK push
+      const data = await apiFetch('/checkout/mpesa', {
+        method: 'POST',
+        body: JSON.stringify({
+          phone: normalizedPhone,
+          shipping_address: {
+            street: formData.streetAddress,
+            building: formData.building,
+            city: formData.city,
+            county: formData.county,
+            additionalInfo: formData.additionalInfo,
+          },
+          session_id: sessionId,
+          customer_email: formData.email,
+          shipping_fee: shipping, // pass the frontend-calculated dynamic fee
+        }),
+      }, token, sessionId);
+
+      const { checkout_request_id } = data;
+
+      // Step 2: Tell the user to check their phone
       showFeedback(
-        'success',
+        'info',
         'STK Push Sent!',
-        `Please check your phone (${mpesaPhone}) and enter your M-Pesa PIN to complete payment.`
+        `Check your phone (${rawPhone}) and enter your M-Pesa PIN to complete payment.`
       );
 
-      // Simulate waiting for payment confirmation
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // Step 3: Poll until paid, failed, or timeout
+      const result = await pollPaymentStatus(checkout_request_id);
 
-      // Simulate payment success
-      showFeedback(
-        'success',
-        'Payment Confirmed!',
-        'Your M-Pesa payment was successful. Processing your order...'
-      );
-
-      // Wait a moment then complete order
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Save address and complete order
-      if (user) {
-        updateUser({
-          name: `${formData.firstName} ${formData.lastName}`,
-          phone: formData.phone,
-          savedAddress: {
+      if (result === 'paid') {
+        // Save address to user profile so it pre-fills next time
+        if (user) {
+          const savedAddress = {
             county: formData.county,
             city: formData.city,
             streetAddress: formData.streetAddress,
             building: formData.building,
-            additionalInfo: formData.additionalInfo
-          }
-        });
+            additionalInfo: formData.additionalInfo,
+          };
+          updateUser({
+            name: `${formData.firstName} ${formData.lastName}`,
+            phone: formData.phone,
+            savedAddress,
+          });
+          // Persist to DB so it survives across devices and browser clears
+          apiFetch('/profile', {
+            method: 'PATCH',
+            body: JSON.stringify({ shipping_address: savedAddress }),
+          }, token, sessionId).catch(() => {});
+        }
+        clearCart();
+        showFeedback('success', 'Payment Confirmed!', `Your order is placed. A confirmation email will be sent to ${formData.email}.`);
+        setTimeout(() => navigate('/shop'), 2500);
+
+      } else if (result === 'failed') {
+        showFeedback('error', 'Payment Failed', 'The M-Pesa payment was declined or cancelled. Please try again.');
+
+      } else {
+        // Timeout — payment may still go through later
+        showFeedback('error', 'Payment Timeout', "We didn't receive payment confirmation. If you were charged, please contact us with your M-Pesa receipt.");
       }
 
-      // Clear cart
-      clearCart();
-
-      // Show final success
-      showFeedback(
-        'success',
-        'Order Placed Successfully!',
-        `Your order has been confirmed. A confirmation has been sent to ${formData.email}`
-      );
-
-      // Navigate to shop
-      setTimeout(() => {
-        navigate('/shop');
-      }, 2000);
-    } catch (error) {
-      showFeedback(
-        'error',
-        'Payment Failed',
-        'M-Pesa payment was not completed. Please try again.'
-      );
+    } catch (err: any) {
+      showFeedback('error', 'Checkout Failed', err.message || 'Failed to initiate payment. Please try again.');
     } finally {
       setIsLoading(false);
       setAwaitingPayment(false);
-      setShowMpesaConfirm(false);
     }
   };
 
