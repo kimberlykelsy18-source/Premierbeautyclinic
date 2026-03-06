@@ -1,10 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Search, ShoppingBag, User, Menu, X, ChevronDown, Heart, Phone, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../../context/StoreContext';
 import { CURRENCIES } from '../../context/StoreContext';
 import logo from '../../../assets/logo.png';
+import { apiFetch } from '../../lib/api';
+
+interface SearchProduct {
+  id: number;
+  name: string;
+  price: string;
+  images: string[] | null;
+  brand: string | null;
+  description: string | null;
+  categories: { name: string; slug: string } | null;
+}
 
 const CATEGORIES = [
   {
@@ -37,11 +48,39 @@ export function Navbar() {
   const { cart, user, isSearchOpen, setIsSearchOpen, selectedCurrency, setSelectedCurrency } = useStore();
   const navigate = useNavigate();
 
+  // ── Search state ──
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allProducts, setAllProducts] = useState<SearchProduct[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Fetch all products once when search overlay first opens; clear query on close
+  useEffect(() => {
+    if (isSearchOpen && allProducts.length === 0) {
+      setSearchLoading(true);
+      apiFetch('/products')
+        .then((data: SearchProduct[]) => setAllProducts(data))
+        .catch(() => {})
+        .finally(() => setSearchLoading(false));
+    }
+    if (!isSearchOpen) setSearchQuery('');
+  }, [isSearchOpen]);
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return allProducts.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.brand && p.brand.toLowerCase().includes(q)) ||
+      (p.categories?.name && p.categories.name.toLowerCase().includes(q)) ||
+      (p.description && p.description.toLowerCase().includes(q))
+    ).slice(0, 6);
+  }, [searchQuery, allProducts]);
 
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -322,7 +361,7 @@ export function Navbar() {
       {/* Search Overlay */}
       <AnimatePresence>
         {isSearchOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -335,32 +374,116 @@ export function Navbar() {
                   <X className="w-6 h-6 md:w-8 md:h-8" />
                 </button>
               </div>
+
+              {/* Search Input */}
               <div className="relative border-b-2 border-black pb-4 flex items-center mb-8 md:mb-12">
-                <Search className="w-6 h-6 md:w-8 md:h-8 mr-3 md:mr-4 text-gray-400" />
-                <input 
+                <Search className="w-6 h-6 md:w-8 md:h-8 mr-3 md:mr-4 text-gray-400 flex-shrink-0" />
+                <input
                   autoFocus
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      navigate(`/shop?q=${encodeURIComponent(searchQuery.trim())}`);
+                      setIsSearchOpen(false);
+                    }
+                  }}
                   placeholder="Search products, services..."
                   className="w-full text-[18px] md:text-[24px] outline-none placeholder:text-gray-300 bg-transparent"
                 />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="ml-2 p-1 hover:bg-gray-100 rounded-full transition-colors">
+                    <X className="w-5 h-5 text-gray-400" />
+                  </button>
+                )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 pb-12">
-                <div>
-                  <h3 className="text-[11px] md:text-[14px] font-bold uppercase tracking-widest text-gray-400 mb-4 md:mb-6">Popular Searches</h3>
-                  <div className="flex flex-wrap gap-2 md:gap-3">
-                    {['Vitamin C', 'Niacinamide', 'SPF 50', 'Chemical Peel', 'Acne'].map(tag => (
-                      <button key={tag} className="px-3 py-1.5 md:px-4 md:py-2 border border-gray-200 rounded-full text-[12px] md:text-[14px] hover:border-[#6D4C91] hover:text-[#6D4C91] transition-colors active:bg-[#FDFBF7]">{tag}</button>
+
+              {/* Live Results */}
+              {searchQuery.trim() ? (
+                searchLoading ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="aspect-square bg-gray-100 rounded-xl mb-3" />
+                        <div className="h-3 bg-gray-100 rounded w-3/4 mb-2" />
+                        <div className="h-4 bg-gray-100 rounded w-1/2" />
+                      </div>
                     ))}
                   </div>
-                </div>
-                <div>
-                  <h3 className="text-[11px] md:text-[14px] font-bold uppercase tracking-widest text-gray-400 mb-4 md:mb-6">Suggestions</h3>
-                  <div className="space-y-3 md:space-y-4">
-                    <Link to="/shop" onClick={() => setIsSearchOpen(false)} className="block text-[16px] md:text-[18px] hover:text-[#6D4C91] transition-colors">Our Bestsellers</Link>
-                    <Link to="/book" onClick={() => setIsSearchOpen(false)} className="block text-[16px] md:text-[18px] hover:text-[#6D4C91] transition-colors">Skin Analysis Quiz</Link>
-                    <Link to="/shop" onClick={() => setIsSearchOpen(false)} className="block text-[16px] md:text-[18px] hover:text-[#6D4C91] transition-colors">New Arrivals</Link>
+                ) : searchResults.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-8">
+                      {searchResults.map(product => (
+                        <Link
+                          key={product.id}
+                          to={`/shop/${product.id}`}
+                          onClick={() => setIsSearchOpen(false)}
+                          className="group flex flex-col"
+                        >
+                          <div className="aspect-square bg-gray-100 rounded-xl md:rounded-2xl overflow-hidden mb-3">
+                            {product.images?.[0] ? (
+                              <img
+                                src={product.images[0]}
+                                alt={product.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-300 text-[12px]">No image</div>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">{product.categories?.name ?? ''}</p>
+                          <p className="text-[13px] md:text-[14px] font-medium group-hover:text-[#6D4C91] transition-colors line-clamp-2">{product.name}</p>
+                          <p className="text-[13px] font-bold mt-1">KES {Number(product.price).toLocaleString()}</p>
+                        </Link>
+                      ))}
+                    </div>
+                    <Link
+                      to={`/shop?q=${encodeURIComponent(searchQuery.trim())}`}
+                      onClick={() => setIsSearchOpen(false)}
+                      className="block text-center text-[13px] font-bold uppercase tracking-widest text-[#6D4C91] hover:underline"
+                    >
+                      View all results for "{searchQuery.trim()}"
+                    </Link>
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-400 text-[15px]">No products found for "{searchQuery}".</p>
+                    <Link
+                      to="/book"
+                      onClick={() => setIsSearchOpen(false)}
+                      className="mt-4 inline-block text-[#6D4C91] font-bold text-[13px] hover:underline"
+                    >
+                      Looking for a service? Book a consultation →
+                    </Link>
+                  </div>
+                )
+              ) : (
+                /* Default state — popular searches & suggestions */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 pb-12">
+                  <div>
+                    <h3 className="text-[11px] md:text-[14px] font-bold uppercase tracking-widest text-gray-400 mb-4 md:mb-6">Popular Searches</h3>
+                    <div className="flex flex-wrap gap-2 md:gap-3">
+                      {['Vitamin C', 'Niacinamide', 'SPF 50', 'Chemical Peel', 'Acne'].map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => setSearchQuery(tag)}
+                          className="px-3 py-1.5 md:px-4 md:py-2 border border-gray-200 rounded-full text-[12px] md:text-[14px] hover:border-[#6D4C91] hover:text-[#6D4C91] transition-colors active:bg-[#FDFBF7]"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-[11px] md:text-[14px] font-bold uppercase tracking-widest text-gray-400 mb-4 md:mb-6">Suggestions</h3>
+                    <div className="space-y-3 md:space-y-4">
+                      <Link to="/shop" onClick={() => setIsSearchOpen(false)} className="block text-[16px] md:text-[18px] hover:text-[#6D4C91] transition-colors">Our Bestsellers</Link>
+                      <Link to="/book" onClick={() => setIsSearchOpen(false)} className="block text-[16px] md:text-[18px] hover:text-[#6D4C91] transition-colors">Skin Analysis Quiz</Link>
+                      <Link to="/shop" onClick={() => setIsSearchOpen(false)} className="block text-[16px] md:text-[18px] hover:text-[#6D4C91] transition-colors">New Arrivals</Link>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </motion.div>
         )}

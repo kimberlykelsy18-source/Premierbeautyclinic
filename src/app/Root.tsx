@@ -1,13 +1,10 @@
-import { Outlet, Link, useLocation } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import { Navbar } from "./components/layout/Navbar";
 import { Footer } from "./components/layout/Footer";
 import { WhatsAppButton } from "./components/WhatsAppButton";
 import { useEffect } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
 
-// TODO: Replace with your actual Google Maps API key before deploying to production
-// Get your API key from: https://console.cloud.google.com/google/maps-apis
-const GOOGLE_MAPS_API_KEY = "";
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 export function Root() {
   const { pathname } = useLocation();
@@ -17,33 +14,25 @@ export function Root() {
   }, [pathname]);
 
   useEffect(() => {
-    // Only attempt to load Google Maps if API key is provided
-    if (!GOOGLE_MAPS_API_KEY) {
-      // Silently skip - address autocomplete will not be available but app will still function
-      return;
-    }
+    // Only load Google Maps if an API key is configured.
+    // Without it the app still works — address autocomplete is simply unavailable.
+    if (!GOOGLE_MAPS_API_KEY) return;
 
-    const loader = new Loader({
-      apiKey: GOOGLE_MAPS_API_KEY,
-      version: "stable",
-      libraries: ["places"]
-    });
-
-    loader.load().catch((e) => {
-      console.error("Failed to load Google Maps API", e);
-    });
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
+    script.async = true;
+    script.onerror = () => console.error("Failed to load Google Maps API");
+    document.head.appendChild(script);
   }, []);
-
-  const isDashboard = pathname.startsWith('/dashboard');
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex flex-col font-sans text-[#1A1A1A]">
-      {!isDashboard && <Navbar />}
+      <Navbar />
       <main className="flex-grow">
         <Outlet />
       </main>
-      {!isDashboard && <Footer />}
-      {!isDashboard && <WhatsAppButton />}
+      <Footer />
+      <WhatsAppButton />
     </div>
   );
 }

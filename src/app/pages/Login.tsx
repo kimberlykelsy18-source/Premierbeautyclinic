@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { useStore } from '../context/StoreContext';
 import { Lock, Mail, ArrowRight, ShieldCheck, Eye, EyeOff, ArrowLeft, User, Phone } from 'lucide-react';
@@ -7,18 +7,16 @@ import { useFeedback } from '../components/Feedback';
 import { ButtonWithLoading } from '../components/Loading';
 import { TermsModal } from '../components/TermsModal';
 import logo from '../../assets/logo.png';
+import { apiFetch } from '../lib/api';
 
 type ViewMode = 'signup' | 'login' | 'forgot-password';
-type PortalMode = 'customer' | 'employee' | 'admin';
 
 export function Login() {
-  const { isFirstTimeUser, setIsFirstTimeUser } = useStore();
+  const { user, authLoading, isFirstTimeUser, setIsFirstTimeUser, login } = useStore();
   const [viewMode, setViewMode] = useState<ViewMode>(isFirstTimeUser ? 'signup' : 'login');
-  const [portalMode, setPortalMode] = useState<PortalMode>('customer');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const { login } = useStore();
   const { showFeedback } = useFeedback();
   const navigate = useNavigate();
 
@@ -31,64 +29,88 @@ export function Login() {
     confirmPassword: ''
   });
 
+  // Redirect already-logged-in customers away from the login page
+  useEffect(() => {
+    if (authLoading || !user) return;
+    navigate('/');
+  }, [user, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Holds the API response temporarily between "Create Account" click and "Accept Terms" click.
+  // We can't log the user in until they accept terms, but we don't want to call the API twice.
+  const [pendingAuthData, setPendingAuthData] = useState<{ user: any; session: any } | null>(null);
+
+  // ── Signup ──────────────────────────────────────────────────────────────
+  // Calls POST /auth/signup. On success, shows the Terms modal.
+  // The actual login() call happens in handleTermsAccept below.
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
+
     if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
       showFeedback('error', 'Missing Fields', 'Please fill in all required fields.');
       return;
     }
-
     if (!formData.email.includes('@')) {
       showFeedback('error', 'Invalid Email', 'Please enter a valid email address.');
       return;
     }
-
     if (formData.phone.length < 10) {
       showFeedback('error', 'Invalid Phone', 'Please enter a valid phone number.');
       return;
     }
-
     if (formData.password.length < 6) {
       showFeedback('error', 'Weak Password', 'Password must be at least 6 characters long.');
       return;
     }
-
     if (formData.password !== formData.confirmPassword) {
-      showFeedback('error', 'Passwords Don\'t Match', 'Please ensure both passwords are identical.');
+      showFeedback('error', "Passwords Don't Match", 'Please ensure both passwords are identical.');
       return;
     }
 
     setIsLoading(true);
-
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Show terms modal for first-time users
+      const data = await apiFetch('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.name,
+          phone: formData.phone,
+        }),
+      });
+
+      // Save the response — we'll use it when the user accepts terms
+      setPendingAuthData(data);
       setShowTerms(true);
     } catch (error) {
-      showFeedback('error', 'Signup Failed', 'There was an error creating your account. Please try again.');
+      showFeedback('error', 'Signup Failed', error instanceof Error ? error.message : 'There was an error creating your account. Please try again.');
+    } finally {
       setIsLoading(false);
     }
   };
 
+  // Called when the user clicks "Accept" in the Terms modal.
+  // Now we have their consent — log them in with the API response we saved.
   const handleTermsAccept = () => {
     setShowTerms(false);
-    setIsLoading(false);
-    
-    // Create account and login
-    login(formData.email, 'customer');
+
+    if (pendingAuthData) {
+      login(
+        {
+          id: pendingAuthData.user.id,
+          name: pendingAuthData.user.user_metadata?.full_name || formData.name,
+          email: pendingAuthData.user.email,
+          role: 'customer',
+        },
+        pendingAuthData.session.access_token
+      );
+    }
+
     setIsFirstTimeUser(false);
-    
     showFeedback('success', 'Welcome to Premier Beauty!', 'Your account has been created successfully.');
-    
-    setTimeout(() => {
-      navigate('/');
-    }, 1500);
+    setTimeout(() => navigate('/'), 1000);
   };
 
+  // ── Login ────────────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -98,27 +120,34 @@ export function Login() {
     }
 
     setIsLoading(true);
-
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const data = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: formData.email, password: formData.password }),
+      });
 
-      login(formData.email, portalMode);
+      login(
+        {
+          id: data.user.id,
+          name: data.user.user_metadata?.full_name || data.user.email,
+          email: data.user.email,
+          role: 'customer',
+        },
+        data.session.access_token
+      );
 
-      if (portalMode === 'admin' || portalMode === 'employee') {
-        showFeedback('success', 'Login Successful', `Welcome back, ${portalMode === 'admin' ? 'Administrator' : 'Staff Member'}!`);
-        navigate('/dashboard');
-      } else {
-        showFeedback('success', 'Login Successful', 'Welcome back to Premier Beauty!');
-        navigate('/');
-      }
+      showFeedback('success', 'Welcome back!', 'You are now signed in.');
+      navigate('/');
     } catch (error) {
-      showFeedback('error', 'Login Failed', 'Invalid email or password. Please try again.');
+      showFeedback('error', 'Login Failed', error instanceof Error ? error.message : 'Invalid email or password. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ── Forgot Password ──────────────────────────────────────────────────────
+  // Calls POST /auth/forgot-password. The backend uses Supabase to send
+  // a reset email with a magic link pointing back to our /reset-password page.
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -126,25 +155,22 @@ export function Login() {
       showFeedback('error', 'Email Required', 'Please enter your email address.');
       return;
     }
-
     if (!formData.email.includes('@')) {
       showFeedback('error', 'Invalid Email', 'Please enter a valid email address.');
       return;
     }
 
     setIsLoading(true);
-
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await apiFetch('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email: formData.email }),
+      });
 
       showFeedback('success', 'Reset Email Sent', `Password reset instructions have been sent to ${formData.email}`);
-      
-      setTimeout(() => {
-        setViewMode('login');
-      }, 2000);
+      setTimeout(() => setViewMode('login'), 2000);
     } catch (error) {
-      showFeedback('error', 'Error', 'Failed to send reset email. Please try again.');
+      showFeedback('error', 'Error', error instanceof Error ? error.message : 'Failed to send reset email. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -156,35 +182,13 @@ export function Login() {
         {/* Logo */}
         <Link to="/" className="flex justify-center mb-6 md:mb-8">
           <div className="bg-[#1A1A1A] rounded-full p-3 md:p-4 flex items-center justify-center">
-            <img 
-              src={logo} 
-              alt="Premier Beauty Clinic" 
-              className="h-9 md:h-11 w-auto object-contain" 
+            <img
+              src={logo}
+              alt="Premier Beauty Clinic"
+              className="h-9 md:h-11 w-auto object-contain"
             />
           </div>
         </Link>
-
-        {/* Portal Selection Tabs */}
-        <div className="flex gap-2 md:gap-3 mb-6 md:mb-8 p-1.5 md:p-2 bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100">
-          <button 
-            onClick={() => setPortalMode('customer')}
-            className={`flex-1 py-2.5 md:py-3 rounded-lg md:rounded-xl text-[11px] md:text-[12px] font-bold uppercase tracking-widest transition-all active:scale-95 ${portalMode === 'customer' ? 'bg-[#6D4C91] text-white' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Customer
-          </button>
-          <button 
-            onClick={() => setPortalMode('employee')}
-            className={`flex-1 py-2.5 md:py-3 rounded-lg md:rounded-xl text-[11px] md:text-[12px] font-bold uppercase tracking-widest transition-all active:scale-95 ${portalMode === 'employee' ? 'bg-[#6D4C91] text-white' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Employee
-          </button>
-          <button 
-            onClick={() => setPortalMode('admin')}
-            className={`flex-1 py-2.5 md:py-3 rounded-lg md:rounded-xl text-[11px] md:text-[12px] font-bold uppercase tracking-widest transition-all active:scale-95 ${portalMode === 'admin' ? 'bg-[#6D4C91] text-white' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Admin
-          </button>
-        </div>
 
         <AnimatePresence mode="wait">
           {/* SIGNUP FORM */}
@@ -343,17 +347,15 @@ export function Login() {
                 </div>
               </div>
 
-              {portalMode === 'customer' && (
-                <div className="text-right">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('forgot-password')}
-                    className="text-[13px] text-[#6D4C91] hover:underline font-medium"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-              )}
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('forgot-password')}
+                  className="text-[13px] text-[#6D4C91] hover:underline font-medium"
+                >
+                  Forgot Password?
+                </button>
+              </div>
 
               <ButtonWithLoading
                 isLoading={isLoading}
@@ -364,21 +366,18 @@ export function Login() {
                 <ArrowRight className="w-5 h-5" />
               </ButtonWithLoading>
 
-              {/* Only show signup link for customer portal */}
-              {portalMode === 'customer' && (
-                <div className="text-center pt-4">
-                  <p className="text-[13px] md:text-[14px] text-gray-500">
-                    Don't have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('signup')}
-                      className="text-[#6D4C91] font-bold hover:underline"
-                    >
-                      Sign Up
-                    </button>
-                  </p>
-                </div>
-              )}
+              <div className="text-center pt-4">
+                <p className="text-[13px] md:text-[14px] text-gray-500">
+                  Don't have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('signup')}
+                    className="text-[#6D4C91] font-bold hover:underline"
+                  >
+                    Sign Up
+                  </button>
+                </p>
+              </div>
             </motion.form>
           )}
 
@@ -431,14 +430,12 @@ export function Login() {
           )}
         </AnimatePresence>
 
-        {(viewMode === 'login' || viewMode === 'signup') && portalMode === 'customer' && (
-          <div className="mt-8 pt-8 border-t border-gray-100">
-            <div className="flex items-center justify-center space-x-2 text-[12px] text-gray-400">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Secure 256-bit SSL Encryption</span>
-            </div>
+        <div className="mt-8 pt-8 border-t border-gray-100">
+          <div className="flex items-center justify-center space-x-2 text-[12px] text-gray-400">
+            <ShieldCheck className="w-4 h-4" />
+            <span>Secure 256-bit SSL Encryption</span>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Terms Modal */}
