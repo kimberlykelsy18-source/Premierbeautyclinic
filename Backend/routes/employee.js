@@ -2,6 +2,8 @@ const express = require('express');
 const path    = require('path');
 const { createServiceClient } = require('../config/supabase');
 
+const serviceSupabase = createServiceClient();
+
 const LOGO_PATH = path.join(__dirname, '../../src/assets/logo.png');
 
 // Employee and admin-only flows
@@ -15,7 +17,7 @@ module.exports = ({ supabase, authenticate, requireEmployeePermission, transport
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return res.status(400).json({ error: error.message });
 
-    const { data: employee } = await supabase
+    const { data: employee } = await serviceSupabase
       .from('employees')
       .select('role, permissions, is_temporary_password')
       .eq('id', data.user.id)
@@ -135,7 +137,7 @@ module.exports = ({ supabase, authenticate, requireEmployeePermission, transport
 
     // Send the single onboarding email with credentials
     // ?portal=employee pre-selects the Employee tab so they don't land on the customer form
-    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?portal=employee`;
+    const loginUrl = `${process.env.DASHBOARD_URL || 'http://localhost:5174'}/login`;
     await transporter.sendMail({
       from: `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
       to: email,

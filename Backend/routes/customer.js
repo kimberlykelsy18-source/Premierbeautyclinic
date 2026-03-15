@@ -28,14 +28,14 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
   };
 
   async function mergeCartItems(destinationCartId, sourceCartId) {
-    const { data: sourceItems } = await supabase
+    const { data: sourceItems } = await db
       .from('cart_items')
       .select('product_id, quantity')
       .eq('cart_id', sourceCartId);
 
     if (!sourceItems || sourceItems.length === 0) return;
 
-    const { data: destItems } = await supabase
+    const { data: destItems } = await db
       .from('cart_items')
       .select('product_id, quantity')
       .eq('cart_id', destinationCartId);
@@ -48,7 +48,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       quantity: (destMap.get(item.product_id) || 0) + item.quantity
     }));
 
-    await supabase.from('cart_items').upsert(merged, { onConflict: 'cart_id,product_id' });
+    await db.from('cart_items').upsert(merged, { onConflict: 'cart_id,product_id' });
   }
 
   async function getOrCreateCart(userId, sessionId) {
@@ -56,18 +56,18 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     let sessionCart = null;
 
     if (userId) {
-      const { data } = await supabase.from('carts').select('id').eq('user_id', userId).single();
+      const { data } = await db.from('carts').select('id').eq('user_id', userId).single();
       userCart = data || null;
     }
 
     if (sessionId) {
-      const { data } = await supabase.from('carts').select('id').eq('session_id', sessionId).single();
+      const { data } = await db.from('carts').select('id').eq('session_id', sessionId).single();
       sessionCart = data || null;
     }
 
     if (userId && sessionId && sessionCart) {
       if (!userCart) {
-        const { data } = await supabase
+        const { data } = await db
           .from('carts')
           .update({ user_id: userId, session_id: null })
           .eq('id', sessionCart.id)
@@ -78,8 +78,8 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
 
       if (userCart.id !== sessionCart.id) {
         await mergeCartItems(userCart.id, sessionCart.id);
-        await supabase.from('cart_items').delete().eq('cart_id', sessionCart.id);
-        await supabase.from('carts').delete().eq('id', sessionCart.id);
+        await db.from('cart_items').delete().eq('cart_id', sessionCart.id);
+        await db.from('carts').delete().eq('id', sessionCart.id);
       }
 
       return userCart;
@@ -91,7 +91,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     if (!userId && !sessionId) return null;
 
     const insertData = userId ? { user_id: userId } : { session_id: sessionId };
-    const { data: newCart } = await supabase.from('carts').insert(insertData).select().single();
+    const { data: newCart } = await db.from('carts').insert(insertData).select().single();
     return newCart;
   }
 
@@ -176,8 +176,8 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     const { error } = await adminClient.auth.admin.updateUserById(req.user.id, { password });
     if (error) return res.status(400).json({ error: error.message });
 
-    // Clear temp-password flag if this is an employee (no-op for customers)
-    await supabase.from('employees').update({ is_temporary_password: false }).eq('id', req.user.id);
+    // Clear temp-password flag if this is an employee (uses service client to bypass RLS)
+    await db.from('employees').update({ is_temporary_password: false }).eq('id', req.user.id);
 
     res.json({ success: true, message: 'Password updated successfully' });
   });
@@ -243,7 +243,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     const cart = await getOrCreateCart(userId, sessionId);
     if (!cart) return res.json({ cart_id: null, items: [] });
 
-    const { data: items } = await supabase
+    const { data: items } = await db
       .from('cart_items')
       .select('quantity, products(id, name, price, images)')
       .eq('cart_id', cart.id);
@@ -258,13 +258,15 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
 
     if (!product_id) return res.status(400).json({ error: 'product_id required' });
     if (!userId && !sessionId) return res.status(400).json({ error: 'session id or login required' });
+    const qty = parseInt(quantity, 10);
+    if (!qty || qty < 1 || qty > 99) return res.status(400).json({ error: 'quantity must be between 1 and 99' });
 
     const cart = await getOrCreateCart(userId, sessionId);
     if (!cart) return res.status(500).json({ error: 'Failed to create cart' });
 
-    const { error } = await supabase
+    const { error } = await db
       .from('cart_items')
-      .upsert({ cart_id: cart.id, product_id, quantity }, { onConflict: 'cart_id,product_id' });
+      .upsert({ cart_id: cart.id, product_id, quantity: qty }, { onConflict: 'cart_id,product_id' });
     if (error) return res.status(400).json({ error: error.message });
 
     res.json({ success: true, cart_id: cart.id });
@@ -282,7 +284,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     const cart = await getOrCreateCart(userId, sessionId);
     if (!cart) return res.status(400).json({ error: 'Cart not found' });
 
-    await supabase.from('cart_items').delete().eq('cart_id', cart.id).eq('product_id', product_id);
+    await db.from('cart_items').delete().eq('cart_id', cart.id).eq('product_id', product_id);
     res.json({ success: true });
   });
 
@@ -293,7 +295,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     if (!userId && !sessionId) return res.status(400).json({ error: 'session id or login required' });
 
     const cart = await getOrCreateCart(userId, sessionId);
-    if (cart) await supabase.from('cart_items').delete().eq('cart_id', cart.id);
+    if (cart) await db.from('cart_items').delete().eq('cart_id', cart.id);
 
     res.json({ success: true, message: 'Cart cleared' });
   });
@@ -352,10 +354,10 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     });
 
     // Use the shipping fee sent by the frontend (calculated from the county).
-    // Falls back to 200 if missing, but the frontend always sends it.
+    // Falls back to 5 if missing, but the frontend always sends it.
     const shipping_fee = typeof req.body.shipping_fee === 'number'
       ? Math.round(req.body.shipping_fee)
-      : 200;
+      : 5;
     const total = subtotal + shipping_fee;
 
     const orderData = {
@@ -418,12 +420,134 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     }
   });
 
+  // Card payment checkout via PesaPal — creates the order in DB then redirects to PesaPal hosted page
+  router.post('/checkout/card', authenticateOptional, async (req, res) => {
+    const pesapal = require('../services/pesapal');
+    const userId    = req.user?.id;
+    const sessionId = req.body.session_id || req.headers['x-session-id'];
+    const { shipping_address, customer_email, billing } = req.body;
+
+    const normalizedShipping = normalizeShippingAddress(shipping_address);
+    const finalEmail = customer_email || req.user?.email;
+
+    if (!normalizedShipping) return res.status(400).json({ error: 'shipping_address required' });
+    if (!userId && !sessionId) return res.status(400).json({ error: 'session_id or login required' });
+
+    const cart = await getOrCreateCart(userId, sessionId);
+    if (!cart) return res.status(400).json({ error: 'Cart is empty' });
+
+    const { data: cartItems } = await db
+      .from('cart_items')
+      .select('quantity, products(id, price)')
+      .eq('cart_id', cart.id);
+
+    if (!cartItems || cartItems.length === 0) return res.status(400).json({ error: 'Cart is empty' });
+
+    const validItems = cartItems.filter(item => item?.products?.id && item?.products?.price);
+    if (validItems.length === 0) return res.status(400).json({ error: 'No valid products in cart' });
+
+    let subtotal = 0;
+    const orderItems = [];
+    validItems.forEach(item => {
+      const price = Number(item.products.price);
+      subtotal += price * item.quantity;
+      orderItems.push({ product_id: item.products.id, quantity: item.quantity, price_at_time: price });
+    });
+
+    const shipping_fee = typeof req.body.shipping_fee === 'number' ? Math.round(req.body.shipping_fee) : 5;
+    const total = subtotal + shipping_fee;
+
+    const orderData = {
+      subtotal, shipping_fee, total,
+      shipping_address: normalizedShipping,
+      status:           'pending',
+      payment_method:   'card',
+      customer_email:   finalEmail || null,
+    };
+    if (userId)    orderData.user_id    = userId;
+    if (sessionId) orderData.session_id = sessionId;
+
+    const { data: order, error: orderError } = await db
+      .from('orders')
+      .insert(orderData)
+      .select()
+      .single();
+
+    if (orderError || !order) {
+      console.error('Card order insert failed:', orderError);
+      return res.status(500).json({ error: orderError?.message || 'Failed to create order' });
+    }
+
+    await db.from('order_items').insert(orderItems.map(i => ({ ...i, order_id: order.id })));
+
+    const { data: payment } = await db
+      .from('payments')
+      .insert({ order_id: order.id, amount: total, status: 'pending', phone: billing?.phone || null })
+      .select()
+      .single();
+
+    try {
+      const shortOrderId   = `ORD-${order.order_number || order.id.slice(0, 7)}`;
+      const frontendUrl    = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const backendUrl     = process.env.BACKEND_URL  || 'http://localhost:3000';
+      const ipnId          = await pesapal.getOrRegisterIPN(`${backendUrl}/pesapal/ipn`);
+
+      const pesapalResult = await pesapal.submitOrder({
+        merchantReference: shortOrderId,
+        amount:            total,
+        currency:          'KES',
+        description:       `Premier Beauty Clinic - Order ${shortOrderId}`,
+        callbackUrl:       `${frontendUrl}/order-success`,
+        cancellationUrl:   `${frontendUrl}/checkout`,
+        ipnId,
+        billingAddress: {
+          email_address: finalEmail || '',
+          phone_number:  billing?.phone || '',
+          country_code:  'KE',
+          first_name:    billing?.firstName || '',
+          last_name:     billing?.lastName  || '',
+          line_1:        normalizedShipping?.street || normalizedShipping?.streetAddress || '',
+          city:          normalizedShipping?.city   || '',
+        },
+      });
+
+      // Reuse checkout_request_id column to store the PesaPal orderTrackingId for status polling
+      if (payment) {
+        await db
+          .from('payments')
+          .update({ checkout_request_id: pesapalResult.order_tracking_id })
+          .eq('id', payment.id);
+      }
+
+      return res.json({
+        success:            true,
+        redirect_url:       pesapalResult.redirect_url,
+        order_tracking_id:  pesapalResult.order_tracking_id,
+        merchant_reference: shortOrderId,
+        order_id:           order.id,
+        total,
+      });
+
+    } catch (err) {
+      console.error('PesaPal checkout error:', err.response?.data || err.message);
+      if (payment) await db.from('payments').update({ status: 'failed' }).eq('id', payment.id);
+      await db.from('orders').update({ status: 'cancelled' }).eq('id', order.id);
+      return res.status(502).json({ error: 'Failed to initiate card payment. Please try again.' });
+    }
+  });
+
   // Payment status polling — frontend calls this every few seconds after sending STK push.
   // Returns the payment status ('pending', 'paid', 'failed') and the order_id once paid.
   // No auth needed — the checkout_request_id is a unique secret only the payer knows.
   router.get('/payment/status/:checkoutRequestId', async (req, res) => {
     const { checkoutRequestId } = req.params;
-    const { data, error } = await supabase
+
+    // Basic format guard — Daraja IDs are alphanumeric strings, 10-40 chars
+    if (!checkoutRequestId || !/^[a-zA-Z0-9_-]{6,60}$/.test(checkoutRequestId)) {
+      return res.status(400).json({ error: 'Invalid payment reference' });
+    }
+
+    const { data, error } = await db
       .from('payments')
       .select('status, order_id, appointment_id')
       .eq('checkout_request_id', checkoutRequestId)
@@ -557,7 +681,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
 
       // Send confirmation email
       if (transporter) {
-        const { data: profile } = await supabase
+        const { data: profile } = await db
           .from('profiles')
           .select('email, full_name')
           .eq('id', req.user.id)

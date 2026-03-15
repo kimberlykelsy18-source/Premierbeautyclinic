@@ -21,20 +21,43 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
   // Service-role client — bypasses RLS for inventory updates triggered by webhook
   const adminDb = createServiceClient();
 
+  // ── Security helpers ──────────────────────────────────────────────────────
+
+  // /api/mpesa/initiate: always require the MPESA_INITIATE_TOKEN header.
+  // Set MPESA_INITIATE_TOKEN in .env; leave it unset to disable the endpoint entirely.
   const ensureMpesaInitiateAllowed = (req, res, next) => {
     const token = process.env.MPESA_INITIATE_TOKEN;
-    const isProd = process.env.NODE_ENV === 'production';
-
-    if (token) {
-      if (req.headers['x-mpesa-token'] !== token) {
-        return res.status(403).json({ error: 'Forbidden' });
-      }
-      return next();
+    if (!token) {
+      return res.status(403).json({ error: 'M-Pesa initiate endpoint is disabled' });
     }
-
-    if (isProd) return res.status(403).json({ error: 'M-Pesa initiate disabled in production' });
+    if (req.headers['x-mpesa-token'] !== token) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
     next();
   };
+
+  // /mpesa/callback: in production only accept requests from Safaricom's known IPs.
+  const SAFARICOM_IPS = new Set([
+    '196.201.214.200', '196.201.214.206', '196.201.213.114',
+    '196.201.214.207', '196.201.214.208', '196.201.213.44',
+    '196.201.212.127', '196.201.212.128', '196.201.212.129',
+    '196.201.212.132', '196.201.212.133', '196.201.212.134',
+  ]);
+
+  const requireSafaricomIP = (req, res, next) => {
+    if (process.env.NODE_ENV !== 'production') return next(); // dev: skip check
+    const raw = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress || '';
+    const ip  = raw.split(',')[0].trim().replace(/^::ffff:/, '');
+    if (!SAFARICOM_IPS.has(ip)) {
+      console.warn(`[M-Pesa callback] Rejected from IP: ${ip}`);
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    next();
+  };
+
+  // UUID format guard — prevents arbitrary strings reaching external APIs
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isValidUUID = id => UUID_RE.test(id);
 
   const formatShippingAddress = address => {
     if (!address) return 'Address not provided';
@@ -68,7 +91,7 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
   });
 
   // Safaricom STK callback handler
-  router.post('/mpesa/callback', async (req, res) => {
+  router.post('/mpesa/callback', requireSafaricomIP, async (req, res) => {
     console.log('M-Pesa Callback received');
 
     const callbackData = req.body?.Body?.stkCallback;
@@ -435,6 +458,187 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
 
     res.json({ success: true });
   });
+
+  const pesapal = require('../services/pesapal');
+
+  // PesaPal IPN — PesaPal calls this (GET) when a payment status changes (production only)
+  router.get('/pesapal/ipn', async (req, res) => {
+    const { OrderTrackingId } = req.query;
+    console.log('PesaPal IPN received:', req.query);
+
+    // Reject malformed or missing IDs before hitting the external API
+    if (!OrderTrackingId || !isValidUUID(OrderTrackingId)) {
+      return res.json({ success: true });
+    }
+
+    // Only process if this tracking ID is actually in our DB (prevents replay abuse)
+    const { data: knownPayment } = await adminDb
+      .from('payments')
+      .select('id')
+      .eq('checkout_request_id', OrderTrackingId)
+      .maybeSingle();
+
+    if (!knownPayment) {
+      console.warn(`[PesaPal IPN] Unknown OrderTrackingId: ${OrderTrackingId}`);
+      return res.json({ success: true });
+    }
+
+    try {
+      await handlePesapalPayment(OrderTrackingId);
+    } catch (err) {
+      console.error('[PesaPal IPN]', err.message);
+    }
+    res.json({ success: true });
+  });
+
+  // PesaPal status check — called from /order-success page after PesaPal redirects the customer back
+  router.get('/pesapal/status/:orderTrackingId', async (req, res) => {
+    const { orderTrackingId } = req.params;
+
+    // Reject malformed IDs immediately
+    if (!isValidUUID(orderTrackingId)) {
+      return res.status(400).json({ error: 'Invalid tracking ID format' });
+    }
+
+    try {
+      const { data: existing } = await adminDb
+        .from('payments')
+        .select('status, order_id')
+        .eq('checkout_request_id', orderTrackingId)
+        .maybeSingle();
+
+      // Unknown tracking ID — don't hit external API
+      if (!existing) {
+        return res.status(404).json({ error: 'Payment not found' });
+      }
+
+      // Already processed — return cached result immediately
+      if (existing?.status === 'paid') {
+        return res.json({ status: 'completed', order_id: existing.order_id });
+      }
+
+      const result = await handlePesapalPayment(orderTrackingId);
+      return res.json(result);
+    } catch (err) {
+      console.error('[PesaPal status]', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Shared handler — verifies status with PesaPal, updates DB, sends email
+  async function handlePesapalPayment(orderTrackingId) {
+    const txStatus  = await pesapal.getTransactionStatus(orderTrackingId);
+    const statusCode = txStatus.status_code;
+
+    const { data: payment } = await adminDb
+      .from('payments')
+      .select('id, order_id, status')
+      .eq('checkout_request_id', orderTrackingId)
+      .maybeSingle();
+
+    if (!payment) return { status: 'not_found' };
+    if (payment.status === 'paid') return { status: 'completed', order_id: payment.order_id };
+
+    if (statusCode === 1) {
+      // COMPLETED
+      await adminDb.from('payments').update({
+        status:       'paid',
+        mpesa_receipt: txStatus.confirmation_code || null,
+      }).eq('id', payment.id);
+
+      const { data: order } = await adminDb
+        .from('orders')
+        .select('*, order_number, customer_email')
+        .eq('id', payment.order_id)
+        .single();
+
+      await adminDb.from('orders').update({ status: 'paid' }).eq('id', payment.order_id);
+
+      // Reduce inventory
+      const { data: orderItems } = await adminDb
+        .from('order_items')
+        .select('product_id, quantity')
+        .eq('order_id', payment.order_id);
+
+      if (orderItems && orderItems.length > 0) {
+        const shortOrderId = toShortOrderId(order?.order_number);
+        await Promise.all(orderItems.map(async (item) => {
+          const { data: prod } = await adminDb.from('products').select('stock').eq('id', item.product_id).single();
+          if (prod !== null) {
+            await adminDb.from('products')
+              .update({ stock: Math.max(0, (prod.stock || 0) - item.quantity) })
+              .eq('id', item.product_id);
+          }
+          await adminDb.from('inventory_logs').insert({
+            product_id:      item.product_id,
+            staff_id:        null,
+            quantity_change: -item.quantity,
+            reason:          `Sale — Order ${shortOrderId}`,
+          });
+        }));
+      }
+
+      // Send order confirmation email
+      if (order?.customer_email) {
+        const shortId = toShortOrderId(order.order_number);
+        transporter.sendMail({
+          from:        `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+          to:          order.customer_email,
+          subject:     `Order Confirmed — ${shortId} · Premier Beauty Clinic`,
+          attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],
+          html: `
+            <div style="font-family:sans-serif;max-width:520px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee">
+              <div style="background:#1A1A1A;padding:28px 32px;text-align:center">
+                <img src="cid:premier_logo" alt="Premier Beauty Clinic" style="height:48px;object-fit:contain" />
+              </div>
+              <div style="background:#6D4C91;padding:24px 32px;text-align:center">
+                <p style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:2px;margin:0 0 6px">Order Confirmed</p>
+                <h2 style="color:#fff;margin:0;font-size:22px">${shortId}</h2>
+              </div>
+              <div style="padding:36px 32px">
+                <p style="color:#555;margin:0 0 24px;font-size:15px">
+                  Thank you for your purchase! Your order has been received and payment confirmed via ${txStatus.payment_method || 'Card'}.
+                </p>
+                <table style="background:#FDFBF7;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
+                  <tr><td style="padding:8px 12px;color:#888;font-size:13px;width:140px">Order ID</td><td style="padding:8px 12px;font-weight:bold;font-size:14px;color:#6D4C91">${shortId}</td></tr>
+                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Payment</td><td style="padding:8px 12px;font-weight:bold;font-size:14px">${txStatus.payment_method || 'Card'}</td></tr>
+                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Amount Paid</td><td style="padding:8px 12px;font-weight:bold;font-size:14px">KES ${Number(txStatus.amount)?.toLocaleString()}</td></tr>
+                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Reference</td><td style="padding:8px 12px;font-size:14px">${txStatus.confirmation_code || '—'}</td></tr>
+                </table>
+                <div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:12px 16px;border-radius:4px;margin:24px 0 0;font-size:13px;color:#166534">
+                  <strong>What's next?</strong> Your order will be packed and dispatched within 1–2 business days. You'll receive a shipping update by email.
+                </div>
+              </div>
+              <div style="background:#FDFBF7;padding:20px 32px;text-align:center;border-top:1px solid #eee">
+                <p style="color:#aaa;font-size:12px;margin:0">© ${new Date().getFullYear()} Premier Beauty Clinic · Nairobi, Kenya</p>
+                <p style="color:#aaa;font-size:12px;margin:6px 0 0">Questions? Email us at ${process.env.SUPPORT_EMAIL || 'support@premierbeauty.com'}</p>
+              </div>
+            </div>
+          `,
+        }).catch(err => console.error('[PesaPal email]', err.message));
+        console.log(`PesaPal order confirmation email sent to ${order.customer_email}`);
+      }
+
+      return { status: 'completed', order_id: payment.order_id };
+
+    } else if (statusCode === 2) {
+      // FAILED
+      await adminDb.from('payments').update({
+        status: 'failed',
+        failure_reason: txStatus.payment_status_description || 'Card payment failed',
+      }).eq('id', payment.id);
+      await adminDb.from('orders').update({ status: 'cancelled' }).eq('id', payment.order_id);
+      return { status: 'failed' };
+
+    } else if (statusCode === 3) {
+      // REVERSED
+      await adminDb.from('payments').update({ status: 'failed', failure_reason: 'Payment reversed' }).eq('id', payment.id);
+      return { status: 'reversed' };
+    }
+
+    // INVALID (0) or still pending
+    return { status: 'pending' };
+  }
 
   return router;
 };
