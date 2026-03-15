@@ -53,7 +53,7 @@ export interface ShippingRegion {
 
 export const DEFAULT_SHIPPING_REGIONS: ShippingRegion[] = [
   // Kenya
-  { id: '1',  country: 'Kenya',    county: 'Nairobi',       region: 'Nairobi',     fee: 300  },
+  { id: '1',  country: 'Kenya',    county: 'Nairobi',       region: 'Nairobi',     fee: 5    },
   { id: '2',  country: 'Kenya',    county: 'Kiambu',        region: 'Central',     fee: 400  },
   { id: '3',  country: 'Kenya',    county: 'Mombasa',       region: 'Coast',       fee: 800  },
   { id: '4',  country: 'Kenya',    county: 'Kisumu',        region: 'Nyanza',      fee: 700  },

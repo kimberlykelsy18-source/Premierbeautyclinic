@@ -18,6 +18,7 @@ const createPaymentRoutes = require('./routes/payment');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.set('trust proxy', 1); // trust first proxy so req.ip is the real client IP
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -25,7 +26,7 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 // Build shared middlewares
-const { authenticate, authenticateOptional, requireEmployeePermission } = createAuthMiddleware(supabase);
+const { authenticate, authenticateOptional, requireEmployeePermission } = createAuthMiddleware(supabase, createServiceClient());
 
 // Register route modules
 app.use(createEmployeeRoutes({ supabase, authenticate, requireEmployeePermission, transporter }));

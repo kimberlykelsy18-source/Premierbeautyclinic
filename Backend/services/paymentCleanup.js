@@ -1,6 +1,6 @@
 const { createServiceClient } = require('../config/supabase');
 
-const TIMEOUT_MINUTES = 10;
+const TIMEOUT_MINUTES = 3;
 const CHECK_INTERVAL_MS = 2 * 60 * 1000; // run every 2 minutes
 
 async function runCleanup() {

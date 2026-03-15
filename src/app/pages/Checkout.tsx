@@ -31,14 +31,7 @@ export function Checkout() {
   const [awaitingPayment, setAwaitingPayment] = useState(false);
   const navigate = useNavigate();
 
-  // Card payment state
-  const [cardData, setCardData] = useState({
-    number: '',
-    expiry: '',
-    cvv: '',
-    name: ''
-  });
-  const [cardType, setCardType] = useState<'visa' | 'mastercard' | 'unknown'>('unknown');
+  const [isCardLoading, setIsCardLoading] = useState(false);
 
   // Form data - Initialize with user data if logged in
   const [formData, setFormData] = useState(() => {
@@ -77,60 +70,6 @@ export function Checkout() {
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const shipping = formData.county ? getShippingFee(formData.county) : 0;
   const total = subtotal + shipping;
-
-  // Card formatting helpers
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || '';
-    const parts = [];
-
-    for (let i = 0; i < match.length; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return value;
-    }
-  };
-
-  const formatExpiry = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    
-    if (v.length >= 2) {
-      return `${v.substring(0, 2)}/${v.substring(2, 4)}`;
-    }
-    
-    return v;
-  };
-
-  const detectCardType = (number: string) => {
-    const sanitized = number.replace(/\s+/g, '');
-    
-    // Visa: starts with 4
-    if (/^4/.test(sanitized)) {
-      return 'visa';
-    }
-    // Mastercard: starts with 51-55 or 2221-2720
-    if (/^5[1-5]/.test(sanitized) || /^2(22[1-9]|2[3-9][0-9]|[3-6][0-9]{2}|7[0-1][0-9]|720)/.test(sanitized)) {
-      return 'mastercard';
-    }
-    
-    return 'unknown';
-  };
-
-  const handleCardNumberChange = (value: string) => {
-    const formatted = formatCardNumber(value);
-    setCardData({ ...cardData, number: formatted });
-    setCardType(detectCardType(formatted));
-  };
-
-  const handleExpiryChange = (value: string) => {
-    const formatted = formatExpiry(value);
-    setCardData({ ...cardData, expiry: formatted });
-  };
 
   const handleInitiateMpesa = () => {
     // Set M-Pesa phone to user's phone number
@@ -241,50 +180,35 @@ export function Checkout() {
     }
   };
 
-  const handlePlaceOrder = async () => {
-    setIsLoading(true);
-    
+  const handleCardPayment = async () => {
+    setIsCardLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Save address to user profile if logged in
-      if (user) {
-        updateUser({
-          name: `${formData.firstName} ${formData.lastName}`,
-          phone: formData.phone,
-          savedAddress: {
-            county: formData.county,
-            city: formData.city,
-            streetAddress: formData.streetAddress,
-            building: formData.building,
-            additionalInfo: formData.additionalInfo
-          }
-        });
-      }
-      
-      // Clear cart
-      clearCart();
-      
-      // Show success feedback
-      showFeedback(
-        'success',
-        'Payment Successful!',
-        `Your card payment was processed successfully. Order confirmation sent to ${formData.email}`
-      );
-      
-      // Navigate to shop after 2 seconds
-      setTimeout(() => {
-        navigate('/shop');
-      }, 2000);
-    } catch (error) {
-      showFeedback(
-        'error',
-        'Payment Failed',
-        'There was an issue processing your payment. Please try again.'
-      );
-    } finally {
-      setIsLoading(false);
+      const data = await apiFetch('/checkout/card', {
+        method: 'POST',
+        body: JSON.stringify({
+          shipping_address: {
+            street:        formData.streetAddress,
+            building:      formData.building,
+            city:          formData.city,
+            county:        formData.county,
+            additionalInfo: formData.additionalInfo,
+          },
+          shipping_fee:   shipping,
+          session_id:     sessionId,
+          customer_email: formData.email,
+          billing: {
+            firstName: formData.firstName,
+            lastName:  formData.lastName,
+            phone:     formData.phone,
+          },
+        }),
+      }, token, sessionId);
+
+      // Redirect the browser to PesaPal's hosted payment page
+      window.location.href = data.redirect_url;
+    } catch (err: any) {
+      showFeedback('error', 'Card Payment Failed', err.message || 'Failed to initiate card payment. Please try again.');
+      setIsCardLoading(false);
     }
   };
 
@@ -528,51 +452,21 @@ export function Checkout() {
                       {paymentMethod === 'card' && <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6 text-[#6D4C91] flex-shrink-0" />}
                     </button>
 
-                    {/* Card Details (if card selected) */}
+                    {/* PesaPal redirect notice */}
                     {paymentMethod === 'card' && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }} 
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
-                        className="space-y-4 md:space-y-5 pt-4"
+                        className="pt-2"
                       >
-                        <div>
-                          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Card Number</label>
-                          <input 
-                            type="text" 
-                            placeholder="1234 5678 9012 3456"
-                            maxLength={19}
-                            value={cardData.number}
-                            onChange={(e) => handleCardNumberChange(e.target.value)}
-                            className="w-full px-5 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-blue-500 outline-none transition-all text-[15px] md:text-[16px]" 
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 md:gap-5">
+                        <div className="flex items-start space-x-3 p-4 md:p-5 bg-blue-50 rounded-xl md:rounded-2xl border border-blue-100">
+                          <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                           <div>
-                            <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Expiry</label>
-                            <input 
-                              type="text" 
-                              placeholder="MM/YY"
-                              maxLength={5}
-                              value={cardData.expiry}
-                              onChange={(e) => handleExpiryChange(e.target.value)}
-                              className="w-full px-5 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-blue-500 outline-none transition-all text-[15px] md:text-[16px]" 
-                            />
+                            <p className="text-[13px] md:text-[14px] font-bold text-blue-900 mb-1">Secure Hosted Payment</p>
+                            <p className="text-[12px] md:text-[13px] text-blue-700">
+                              You'll be redirected to PesaPal's secure payment page to enter your card details. We never store your card information.
+                            </p>
                           </div>
-                          <div>
-                            <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">CVV</label>
-                            <input 
-                              type="text" 
-                              placeholder="123"
-                              maxLength={3}
-                              value={cardData.cvv}
-                              onChange={(e) => setCardData({...cardData, cvv: e.target.value})}
-                              className="w-full px-5 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-blue-500 outline-none transition-all text-[15px] md:text-[16px]" 
-                            />
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3 p-4 bg-blue-50 rounded-xl md:rounded-2xl border border-blue-100">
-                          <ShieldCheck className="w-4 h-4 md:w-5 md:h-5 text-blue-600 flex-shrink-0" />
-                          <p className="text-[12px] md:text-[13px] text-blue-700 font-medium">Your payment information is encrypted and secure.</p>
                         </div>
                       </motion.div>
                     )}
@@ -692,26 +586,22 @@ export function Checkout() {
                           )}
                         </div>
                       ) : (
-                        <div className="flex items-center space-x-3">
-                          {cardType === 'visa' && (
-                            <svg className="w-12 h-8" viewBox="0 0 48 32" fill="none">
+                        <div>
+                          <div className="flex items-center space-x-3 mb-3">
+                            <svg className="w-10 h-7" viewBox="0 0 48 32" fill="none">
                               <rect width="48" height="32" rx="4" fill="#1434CB" />
                               <path d="M17 10h14M17 16h14M17 22h8" stroke="white" strokeWidth="2" strokeLinecap="round" />
                             </svg>
-                          )}
-                          {cardType === 'mastercard' && (
-                            <svg className="w-12 h-8" viewBox="0 0 48 32" fill="none">
+                            <svg className="w-10 h-7" viewBox="0 0 48 32" fill="none">
                               <rect width="48" height="32" rx="4" fill="#EB001B" />
                               <circle cx="20" cy="16" r="8" fill="#FF5F00" />
                               <circle cx="28" cy="16" r="8" fill="#F79E1B" />
                             </svg>
-                          )}
-                          <div>
-                            <p className="text-[15px] md:text-[16px] font-bold">
-                              {cardType === 'visa' ? 'Visa' : cardType === 'mastercard' ? 'Mastercard' : 'Card'} •••• {cardData.number.slice(-4)}
-                            </p>
-                            <p className="text-[13px] text-gray-500">Expires {cardData.expiry}</p>
+                            <span className="text-[15px] md:text-[16px] font-bold">Card via PesaPal</span>
                           </div>
+                          <p className="text-[12px] md:text-[13px] text-gray-500">
+                            Clicking "Pay" will redirect you to PesaPal's secure checkout page to complete your card payment.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -725,8 +615,8 @@ export function Checkout() {
                         Back
                       </button>
                       <ButtonWithLoading
-                        isLoading={isLoading}
-                        onClick={paymentMethod === 'mpesa' ? handleConfirmMpesaPayment : handlePlaceOrder}
+                        isLoading={paymentMethod === 'mpesa' ? isLoading : isCardLoading}
+                        onClick={paymentMethod === 'mpesa' ? handleConfirmMpesaPayment : handleCardPayment}
                         className="flex-[2] bg-[#6D4C91] text-white py-4 md:py-5 rounded-full text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all shadow-xl"
                       >
                         {paymentMethod === 'mpesa' ? 'Confirm Payment' : `Pay ${formatPrice(total)}`}

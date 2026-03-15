@@ -13,6 +13,7 @@ import { FAQ } from "./pages/FAQ";
 import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import { TermsOfService } from "./pages/TermsOfService";
 import { ResetPassword } from "./pages/ResetPassword";
+import { OrderSuccess } from "./pages/OrderSuccess";
 
 export const router = createBrowserRouter([
   {
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
       { path: "privacy",        Component: PrivacyPolicy },
       { path: "terms",          Component: TermsOfService },
       { path: "reset-password", Component: ResetPassword },
+      { path: "order-success",  Component: OrderSuccess  },
       { path: "*",       Component: NotFound       },
     ],
   },

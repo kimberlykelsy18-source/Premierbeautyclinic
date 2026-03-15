@@ -1,5 +1,5 @@
 // Authentication and authorization helpers shared across routes
-module.exports = function createAuthMiddleware(supabase) {
+module.exports = function createAuthMiddleware(supabase, serviceSupabase) {
   // Verify Supabase JWT and attach user to request
   async function authenticate(req, res, next) {
     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -29,7 +29,7 @@ module.exports = function createAuthMiddleware(supabase) {
     return async (req, res, next) => {
       if (!req.user) return res.status(401).json({ error: 'No token provided' });
 
-      const { data: employee, error } = await supabase
+      const { data: employee, error } = await serviceSupabase
         .from('employees')
         .select('role, permissions')
         .eq('id', req.user.id)

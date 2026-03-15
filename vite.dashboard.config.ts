@@ -35,6 +35,14 @@ export default defineConfig({
   assetsInclude: ['**/*.svg', '**/*.csv'],
   build: {
     outDir: 'dist/dashboard',
+    sourcemap: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
     rollupOptions: {
       input: resolve(__dirname, 'dashboard.html'),
     },
