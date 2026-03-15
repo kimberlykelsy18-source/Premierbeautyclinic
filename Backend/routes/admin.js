@@ -9,6 +9,21 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
   const adminDb = serviceSupabase || supabase;
   const router = express.Router();
 
+  // ── Security helpers ────────────────────────────────────────────────────────
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isValidUUID = id => UUID_RE.test(id);
+
+  // Rejects requests where req.params.id is not a valid UUID
+  const validateId = (req, res, next) => {
+    if (!isValidUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
+    next();
+  };
+
+  // Strip HTML/script tags from a string to prevent stored XSS
+  const sanitize = str => (typeof str === 'string' ? str.replace(/<[^>]*>/g, '').trim() : str);
+
   // Inventory + low stock alerts
   router.get('/admin/inventory', authenticate, requireEmployeePermission('view_inventory'), async (req, res) => {
     const { data: products } = await supabase
@@ -55,12 +70,12 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     res.json(data || []);
   });
 
-  router.post('/admin/orders/:id/deliver', authenticate, requireEmployeePermission('mark_delivered'), async (req, res) => {
+  router.post('/admin/orders/:id/deliver', authenticate, requireEmployeePermission('mark_delivered'), validateId, async (req, res) => {
     await Promise.all([
       adminDb.from('delivery_updates').insert({
         order_id: req.params.id,
         status: 'delivered',
-        notes: req.body.notes,
+        notes: sanitize(req.body.notes || '').slice(0, 500) || null,
         updated_by: req.user.id,
       }),
       adminDb.from('orders').update({ status: 'delivered' }).eq('id', req.params.id),
@@ -69,7 +84,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
   });
 
   // General order status update (shipped, pending/processing, cancelled)
-  router.patch('/admin/orders/:id/status', authenticate, requireEmployeePermission('mark_delivered'), async (req, res) => {
+  router.patch('/admin/orders/:id/status', authenticate, requireEmployeePermission('mark_delivered'), validateId, async (req, res) => {
     const { status, notes } = req.body;
     const allowed = ['pending', 'shipped', 'cancelled'];
     if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
@@ -98,9 +113,9 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     res.json(data || []);
   });
 
-  router.post('/admin/appointments/:id/complete', authenticate, requireEmployeePermission('complete_appointment'), async (req, res) => {
+  router.post('/admin/appointments/:id/complete', authenticate, requireEmployeePermission('complete_appointment'), validateId, async (req, res) => {
     const update = { status: 'completed' };
-    if (req.body.practitioner) update.practitioner = req.body.practitioner;
+    if (req.body.practitioner) update.practitioner = sanitize(req.body.practitioner).slice(0, 100);
     await adminDb.from('appointments').update(update).eq('id', req.params.id);
     res.json({ success: true });
   });
@@ -108,7 +123,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
   // Check-in payment — used for zero-deposit or balance-collection at the clinic.
   // Creates a payment record and triggers an STK push to the customer's phone.
   // The M-Pesa callback will then set appointment → 'completed' and send the final email.
-  router.post('/admin/appointments/:id/checkin-pay', authenticate, requireEmployeePermission('complete_appointment'), async (req, res) => {
+  router.post('/admin/appointments/:id/checkin-pay', authenticate, requireEmployeePermission('complete_appointment'), validateId, async (req, res) => {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ error: 'phone is required' });
 
@@ -344,7 +359,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
   });
 
   // Walk-ins — collect payment after the fact (STK push to already-recorded walk-in)
-  router.post('/admin/walkins/:id/pay', authenticate, requireEmployeePermission('create_walkin'), async (req, res) => {
+  router.post('/admin/walkins/:id/pay', authenticate, requireEmployeePermission('create_walkin'), validateId, async (req, res) => {
     const { phone, amount } = req.body;
     if (!phone) return res.status(400).json({ error: 'phone is required' });
 
@@ -385,7 +400,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
   });
 
   // Walk-ins — mark completed (client has been served)
-  router.post('/admin/walkins/:id/complete', authenticate, requireEmployeePermission('complete_appointment'), async (req, res) => {
+  router.post('/admin/walkins/:id/complete', authenticate, requireEmployeePermission('complete_appointment'), validateId, async (req, res) => {
     const { error } = await adminDb.from('walk_ins').update({ status: 'completed' }).eq('id', req.params.id);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
@@ -449,7 +464,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
 
   // Clinic settings (single row, id = 1)
   router.get('/admin/settings', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
-    const { data } = await supabase
+    const { data } = await adminDb
       .from('clinic_settings')
       .select('clinic_name, support_email, currency, timezone, default_deposit_percentage')
       .eq('id', 1)
@@ -500,7 +515,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
   });
 
   // Edit product (price, name, threshold, active, brand, category)
-  router.patch('/admin/products/:id', authenticate, requireEmployeePermission('edit_stock'), async (req, res) => {
+  router.patch('/admin/products/:id', authenticate, requireEmployeePermission('edit_stock'), validateId, async (req, res) => {
     const ALLOWED = ['name', 'price', 'low_stock_threshold', 'is_active', 'brand', 'description', 'category_id', 'images'];
     const updates = {};
     for (const key of ALLOWED) {
@@ -577,15 +592,28 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
 
   router.patch('/admin/settings', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
     const { clinic_name, support_email, currency, timezone, default_deposit_percentage } = req.body;
+
+    // Validate email format if provided
+    if (support_email !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(support_email)) {
+      return res.status(400).json({ error: 'Invalid support_email format' });
+    }
+    // Deposit must be 0–100 if provided
+    if (default_deposit_percentage !== undefined) {
+      const pct = Number(default_deposit_percentage);
+      if (isNaN(pct) || pct < 0 || pct > 100) {
+        return res.status(400).json({ error: 'default_deposit_percentage must be 0–100' });
+      }
+    }
+
     const updates = { id: 1, updated_at: new Date().toISOString(), updated_by: req.user.id };
 
-    if (clinic_name               !== undefined) updates.clinic_name               = clinic_name;
-    if (support_email             !== undefined) updates.support_email             = support_email;
-    if (currency                  !== undefined) updates.currency                  = currency;
-    if (timezone                  !== undefined) updates.timezone                  = timezone;
+    if (clinic_name               !== undefined) updates.clinic_name               = sanitize(clinic_name).slice(0, 100);
+    if (support_email             !== undefined) updates.support_email             = support_email.trim().toLowerCase();
+    if (currency                  !== undefined) updates.currency                  = sanitize(currency).slice(0, 10);
+    if (timezone                  !== undefined) updates.timezone                  = sanitize(timezone).slice(0, 60);
     if (default_deposit_percentage !== undefined) updates.default_deposit_percentage = Number(default_deposit_percentage);
 
-    const { error } = await supabase.from('clinic_settings').upsert(updates);
+    const { error } = await adminDb.from('clinic_settings').upsert(updates);
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true });
   });

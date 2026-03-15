@@ -21,5 +21,13 @@ export default defineConfig({
   assetsInclude: ['**/*.svg', '**/*.csv'],
   build: {
     outDir: 'dist/store',
+    sourcemap: false,        // never expose source maps in production
+    minify: 'terser',        // stronger minification than default esbuild
+    terserOptions: {
+      compress: {
+        drop_console: true,  // strip all console.log / console.error from bundle
+        drop_debugger: true,
+      },
+    },
   },
 })
