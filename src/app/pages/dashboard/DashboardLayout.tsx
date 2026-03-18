@@ -19,7 +19,7 @@ export function DashboardLayout() {
   useEffect(() => {
     if (authLoading) return;
     if (!user || user.role === 'customer') {
-      navigate('/login');
+      navigate('/staff/login');
     }
   }, [user, authLoading, navigate]);
 
@@ -54,17 +54,17 @@ export function DashboardLayout() {
   };
 
   const navItems = [
-    { name: 'Overview',     path: '/',              icon: LayoutDashboard },
-    { name: 'Orders',       path: '/orders',        icon: ShoppingCart    },
-    { name: 'Appointments', path: '/appointments',  icon: CalendarDays    },
-    { name: 'Inventory',    path: '/inventory',     icon: Box             },
-    { name: 'Customers',    path: '/customers',     icon: Users,  permission: 'admin' },
-    { name: 'Settings',     path: '/settings',      icon: Settings, permission: 'admin' },
+    { name: 'Overview',     path: '/staff',              icon: LayoutDashboard },
+    { name: 'Orders',       path: '/staff/orders',        icon: ShoppingCart    },
+    { name: 'Appointments', path: '/staff/appointments',  icon: CalendarDays    },
+    { name: 'Inventory',    path: '/staff/inventory',     icon: Box             },
+    { name: 'Customers',    path: '/staff/customers',     icon: Users,  permission: 'admin' },
+    { name: 'Settings',     path: '/staff/settings',      icon: Settings, permission: 'admin' },
   ];
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/staff/login');
   };
 
   const isRestricted = (item: typeof navItems[0]) =>
@@ -181,7 +181,7 @@ export function DashboardLayout() {
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <aside className={`bg-[#1A1A1A] text-white flex flex-col transition-all duration-300 ${isSidebarOpen ? 'w-[280px]' : 'w-[80px]'}`}>
         <div className="p-8 flex items-center justify-between">
-          <Link to="/" className={`overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'w-auto' : 'w-0 opacity-0'}`}>
+          <Link to="/staff" className={`overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'w-auto' : 'w-0 opacity-0'}`}>
             <img src={logo} alt="Premier" className="h-10 brightness-0 invert" />
           </Link>
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-white/10 rounded-lg">

@@ -31,7 +31,7 @@ export function DashboardLogin() {
   useEffect(() => {
     if (authLoading || !user) return;
     if (user.role !== 'customer') {
-      navigate('/');
+      navigate('/staff');
     }
   }, [user, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -75,7 +75,7 @@ export function DashboardLogin() {
       } else {
         showFeedback('success', 'Login Successful', `Welcome back!`);
       }
-      navigate('/');
+      navigate('/staff');
     } catch (error) {
       showFeedback('error', 'Login Failed', error instanceof Error ? error.message : 'Invalid email or password. Please try again.');
     } finally {
