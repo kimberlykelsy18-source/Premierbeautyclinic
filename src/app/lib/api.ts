@@ -1,7 +1,7 @@
 // Central API utility for all backend requests.
 //
 // WHY THIS FILE EXISTS:
-// Instead of writing fetch('http://localhost:3000/...') in every component,
+// Instead of writing fetch('https://premierbeautyclinic-production.up.railway.app/...') in every component,
 // we have one place that:
 //  - Knows the backend URL (from .env)
 //  - Attaches the JWT auth token to every request automatically
@@ -13,7 +13,7 @@
 //   const data = await apiFetch('/products');
 //   const data = await apiFetch('/orders', { method: 'GET' }, token);
 
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+export const API_BASE = import.meta.env.VITE_API_URL || 'http://premierbeautyclinic-production.up.railway.app';
 
 // Converts a sequential number into a short human-readable ID.
 // Formula: every 999 entries the letter increments (A→B→C…)

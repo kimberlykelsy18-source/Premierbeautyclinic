@@ -489,7 +489,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     try {
       const shortOrderId   = `ORD-${order.order_number || order.id.slice(0, 7)}`;
       const frontendUrl    = process.env.FRONTEND_URL || 'http://localhost:5173';
-      const backendUrl     = process.env.BACKEND_URL  || 'http://localhost:3000';
+      const backendUrl     = process.env.BACKEND_URL  || 'https://premierbeautyclinic-production.up.railway.app';
       const ipnId          = await pesapal.getOrRegisterIPN(`${backendUrl}/pesapal/ipn`);
 
       const pesapalResult = await pesapal.submitOrder({
