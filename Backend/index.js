@@ -19,7 +19,21 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1); // trust first proxy so req.ip is the real client IP
-app.use(cors());
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL,                          // e.g. https://www.premierbeautyclinic.co.ke
+  'http://localhost:5173',                            // local dev (store)
+  'http://localhost:5174',                            // local dev (dashboard)
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow server-to-server requests (no origin) and whitelisted origins
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
