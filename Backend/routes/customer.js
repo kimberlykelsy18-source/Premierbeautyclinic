@@ -373,7 +373,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     if (sessionId) orderData.session_id = sessionId;
 
     // Create order
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await db
       .from('orders')
       .insert(orderData)
       .select()
@@ -384,9 +384,9 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       return res.status(500).json({ error: orderError?.message || 'Failed to create order' });
     }
 
-    await supabase.from('order_items').insert(orderItems.map(i => ({ ...i, order_id: order.id })));
+    await db.from('order_items').insert(orderItems.map(i => ({ ...i, order_id: order.id })));
 
-    const { data: payment } = await supabase
+    const { data: payment } = await db
       .from('payments')
       .insert({ order_id: order.id, amount: total, phone: normalizedPhone, status: 'pending' })
       .select()
@@ -397,7 +397,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       const stkResult = await initiateSTKPush(normalizedPhone, total, ordRef);
 
       if (payment) {
-        await supabase
+        await db
           .from('payments')
           .update({ checkout_request_id: stkResult.CheckoutRequestID })
           .eq('id', payment.id);
@@ -413,7 +413,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       const darajaError = error.response?.data;
       console.error('STK push failed:', darajaError || error.message);
       if (payment) {
-        await supabase.from('payments').update({ status: 'failed' }).eq('id', payment.id);
+        await db.from('payments').update({ status: 'failed' }).eq('id', payment.id);
       }
       const message = darajaError?.errorMessage || 'Failed to initiate M-Pesa payment. Please check your phone number and try again.';
       return res.status(502).json({ error: message });
