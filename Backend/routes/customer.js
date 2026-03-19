@@ -335,7 +335,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     const cart = await getOrCreateCart(userId, sessionId);
     if (!cart) return res.status(400).json({ error: 'Cart is empty' });
 
-    const { data: cartItems } = await supabase
+    const { data: cartItems } = await db
       .from('cart_items')
       .select('quantity, products(id, price)')
       .eq('cart_id', cart.id);
