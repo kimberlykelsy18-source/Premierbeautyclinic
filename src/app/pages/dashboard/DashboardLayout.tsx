@@ -11,7 +11,8 @@ export function DashboardLayout() {
   const { user, token, sessionId, authLoading, logout, updateUser } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen]           = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // ── Auth protection ──────────────────────────────────────────────────────
   // Wait for authLoading to finish before checking — prevents a false redirect
@@ -88,7 +89,7 @@ export function DashboardLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-[#F8F9FA] overflow-hidden">
+    <div className="flex h-screen bg-[#F8F9FA] overflow-hidden relative">
       {/* ── Forced Password Reset Overlay ───────────────────────────────── */}
       <AnimatePresence>
         {user.requiresPasswordReset && (
@@ -178,18 +179,43 @@ export function DashboardLayout() {
         )}
       </AnimatePresence>
 
+      {/* ── Mobile Sidebar Backdrop ──────────────────────────────────────── */}
+      <AnimatePresence>
+        {isMobileSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-[90] md:hidden"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
-      <aside className={`bg-[#1A1A1A] text-white flex flex-col transition-all duration-300 ${isSidebarOpen ? 'w-[280px]' : 'w-[80px]'}`}>
-        <div className="p-8 flex items-center justify-between">
-          <Link to="/staff" className={`overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'w-auto' : 'w-0 opacity-0'}`}>
+      <aside className={`
+        bg-[#1A1A1A] text-white flex flex-col transition-all duration-300
+        fixed inset-y-0 left-0 z-[95] md:relative md:z-auto
+        ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        ${isSidebarOpen ? 'w-[280px]' : 'md:w-[80px] w-[280px]'}
+      `}>
+        <div className="p-6 md:p-8 flex items-center justify-between">
+          <Link to="/staff" className={`overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'w-auto' : 'md:w-0 md:opacity-0 w-auto'}`}>
             <img src={logo} alt="Premier" className="h-10 brightness-0 invert" />
           </Link>
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-white/10 rounded-lg">
-            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Desktop collapse toggle */}
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:flex p-2 hover:bg-white/10 rounded-lg">
+              {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            {/* Mobile close button */}
+            <button onClick={() => setIsMobileSidebarOpen(false)} className="md:hidden p-2 hover:bg-white/10 rounded-lg">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        <nav className="flex-grow px-4 mt-8 space-y-2">
+        <nav className="flex-grow px-4 mt-4 md:mt-8 space-y-2">
           {navItems.map((item) => {
             const isActive    = location.pathname === item.path;
             const restricted  = isRestricted(item);
@@ -197,13 +223,12 @@ export function DashboardLayout() {
               <Link
                 key={item.path}
                 to={restricted ? '#' : item.path}
+                onClick={() => setIsMobileSidebarOpen(false)}
                 className={`flex items-center space-x-4 p-4 rounded-xl transition-all relative group ${isActive ? 'bg-[#6D4C91] text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'} ${restricted ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'group-hover:text-white'}`} />
-                {isSidebarOpen && (
-                  <span className="text-[14px] font-medium font-sans">{item.name}</span>
-                )}
-                {restricted && isSidebarOpen && (
+                <span className={`text-[14px] font-medium font-sans transition-all duration-300 ${isSidebarOpen ? 'md:block' : 'md:hidden'} block`}>{item.name}</span>
+                {restricted && (isSidebarOpen || true) && (
                   <Lock className="w-4 h-4 ml-auto text-amber-500" />
                 )}
               </Link>
@@ -217,7 +242,7 @@ export function DashboardLayout() {
             className="w-full flex items-center space-x-4 p-4 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"
           >
             <LogOut className="w-5 h-5 shrink-0" />
-            {isSidebarOpen && <span className="text-[14px] font-medium font-sans">Logout</span>}
+            <span className={`text-[14px] font-medium font-sans transition-all duration-300 ${isSidebarOpen ? 'md:block' : 'md:hidden'} block`}>Logout</span>
           </button>
         </div>
       </aside>
@@ -225,24 +250,32 @@ export function DashboardLayout() {
       {/* ── Main Content Area ────────────────────────────────────────────── */}
       <main className="flex-grow flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="h-[80px] bg-white border-b border-gray-100 flex items-center justify-between px-8 shrink-0">
-          <div className="flex items-center bg-[#F8F9FA] px-4 py-2 rounded-xl w-full max-w-md border border-gray-100">
+        <header className="h-[64px] md:h-[80px] bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-8 shrink-0 gap-4">
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setIsMobileSidebarOpen(true)}
+            className="md:hidden p-2 hover:bg-gray-50 rounded-lg transition-colors shrink-0"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <div className="hidden md:flex items-center bg-[#F8F9FA] px-4 py-2 rounded-xl w-full max-w-md border border-gray-100">
             <Search className="w-4 h-4 text-gray-400 mr-3" />
             <input placeholder="Search orders, appointments…" className="bg-transparent outline-none text-[14px] w-full" />
           </div>
 
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-3 md:space-x-6 ml-auto">
             <button className="relative p-2 text-gray-400 hover:text-black hover:bg-gray-50 rounded-lg transition-all">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
             </button>
-            <div className="h-8 w-[1px] bg-gray-100" />
-            <div className="flex items-center space-x-4">
+            <div className="h-8 w-[1px] bg-gray-100 hidden md:block" />
+            <div className="flex items-center space-x-3">
               <div className="text-right hidden sm:block">
                 <p className="text-[14px] font-bold leading-none mb-1">{user.name}</p>
                 <p className="text-[11px] text-gray-400 uppercase tracking-widest">{user.role}</p>
               </div>
-              <div className="w-10 h-10 bg-[#6D4C91]/10 rounded-xl flex items-center justify-center text-[#6D4C91] font-bold">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-[#6D4C91]/10 rounded-xl flex items-center justify-center text-[#6D4C91] font-bold shrink-0">
                 {user.name?.[0]?.toUpperCase() ?? 'S'}
               </div>
             </div>
@@ -250,7 +283,7 @@ export function DashboardLayout() {
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-grow overflow-y-auto p-8 bg-[#F8F9FA]">
+        <div className="flex-grow overflow-y-auto p-4 md:p-8 bg-[#F8F9FA]">
           <Outlet />
         </div>
       </main>
