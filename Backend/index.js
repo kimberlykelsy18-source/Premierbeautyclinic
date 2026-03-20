@@ -37,7 +37,22 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:  ["'self'"],
+      scriptSrc:   ["'self'", "'unsafe-inline'", "https://vercel.live", "https://www.googletagmanager.com"],
+      styleSrc:    ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc:     ["'self'", "https://fonts.gstatic.com"],
+      imgSrc:      ["'self'", "data:", "https:", "blob:"],
+      connectSrc:  ["'self'", process.env.BACKEND_URL, process.env.VITE_SUPABASE_URL, "https://maps.googleapis.com"],
+      frameSrc:    ["'self'", "https://pay.pesapal.com"],
+      objectSrc:   ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // needed for PesaPal iframe redirect
+}));
 app.use(morgan('dev'));
 
 // ── Rate limiters ────────────────────────────────────────────────────────────
