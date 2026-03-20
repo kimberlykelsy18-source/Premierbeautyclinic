@@ -1,10 +1,10 @@
 const express = require('express');
 const path    = require('path');
+const { Resend } = require('resend');
 const { createServiceClient } = require('../config/supabase');
 
 const serviceSupabase = createServiceClient();
-
-const LOGO_PATH = path.join(__dirname, '../../src/assets/logo.png');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Employee and admin-only flows
 module.exports = ({ supabase, authenticate, requireEmployeePermission, transporter }) => {
@@ -135,33 +135,23 @@ module.exports = ({ supabase, authenticate, requireEmployeePermission, transport
       is_temporary_password: true,
     });
 
-    // Send the single onboarding email with credentials
-    // ?portal=employee pre-selects the Employee tab so they don't land on the customer form
-    const loginUrl = `${process.env.DASHBOARD_URL || 'http://localhost:5174'}/login`;
-    await transporter.sendMail({
-      from: `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+    // Send the single onboarding email with credentials via Resend (HTTP-based — works on Railway)
+    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/staff/login`;
+    await resend.emails.send({
+      from: `Premier Beauty Clinic <onboarding@resend.dev>`,
       to: email,
       subject: 'Welcome to Premier Beauty Clinic — Your Login Details',
-      attachments: [{
-        filename: 'logo.png',
-        path: LOGO_PATH,
-        cid: 'premier_logo',
-      }],
       html: `
         <div style="font-family:sans-serif;max-width:520px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee">
-          <!-- Header -->
           <div style="background:#1A1A1A;padding:28px 32px;text-align:center">
-            <img src="cid:premier_logo" alt="Premier Beauty Clinic" style="height:48px;object-fit:contain" />
+            <h2 style="color:#fff;margin:0;font-size:20px;letter-spacing:1px">Premier Beauty Clinic</h2>
           </div>
-
-          <!-- Body -->
           <div style="padding:36px 32px">
             <h2 style="color:#1A1A1A;margin:0 0 8px">Welcome, ${name}!</h2>
             <p style="color:#555;margin:0 0 24px">
               You've been added to the Premier Beauty Clinic team as <strong style="color:#6D4C91">${role || 'staff'}</strong>.
               Here are your temporary login credentials:
             </p>
-
             <table style="background:#FDFBF7;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
               <tr>
                 <td style="padding:8px 12px;color:#888;font-size:13px;width:100px">Email</td>
@@ -174,19 +164,15 @@ module.exports = ({ supabase, authenticate, requireEmployeePermission, transport
                 </td>
               </tr>
             </table>
-
             <p style="margin:28px 0 20px;text-align:center">
               <a href="${loginUrl}" style="background:#6D4C91;color:white;padding:14px 36px;border-radius:30px;text-decoration:none;font-weight:bold;font-size:14px;display:inline-block">
                 Login to Dashboard →
               </a>
             </p>
-
             <p style="background:#fff8e1;border-left:4px solid #f59e0b;padding:12px 16px;border-radius:4px;color:#92400e;font-size:13px;margin:0">
               <strong>Important:</strong> You will be prompted to set a new password on your very first login. Keep these credentials safe until then.
             </p>
           </div>
-
-          <!-- Footer -->
           <div style="background:#FDFBF7;padding:20px 32px;text-align:center;border-top:1px solid #eee">
             <p style="color:#aaa;font-size:12px;margin:0">© ${new Date().getFullYear()} Premier Beauty Clinic · Nairobi, Kenya</p>
           </div>
