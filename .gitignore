@@ -1,10 +1,6 @@
 # ── Environment & Secrets ─────────────────────────────────────────────────────
 .env
 .env.*
-!.env.example
-Backend/.env
-Backend/.env.*
-!Backend/.env.example
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
 node_modules/

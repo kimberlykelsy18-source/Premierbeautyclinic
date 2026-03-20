@@ -1,8 +1,9 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 
 const { supabase, createServiceClient } = require('./config/supabase');
 const { transporter } = require('./config/email');
@@ -39,7 +40,35 @@ app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
 app.use(morgan('dev'));
 
-// Build shared middlewares
+// ── Rate limiters ────────────────────────────────────────────────────────────
+// Auth endpoints: max 10 attempts per 15 minutes per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Please try again in 15 minutes.' },
+});
+
+// Payment endpoints: max 5 STK pushes per minute per IP (prevents spam)
+const paymentLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many payment requests. Please wait a moment.' },
+});
+
+app.use('/auth/login',            authLimiter);
+app.use('/auth/signup',           authLimiter);
+app.use('/auth/forgot-password',  authLimiter);
+app.use('/employee/login',        authLimiter);
+app.use('/developer/',            authLimiter);
+app.use('/checkout/mpesa',        paymentLimiter);
+app.use('/checkout/card',         paymentLimiter);
+app.use('/api/mpesa/initiate',    paymentLimiter);
+
+// ── Build shared middlewares ──────────────────────────────────────────────────
 const { authenticate, authenticateOptional, requireEmployeePermission } = createAuthMiddleware(supabase, createServiceClient());
 
 // Register route modules

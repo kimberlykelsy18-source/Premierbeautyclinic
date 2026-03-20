@@ -55,7 +55,7 @@ module.exports = ({ supabase, authenticate, requireEmployeePermission, transport
 
     const { error } = await adminClient.auth.admin.generateLink({
       type: 'recovery',
-      email: 'seanzuri12@gmail.com'
+      email: req.user.email,
     });
 
     if (error) return res.status(400).json({ error: error.message });
