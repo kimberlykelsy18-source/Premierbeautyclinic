@@ -39,13 +39,15 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
-// Gmail transporter via Nodemailer
-// Uses the same Gmail App Password you have in Backend/.env
+// Gmail via OAuth2 — password auth is deprecated by Google
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: Deno.env.get('GMAIL_EMAIL'),
-    pass: Deno.env.get('GMAIL_PASSWORD'),
+    type:         'OAuth2',
+    user:         Deno.env.get('GMAIL_EMAIL'),
+    clientId:     Deno.env.get('GMAIL_CLIENT_ID'),
+    clientSecret: Deno.env.get('GMAIL_CLIENT_SECRET'),
+    refreshToken: Deno.env.get('GMAIL_REFRESH_TOKEN'),
   },
 });
 
