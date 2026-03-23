@@ -75,7 +75,7 @@ async function submitOrder({ merchantReference, amount, currency = 'KES', descri
     callback_url:     callbackUrl,
     cancellation_url: cancellationUrl,
     notification_id:  ipnId,
-    branch:           'Premier Beauty Clinic - Nairobi',
+    branch:           'PremierBeauty',
     billing_address:  billingAddress,
   }, { headers });
 
