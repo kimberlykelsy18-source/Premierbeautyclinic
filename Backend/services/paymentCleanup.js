@@ -10,10 +10,12 @@ async function runCleanup() {
   const mpesaCutoff = new Date(Date.now() - MPESA_TIMEOUT_MINUTES * 60 * 1000).toISOString();
   const cardCutoff  = new Date(Date.now() - CARD_TIMEOUT_MINUTES  * 60 * 1000).toISOString();
 
-  // Fetch all pending payments with their method so we can apply the right timeout
+  // PesaPal tracking IDs are UUIDs; M-Pesa checkout_request_ids are not
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   const { data: pendingPayments, error } = await db
     .from('payments')
-    .select('id, order_id, appointment_id, payment_method, created_at')
+    .select('id, order_id, appointment_id, payment_method, checkout_request_id, created_at')
     .eq('status', 'pending');
 
   if (error) {
@@ -23,11 +25,13 @@ async function runCleanup() {
 
   if (!pendingPayments || pendingPayments.length === 0) return;
 
-  // Apply per-method timeout
-  const stalePayments = pendingPayments.filter(p => {
-    if (p.payment_method === 'card') return p.created_at < cardCutoff;
-    return p.created_at < mpesaCutoff; // mpesa + anything else
-  });
+  // Detect card payments by payment_method column (if present) or UUID checkout_request_id
+  const isCard = p =>
+    p.payment_method === 'card' || UUID_RE.test(p.checkout_request_id || '');
+
+  const stalePayments = pendingPayments.filter(p =>
+    isCard(p) ? p.created_at < cardCutoff : p.created_at < mpesaCutoff
+  );
 
   if (stalePayments.length === 0) return;
 
@@ -36,9 +40,8 @@ async function runCleanup() {
   const staleIds = stalePayments.map(p => p.id);
   const orderIds = stalePayments.filter(p => p.order_id).map(p => p.order_id);
 
-  // Mark payments as failed with the correct reason per method
   for (const p of stalePayments) {
-    const failure_reason = p.payment_method === 'card'
+    const failure_reason = isCard(p)
       ? 'Card payment session expired — no confirmation received from PesaPal'
       : 'Network Timeout — no callback received from M-Pesa';
     await db.from('payments').update({ status: 'failed', failure_reason }).eq('id', p.id);
