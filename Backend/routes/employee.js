@@ -261,25 +261,20 @@ module.exports = ({ supabase, authenticate, requireEmployeePermission, transport
 
     if (dbError) return res.status(500).json({ error: dbError.message });
 
-    // ── Send welcome email ───────────────────────────────────────────────────
-    const dashboardUrl = `${process.env.DASHBOARD_URL || 'http://localhost:5174'}/login`;
+    // ── Send welcome email via Resend (HTTP-based — works on Railway) ───────────
+    const dashboardUrl = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/login`;
 
     try {
-      await transporter.sendMail({
-        from: `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+      await resend.emails.send({
+        from: 'Premier Beauty Clinic <onboarding@resend.dev>',
         to: email.trim(),
         subject: 'Premier Beauty Clinic — Your Admin Account is Ready',
-        attachments: [{
-          filename: 'logo.png',
-          path: LOGO_PATH,
-          cid: 'premier_logo',
-        }],
         html: `
           <div style="font-family:sans-serif;max-width:540px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee">
 
             <!-- Header -->
             <div style="background:#1A1A1A;padding:28px 32px;text-align:center">
-              <img src="cid:premier_logo" alt="Premier Beauty Clinic" style="height:48px;object-fit:contain" />
+              <p style="color:#fff;font-size:20px;font-weight:bold;margin:0">Premier Beauty Clinic</p>
             </div>
 
             <!-- Body -->
