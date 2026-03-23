@@ -173,18 +173,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setToken(savedToken);
         setUser(parsedUser);
 
-        // Refresh saved address from DB in background so it stays in sync
-        // across devices and sessions (localStorage is device-local).
+        // Refresh profile from DB in background so name, phone, and address
+        // stay in sync across devices and sessions (localStorage is device-local).
         apiFetch('/profile', {}, savedToken, null)
           .then((profile: any) => {
-            if (profile?.shipping_address) {
-              setUser(prev => {
-                if (!prev) return null;
-                const updated = { ...prev, savedAddress: profile.shipping_address };
-                localStorage.setItem(USER_KEY, JSON.stringify(updated));
-                return updated;
-              });
-            }
+            if (!profile) return;
+            setUser(prev => {
+              if (!prev) return null;
+              const updated = {
+                ...prev,
+                ...(profile.full_name  && { name:  profile.full_name }),
+                ...(profile.phone      && { phone: profile.phone }),
+                ...(profile.shipping_address && { savedAddress: profile.shipping_address }),
+              };
+              localStorage.setItem(USER_KEY, JSON.stringify(updated));
+              return updated;
+            });
           })
           .catch(() => {}); // silently ignore — localStorage value still used as fallback
       }
@@ -248,17 +252,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(USER_KEY, JSON.stringify(userData));
     loadCart(authToken, sessionId); // merge guest cart + load user cart
 
-    // Fetch saved address from DB and merge into user state
+    // Fetch full profile from DB and merge name, phone, address into user state
     apiFetch('/profile', {}, authToken, null)
       .then((profile: any) => {
-        if (profile?.shipping_address) {
-          setUser(prev => {
-            if (!prev) return null;
-            const updated = { ...prev, savedAddress: profile.shipping_address };
-            localStorage.setItem(USER_KEY, JSON.stringify(updated));
-            return updated;
-          });
-        }
+        if (!profile) return;
+        setUser(prev => {
+          if (!prev) return null;
+          const updated = {
+            ...prev,
+            ...(profile.full_name  && { name:  profile.full_name }),
+            ...(profile.phone      && { phone: profile.phone }),
+            ...(profile.shipping_address && { savedAddress: profile.shipping_address }),
+          };
+          localStorage.setItem(USER_KEY, JSON.stringify(updated));
+          return updated;
+        });
       })
       .catch(() => {});
   };
