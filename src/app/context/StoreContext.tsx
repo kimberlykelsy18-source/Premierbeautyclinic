@@ -39,6 +39,7 @@ export interface User {
     city: string;
     streetAddress: string;
     building?: string;
+    postalCode?: string;
     additionalInfo?: string;
   };
 }

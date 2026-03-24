@@ -143,6 +143,7 @@ export function Account() {
     city:           user?.savedAddress?.city           || '',
     streetAddress:  user?.savedAddress?.streetAddress  || '',
     building:       user?.savedAddress?.building       || '',
+    postalCode:     user?.savedAddress?.postalCode     || '',
     additionalInfo: user?.savedAddress?.additionalInfo || '',
   });
 
@@ -160,6 +161,7 @@ export function Account() {
         city:           user.savedAddress?.city           || '',
         streetAddress:  user.savedAddress?.streetAddress  || '',
         building:       user.savedAddress?.building       || '',
+        postalCode:     user.savedAddress?.postalCode     || '',
         additionalInfo: user.savedAddress?.additionalInfo || '',
       });
     }
@@ -253,6 +255,7 @@ export function Account() {
           city:           addressData.city,
           streetAddress:  addressData.streetAddress,
           building:       addressData.building,
+          postalCode:     addressData.postalCode,
           additionalInfo: addressData.additionalInfo,
         }
       });
@@ -512,7 +515,7 @@ export function Account() {
                         <div className="p-5 md:p-6 bg-gray-50 rounded-xl md:rounded-2xl space-y-1 text-[14px] md:text-[15px] text-gray-600">
                           <p className="font-bold text-gray-900">{user.savedAddress.streetAddress}</p>
                           {user.savedAddress.building && <p>{user.savedAddress.building}</p>}
-                          <p>{user.savedAddress.city}, {user.savedAddress.county}</p>
+                          <p>{user.savedAddress.city}, {user.savedAddress.county}{user.savedAddress.postalCode && ` ${user.savedAddress.postalCode}`}</p>
                           {user.savedAddress.additionalInfo && <p className="italic text-[13px]">{user.savedAddress.additionalInfo}</p>}
                         </div>
                       ) : (
@@ -542,6 +545,10 @@ export function Account() {
                         <div>
                           <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Building / Apt</label>
                           <input value={addressData.building} onChange={e => setAddressData({...addressData, building: e.target.value})} placeholder="e.g. Apt 5B" className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-[14px] md:text-[15px]" />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Postal Code</label>
+                          <input value={addressData.postalCode} onChange={e => setAddressData({...addressData, postalCode: e.target.value})} placeholder="e.g. 00100" className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-[14px] md:text-[15px]" />
                         </div>
                         <div className="flex gap-3">
                           <button onClick={() => setIsEditingAddress(false)} className="px-6 py-3 border border-gray-200 rounded-full font-bold uppercase tracking-widest text-[11px] hover:bg-gray-50 transition-all">Cancel</button>
