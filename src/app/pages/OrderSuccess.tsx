@@ -13,6 +13,7 @@ export function OrderSuccess() {
   const { clearCart, token, sessionId } = useStore();
   const [status, setStatus] = useState<PaymentStatus>('loading');
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const orderTrackingId = searchParams.get('OrderTrackingId');
   const merchantRef     = searchParams.get('OrderMerchantReference');
@@ -24,7 +25,7 @@ export function OrderSuccess() {
     }
 
     let attempts = 0;
-    const maxAttempts = 10; // Poll up to 10 times (30 seconds total)
+    const maxAttempts = 20; // Poll up to 20 times (60 seconds total)
 
     async function checkStatus() {
       try {
@@ -55,7 +56,7 @@ export function OrderSuccess() {
 
     checkStatus();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderTrackingId]);
+  }, [orderTrackingId, retryCount]);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex flex-col">
@@ -157,17 +158,17 @@ export function OrderSuccess() {
                 Please check <strong>My Orders</strong> in a few minutes or contact us.
               </p>
               <div className="space-y-3">
-                <Link
-                  to="/account"
+                <button
+                  onClick={() => { setStatus('loading'); setRetryCount(c => c + 1); }}
                   className="block w-full bg-[#6D4C91] text-white py-4 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all"
                 >
-                  View My Orders
-                </Link>
+                  Check Again
+                </button>
                 <Link
-                  to="/shop"
+                  to="/account"
                   className="block w-full border border-gray-200 py-4 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all"
                 >
-                  Continue Shopping
+                  View My Orders
                 </Link>
               </div>
             </>
