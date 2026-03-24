@@ -531,6 +531,7 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
   async function handlePesapalPayment(orderTrackingId) {
     const txStatus  = await pesapal.getTransactionStatus(orderTrackingId);
     const statusCode = txStatus.status_code;
+    console.log(`[PesaPal] getTransactionStatus for ${orderTrackingId}:`, JSON.stringify(txStatus));
 
     const { data: payment } = await adminDb
       .from('payments')
