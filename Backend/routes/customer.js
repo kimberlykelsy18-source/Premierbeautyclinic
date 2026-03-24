@@ -113,6 +113,14 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     const { email, password } = req.body;
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return res.status(400).json({ error: error.message });
+
+    // Block staff/admin from logging in via the customer portal
+    const db = createServiceClient();
+    const { data: employee } = await db.from('employees').select('id').eq('id', data.user.id).maybeSingle();
+    if (employee) {
+      return res.status(403).json({ error: 'Staff accounts must log in via the staff dashboard.' });
+    }
+
     res.json({ success: true, user: data.user, session: data.session });
   });
 
