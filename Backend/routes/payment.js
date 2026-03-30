@@ -1,5 +1,7 @@
-const express = require('express');
-const path    = require('path');
+const express     = require('express');
+const path        = require('path');
+const { Resend }  = require('resend');
+const resend      = new Resend(process.env.RESEND_API_KEY);
 
 // Converts a sequential number → short human-readable ID (A001…A999→B001…)
 function toShortId(prefix, n) {
@@ -529,6 +531,7 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
   async function handlePesapalPayment(orderTrackingId) {
     const txStatus  = await pesapal.getTransactionStatus(orderTrackingId);
     const statusCode = txStatus.status_code;
+    console.log(`[PesaPal] getTransactionStatus for ${orderTrackingId}:`, JSON.stringify(txStatus));
 
     const { data: payment } = await adminDb
       .from('payments')
@@ -578,18 +581,17 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
         }));
       }
 
-      // Send order confirmation email
+      // Send order confirmation email via Resend (HTTP — works on Railway)
       if (order?.customer_email) {
         const shortId = toShortOrderId(order.order_number);
-        transporter.sendMail({
-          from:        `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
-          to:          order.customer_email,
-          subject:     `Order Confirmed — ${shortId} · Premier Beauty Clinic`,
-          attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],
+        resend.emails.send({
+          from:    'Premier Beauty Clinic <onboarding@resend.dev>',
+          to:      order.customer_email,
+          subject: `Order Confirmed — ${shortId} · Premier Beauty Clinic`,
           html: `
             <div style="font-family:sans-serif;max-width:520px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee">
               <div style="background:#1A1A1A;padding:28px 32px;text-align:center">
-                <img src="cid:premier_logo" alt="Premier Beauty Clinic" style="height:48px;object-fit:contain" />
+                <p style="color:#fff;font-size:20px;font-weight:bold;margin:0">Premier Beauty Clinic</p>
               </div>
               <div style="background:#6D4C91;padding:24px 32px;text-align:center">
                 <p style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:2px;margin:0 0 6px">Order Confirmed</p>

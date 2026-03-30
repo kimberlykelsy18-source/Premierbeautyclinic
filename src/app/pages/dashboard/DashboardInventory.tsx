@@ -559,7 +559,7 @@ export function DashboardInventory() {
               />
             </div>
             {pendingImages.length > 0 && (
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                 {pendingImages.map((f, i) => (
                   <div key={i} className="relative aspect-square">
                     <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover rounded-xl border border-gray-100" />
@@ -697,7 +697,7 @@ export function DashboardInventory() {
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
               {(['All', 'In Stock', 'Low Stock', 'Out of Stock', 'Hidden'] as const).map(f => (
                 <button
                   key={f}
@@ -1010,7 +1010,7 @@ export function DashboardInventory() {
                 {editExistingImages.length > 0 && (
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Current Images</label>
-                    <div className="grid grid-cols-5 gap-3">
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                       {editExistingImages.map((url, i) => (
                         <div key={i} className="relative aspect-square">
                           <img src={url} alt="" className="w-full h-full object-cover rounded-xl border border-gray-100" />
@@ -1057,7 +1057,7 @@ export function DashboardInventory() {
                     </div>
                   )}
                   {editPendingImages.length > 0 && (
-                    <div className="grid grid-cols-5 gap-3">
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                       {editPendingImages.map((f, i) => (
                         <div key={i} className="relative aspect-square">
                           <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover rounded-xl border border-gray-100" />

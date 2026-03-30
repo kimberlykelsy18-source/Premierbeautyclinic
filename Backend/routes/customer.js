@@ -113,6 +113,14 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     const { email, password } = req.body;
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return res.status(400).json({ error: error.message });
+
+    // Block staff/admin from logging in via the customer portal
+    const db = createServiceClient();
+    const { data: employee } = await db.from('employees').select('id').eq('id', data.user.id).maybeSingle();
+    if (employee) {
+      return res.status(403).json({ error: 'Staff accounts must log in via the staff dashboard.' });
+    }
+
     res.json({ success: true, user: data.user, session: data.session });
   });
 
@@ -353,11 +361,10 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       orderItems.push({ product_id: item.products.id, quantity: item.quantity, price_at_time: price });
     });
 
-    // Use the shipping fee sent by the frontend (calculated from the county).
-    // Falls back to 5 if missing, but the frontend always sends it.
-    const shipping_fee = typeof req.body.shipping_fee === 'number'
-      ? Math.round(req.body.shipping_fee)
-      : 5;
+    // Validate shipping fee is a sane number (0–5000 KES).
+    // Admins can set custom rates so we allow any value in range rather than a fixed list.
+    const clientFee = typeof req.body.shipping_fee === 'number' ? Math.round(req.body.shipping_fee) : null;
+    const shipping_fee = (clientFee !== null && clientFee >= 0 && clientFee <= 5000) ? clientFee : 200;
     const total = subtotal + shipping_fee;
 
     const orderData = {

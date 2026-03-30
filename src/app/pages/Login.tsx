@@ -131,6 +131,7 @@ export function Login() {
           id: data.user.id,
           name: data.user.user_metadata?.full_name || data.user.email,
           email: data.user.email,
+          phone: data.user.user_metadata?.phone || '',
           role: 'customer',
         },
         data.session.access_token

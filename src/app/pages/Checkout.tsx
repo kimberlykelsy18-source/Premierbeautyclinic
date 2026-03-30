@@ -50,10 +50,11 @@ export function Checkout() {
         city: user.savedAddress?.city || '',
         streetAddress: user.savedAddress?.streetAddress || '',
         building: user.savedAddress?.building || '',
+        postalCode: user.savedAddress?.postalCode || '',
         additionalInfo: user.savedAddress?.additionalInfo || ''
       };
     }
-    
+
     return {
       firstName: '',
       lastName: '',
@@ -63,6 +64,7 @@ export function Checkout() {
       city: '',
       streetAddress: '',
       building: '',
+      postalCode: '',
       additionalInfo: ''
     };
   });
@@ -119,6 +121,7 @@ export function Checkout() {
             building: formData.building,
             city: formData.city,
             county: formData.county,
+            postalCode: formData.postalCode,
             additionalInfo: formData.additionalInfo,
           },
           session_id: sessionId,
@@ -147,6 +150,7 @@ export function Checkout() {
             city: formData.city,
             streetAddress: formData.streetAddress,
             building: formData.building,
+            postalCode: formData.postalCode,
             additionalInfo: formData.additionalInfo,
           };
           updateUser({
@@ -382,6 +386,16 @@ export function Checkout() {
                         </div>
 
                         <div>
+                          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Postal Code</label>
+                          <input
+                            value={formData.postalCode}
+                            onChange={(e) => setFormData({...formData, postalCode: e.target.value})}
+                            placeholder="e.g. 00100"
+                            className="w-full px-5 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px] md:text-[16px]"
+                          />
+                        </div>
+
+                        <div>
                           <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Additional Delivery Info</label>
                           <textarea 
                             value={formData.additionalInfo}
@@ -506,7 +520,7 @@ export function Checkout() {
                         <p>{formData.phone}</p>
                         <p>{formData.email}</p>
                         <p className="mt-3">{formData.streetAddress} {formData.building && `- ${formData.building}`}</p>
-                        <p>{formData.city}, {formData.county}</p>
+                        <p>{formData.city}, {formData.county}{formData.postalCode && ` ${formData.postalCode}`}</p>
                         {formData.additionalInfo && <p className="mt-2 text-[13px] italic">{formData.additionalInfo}</p>}
                       </div>
                     </div>

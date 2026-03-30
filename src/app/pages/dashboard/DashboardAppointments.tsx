@@ -684,7 +684,7 @@ export function DashboardAppointments() {
 
       {/* ── All Appointments (online + walk-ins unified) ── */}
       <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-10 pt-8 pb-6 border-b border-gray-50 space-y-4">
+        <div className="px-4 md:px-10 pt-8 pb-6 border-b border-gray-50 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-[18px] font-serif font-bold">All Appointments</h2>
@@ -711,7 +711,7 @@ export function DashboardAppointments() {
                 className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-full text-[13px] outline-none focus:ring-2 focus:ring-[#6D4C91]/20"
               />
             </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
               {(['All', 'Online', 'Walk-in', 'Active', 'Completed'] as const).map(f => (
                 <button
                   key={f}
@@ -735,7 +735,7 @@ export function DashboardAppointments() {
             <p className="text-[13px]">{searchTerm || statusFilter !== 'All' ? 'Try a different search or filter.' : 'Online bookings and walk-ins will appear here.'}</p>
           </div>
         ) : (
-          <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="p-4 md:p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {filteredBookings.map((booking) => {
               if (booking.kind === 'online') {
                 const apt             = booking.apt;

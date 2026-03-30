@@ -11,9 +11,15 @@ let _tokenExpiry  = 0;
 async function getToken() {
   if (_cachedToken && Date.now() < _tokenExpiry) return _cachedToken;
 
+  const key    = process.env.PESAPAL_CONSUMER_KEY    || '';
+  const secret = process.env.PESAPAL_CONSUMER_SECRET || '';
+  console.log('[PesaPal] ENV:', process.env.PESAPAL_ENV);
+  console.log('[PesaPal] KEY length:', key.length, '| first 6:', key.slice(0, 6));
+  console.log('[PesaPal] SECRET length:', secret.length, '| last 4:', secret.slice(-4));
+
   const { data } = await axios.post(`${BASE_URL}/api/Auth/RequestToken`, {
-    consumer_key:    process.env.PESAPAL_CONSUMER_KEY,
-    consumer_secret: process.env.PESAPAL_CONSUMER_SECRET,
+    consumer_key:    key,
+    consumer_secret: secret,
   }, {
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
   });
@@ -69,7 +75,7 @@ async function submitOrder({ merchantReference, amount, currency = 'KES', descri
     callback_url:     callbackUrl,
     cancellation_url: cancellationUrl,
     notification_id:  ipnId,
-    branch:           'Premier Beauty Clinic - Nairobi',
+    branch:           'PremierBeauty',
     billing_address:  billingAddress,
   }, { headers });
 

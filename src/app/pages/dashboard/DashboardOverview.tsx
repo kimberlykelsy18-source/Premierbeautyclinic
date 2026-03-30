@@ -197,13 +197,13 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-8 pb-12">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
-          <h1 className="text-[32px] font-serif font-bold italic mb-2">Operations Overview</h1>
-          <p className="text-gray-500">Welcome back. Here's what's happening at Premier Beauty Clinic today.</p>
+          <h1 className="text-[24px] md:text-[32px] font-serif font-bold italic mb-2">Operations Overview</h1>
+          <p className="text-gray-500 text-[14px] md:text-base">Welcome back. Here's what's happening at Premier Beauty Clinic today.</p>
         </div>
         {isAdmin && (
-          <button className="flex items-center space-x-2 bg-white border border-gray-200 px-6 py-3 rounded-xl text-[14px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm">
+          <button className="flex items-center space-x-2 bg-white border border-gray-200 px-4 md:px-6 py-3 rounded-xl text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm self-start sm:self-auto">
             <Download className="w-4 h-4" />
             <span>Export Report</span>
           </button>
@@ -269,7 +269,7 @@ export function DashboardOverview() {
             )}
           </div>
 
-          <div className="h-[400px]">
+          <div className="h-[220px] md:h-[400px]">
             {isAdmin && (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
