@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useStore } from '../context/StoreContext';
 import { Lock, Mail, ArrowRight, ShieldCheck, Eye, EyeOff, ArrowLeft, User, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
-import { ButtonWithLoading } from '../components/Loading';
 import { TermsModal } from '../components/TermsModal';
-import logo from '../../assets/logo.png';
 import { apiFetch } from '../lib/api';
 
 type ViewMode = 'signup' | 'login' | 'forgot-password';
@@ -178,19 +176,8 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] pt-[90px] md:pt-[120px] pb-16 md:pb-24">
-      <div className="max-w-md mx-auto px-4 md:px-6">
-        {/* Logo */}
-        <Link to="/" className="flex justify-center mb-6 md:mb-8">
-          <div className="bg-[#1A1A1A] rounded-full p-3 md:p-4 flex items-center justify-center">
-            <img
-              src={logo}
-              alt="Premier Beauty Clinic"
-              className="h-9 md:h-11 w-auto object-contain"
-            />
-          </div>
-        </Link>
-
+    <div className="min-h-screen bg-[#F2F1F8] pt-[90px] md:pt-[120px] pb-16">
+      <div className="max-w-md mx-auto px-4 md:px-6 py-8 md:py-12">
         <AnimatePresence mode="wait">
           {/* SIGNUP FORM */}
           {viewMode === 'signup' && (
@@ -202,6 +189,10 @@ export function Login() {
               onSubmit={handleSignup}
               className="space-y-5 md:space-y-6"
             >
+              <div className="mb-2">
+                <h1 className="text-[26px] md:text-[32px] font-serif font-bold leading-tight mb-1">Create Account</h1>
+                <p className="text-[13px] text-gray-500">Join Premier Beauty Clinic today.</p>
+              </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Full Name *</label>
                 <div className="relative">
@@ -279,14 +270,16 @@ export function Login() {
                 </div>
               </div>
 
-              <ButtonWithLoading
-                isLoading={isLoading}
+              <button
                 type="submit"
-                className="w-full bg-[#6D4C91] text-white py-5 rounded-full text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all flex items-center justify-center space-x-2 shadow-lg mt-8"
+                disabled={isLoading}
+                className="w-full bg-[#6D4C91] text-white py-3.5 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all flex items-center justify-center gap-2 mt-6 shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <span>Create Account</span>
-                <ArrowRight className="w-5 h-5" />
-              </ButtonWithLoading>
+                {isLoading
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <><span>Create Account</span><ArrowRight className="w-4 h-4 shrink-0" /></>
+                }
+              </button>
 
               <div className="text-center pt-4">
                 <p className="text-[13px] md:text-[14px] text-gray-500">
@@ -313,6 +306,10 @@ export function Login() {
               onSubmit={handleLogin}
               className="space-y-5 md:space-y-6"
             >
+              <div className="mb-2">
+                <h1 className="text-[26px] md:text-[32px] font-serif font-bold leading-tight mb-1">Welcome Back</h1>
+                <p className="text-[13px] text-gray-500">Sign in to your account.</p>
+              </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Email Address</label>
                 <div className="relative">
@@ -358,14 +355,16 @@ export function Login() {
                 </button>
               </div>
 
-              <ButtonWithLoading
-                isLoading={isLoading}
+              <button
                 type="submit"
-                className="w-full bg-[#1A1A1A] text-white py-5 rounded-full text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] transition-all flex items-center justify-center space-x-2 mt-6"
+                disabled={isLoading}
+                className="w-full bg-[#000000] text-white py-3.5 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <span>Sign In</span>
-                <ArrowRight className="w-5 h-5" />
-              </ButtonWithLoading>
+                {isLoading
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <><span>Sign In</span><ArrowRight className="w-4 h-4 shrink-0" /></>
+                }
+              </button>
 
               <div className="text-center pt-4">
                 <p className="text-[13px] md:text-[14px] text-gray-500">
@@ -392,6 +391,10 @@ export function Login() {
               onSubmit={handleForgotPassword}
               className="space-y-5 md:space-y-6"
             >
+              <div className="mb-2">
+                <h1 className="text-[26px] md:text-[32px] font-serif font-bold leading-tight mb-1">Reset Password</h1>
+                <p className="text-[13px] text-gray-500">Enter your email and we'll send a reset link.</p>
+              </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Email Address</label>
                 <div className="relative">
@@ -409,13 +412,16 @@ export function Login() {
                 </p>
               </div>
 
-              <ButtonWithLoading
-                isLoading={isLoading}
+              <button
                 type="submit"
-                className="w-full bg-[#6D4C91] text-white py-5 rounded-full text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all mt-6"
+                disabled={isLoading}
+                className="w-full bg-[#6D4C91] text-white py-3.5 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Send Reset Link
-              </ButtonWithLoading>
+                {isLoading
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <span>Send Reset Link</span>
+                }
+              </button>
 
               <div className="text-center pt-4">
                 <button

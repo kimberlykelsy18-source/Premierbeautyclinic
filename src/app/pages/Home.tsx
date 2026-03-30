@@ -45,7 +45,7 @@ export function Home() {
   }, []);
 
   return (
-    <div className="pt-[70px] md:pt-[100px]">
+    <div className="pt-[70px] md:pt-[100px] bg-[#F2F1F8]">
       {/* Hero Section */}
       <section className="relative h-[50vh] md:h-[75vh] lg:h-[85vh] flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
@@ -84,7 +84,7 @@ export function Home() {
       </section>
 
       {/* Feature Section */}
-      <section className="py-10 md:py-20 bg-white">
+      <section className="py-10 md:py-20 bg-[#F2F1F8]">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12">
             <div className="text-center group">
@@ -162,20 +162,20 @@ export function Home() {
                         </button>
                       </Link>
                       <div className="flex flex-col items-center text-center px-1">
-                        <p className="text-[9px] md:text-[11px] text-gray-400 uppercase tracking-widest mb-1 md:mb-2">
+                        <p className="font-eczar text-[9px] md:text-[11px] text-gray-400 uppercase tracking-widest mb-1 md:mb-2">
                           {product.categories?.name ?? ''}
                         </p>
-                        <h3 className="text-[12px] md:text-[16px] font-medium mb-1 group-hover:text-[#6D4C91] transition-colors leading-tight">
+                        <h3 className="font-alice text-[12px] md:text-[16px] mb-1 group-hover:text-[#6D4C91] transition-colors leading-tight">
                           {product.name}
                         </h3>
                         <div className="mb-1 md:mb-2">
                           {isLowStock ? (
-                            <span className="text-[8px] md:text-[10px] text-red-500 font-bold uppercase tracking-tighter">Low Stock</span>
+                            <span className="font-eczar text-[8px] md:text-[10px] text-red-500 font-bold uppercase tracking-tighter">Low Stock</span>
                           ) : (
-                            <span className="text-[8px] md:text-[10px] text-green-600 font-bold uppercase tracking-tighter">In Stock</span>
+                            <span className="font-eczar text-[8px] md:text-[10px] text-green-600 font-bold uppercase tracking-tighter">In Stock</span>
                           )}
                         </div>
-                        <p className="text-[13px] md:text-[15px] font-bold">{formatPrice(Number(product.price))}</p>
+                        <p className="font-serif text-[13px] md:text-[15px] font-bold">{formatPrice(Number(product.price))}</p>
                       </div>
                     </motion.div>
                   );

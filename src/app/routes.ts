@@ -22,6 +22,7 @@ import { DashboardAppointments } from "./pages/dashboard/DashboardAppointments";
 import { DashboardInventory } from "./pages/dashboard/DashboardInventory";
 import { DashboardCustomers } from "./pages/dashboard/DashboardCustomers";
 import { DashboardSettings } from "./pages/dashboard/DashboardSettings";
+import { DashboardShipping } from "./pages/dashboard/DashboardShipping";
 
 export const router = createBrowserRouter([
   // ── Staff / Admin portal (hidden route, shared only with staff) ──────────
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
       { path: "appointments",           Component: DashboardAppointments },
       { path: "inventory",              Component: DashboardInventory    },
       { path: "customers",              Component: DashboardCustomers    },
+      { path: "shipping",               Component: DashboardShipping     },
       { path: "settings",               Component: DashboardSettings     },
     ],
   },

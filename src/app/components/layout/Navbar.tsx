@@ -107,7 +107,7 @@ export function Navbar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       {/* Marquee Announcement Bar */}
-      <div className="bg-[#6D4C91] text-white py-2 overflow-hidden whitespace-nowrap border-b border-white/10">
+      <div className="bg-[#F2F1F8] text-[#1A1A1A] py-2 overflow-hidden whitespace-nowrap border-b border-gray-300">
         <motion.div 
           animate={{ x: ["100%", "-100%"] }}
           transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
@@ -123,11 +123,11 @@ export function Navbar() {
       </div>
 
       {/* Main Navbar */}
-      <nav className={`transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'bg-white/90 backdrop-blur-md py-3 md:py-4'}`}>
+      <nav className={`transition-all duration-300 bg-[#000000] ${isScrolled ? 'shadow-md py-2' : 'py-3 md:py-4'}`}>
         <div className="max-w-7xl mx-auto px-3 md:px-8 flex items-center justify-between">
           {/* Mobile Menu Toggle */}
-          <button 
-            className="md:hidden p-2 -ml-2 z-10"
+          <button
+            className="md:hidden p-2 -ml-2 z-10 text-white"
             onClick={() => setIsMobileMenuOpen(true)}
           >
             <Menu className="w-5 h-5" />
@@ -135,43 +135,41 @@ export function Navbar() {
 
           {/* Left Navigation (Desktop) */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/shop" className="text-[14px] font-medium hover:text-[#6D4C91] transition-colors uppercase tracking-wider">Shop</Link>
-            <div 
+            <Link to="/shop" className="text-[14px] font-medium text-white/80 hover:text-white transition-colors uppercase tracking-wider">Shop</Link>
+            <div
               className="relative group"
               onMouseEnter={() => setActiveMegaMenu('categories')}
               onMouseLeave={() => setActiveMegaMenu(null)}
             >
-              <button className="text-[14px] font-medium hover:text-[#6D4C91] transition-colors flex items-center space-x-1 uppercase tracking-wider">
+              <button className="text-[14px] font-medium text-white/80 hover:text-white transition-colors flex items-center space-x-1 uppercase tracking-wider">
                 <span>Collections</span>
                 <ChevronDown className="w-4 h-4" />
               </button>
             </div>
-            <Link to="/book" className="text-[14px] font-medium hover:text-[#6D4C91] transition-colors uppercase tracking-wider">Services</Link>
+            <Link to="/book" className="text-[14px] font-medium text-white/80 hover:text-white transition-colors uppercase tracking-wider">Services</Link>
           </div>
 
           {/* Logo */}
-          <Link to="/" className="md:absolute md:left-1/2 md:-translate-x-1/2 flex-shrink-0">
-            <div className="bg-[#1A1A1A] rounded-full p-2 md:p-3 flex items-center justify-center">
-              <img 
-                src={logo} 
-                alt="Premier Beauty Clinic" 
-                className="h-7 md:h-10 w-auto object-contain" 
-              />
-            </div>
+          <Link to="/" className="absolute left-1/2 -translate-x-1/2 flex-shrink-0">
+            <img
+              src={logo}
+              alt="Premier Beauty Clinic"
+              className="h-8 md:h-12 w-auto object-contain"
+            />
           </Link>
 
           {/* Right Navigation */}
           <div className="flex items-center space-x-1 md:space-x-6 z-10">
-            <button 
+            <button
               onClick={() => setIsSearchOpen(true)}
-              className="p-2 hover:text-[#6D4C91] transition-colors"
+              className="p-2 text-white/80 hover:text-white transition-colors"
             >
               <Search className="w-5 h-5 md:w-6 md:h-6" />
             </button>
-            <Link to={user ? "/account" : "/login"} className="p-2 hover:text-[#6D4C91] transition-colors hidden sm:block">
+            <Link to={user ? "/account" : "/login"} className="p-2 text-white/80 hover:text-white transition-colors hidden sm:block">
               <User className="w-5 h-5 md:w-6 md:h-6" />
             </Link>
-            <Link to="/cart" className="p-2 hover:text-[#6D4C91] transition-colors relative">
+            <Link to="/cart" className="p-2 text-white/80 hover:text-white transition-colors relative">
               <ShoppingBag className="w-5 h-5 md:w-6 md:h-6" />
               {cartCount > 0 && (
                 <span className="absolute top-0 right-0 bg-[#6D4C91] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
@@ -180,8 +178,8 @@ export function Navbar() {
               )}
             </Link>
             <div className="relative">
-              <button 
-                className="p-2 hover:text-[#6D4C91] transition-colors flex items-center space-x-1"
+              <button
+                className="p-2 text-white/80 hover:text-white transition-colors flex items-center space-x-1"
                 onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
               >
                 <Globe className="w-5 h-5 md:w-6 md:h-6" />
@@ -201,7 +199,7 @@ export function Navbar() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-lg z-50 w-64 max-h-80 overflow-y-auto"
+                      className="absolute top-full right-0 mt-2 bg-[#F2F1F8] border border-gray-200 rounded-2xl shadow-lg z-50 w-64 max-h-80 overflow-y-auto"
                     >
                       <div className="p-3">
                         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3 px-2">Select Currency</p>
@@ -243,7 +241,7 @@ export function Navbar() {
               exit={{ opacity: 0, y: 10 }}
               onMouseEnter={() => setActiveMegaMenu('categories')}
               onMouseLeave={() => setActiveMegaMenu(null)}
-              className="hidden md:block absolute top-full left-0 right-0 bg-white border-t border-gray-100 shadow-xl"
+              className="hidden md:block absolute top-full left-0 right-0 bg-[#F2F1F8] border-t border-gray-100 shadow-xl"
             >
               <div className="max-w-7xl mx-auto px-8 py-10 grid grid-cols-5 gap-8">
                 {CATEGORIES.map((cat) => (
@@ -289,9 +287,7 @@ export function Navbar() {
               <div className="p-6 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-8">
                   <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>
-                    <div className="bg-[#1A1A1A] rounded-full p-2 flex items-center justify-center">
-                      <img src={logo} alt="Logo" className="h-8 w-auto object-contain" />
-                    </div>
+                    <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
                   </Link>
                   <button onClick={() => setIsMobileMenuOpen(false)}>
                     <X className="w-6 h-6" />
@@ -431,9 +427,9 @@ export function Navbar() {
                               <div className="w-full h-full flex items-center justify-center text-gray-300 text-[12px]">No image</div>
                             )}
                           </div>
-                          <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">{product.categories?.name ?? ''}</p>
-                          <p className="text-[13px] md:text-[14px] font-medium group-hover:text-[#6D4C91] transition-colors line-clamp-2">{product.name}</p>
-                          <p className="text-[13px] font-bold mt-1">KES {Number(product.price).toLocaleString()}</p>
+                          <p className="font-eczar text-[10px] text-gray-400 uppercase tracking-widest mb-1">{product.categories?.name ?? ''}</p>
+                          <p className="font-alice text-[13px] md:text-[14px] group-hover:text-[#6D4C91] transition-colors line-clamp-2">{product.name}</p>
+                          <p className="font-serif text-[13px] font-bold mt-1">KES {Number(product.price).toLocaleString()}</p>
                         </Link>
                       ))}
                     </div>

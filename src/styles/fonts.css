@@ -1,0 +1,12 @@
+/* Google Fonts: Lora (headings/serif), Alice (product names), Eczar (labels/metadata) */
+
+@theme {
+  /* Override default font-serif to use Lora — a refined serif used for all italic headings */
+  --font-serif: 'Lora', Georgia, serif;
+
+  /* Alice — elegant serif for product card names */
+  --font-alice: 'Alice', serif;
+
+  /* Eczar — classic serif for small uppercase labels, categories, metadata */
+  --font-eczar: 'Eczar', serif;
+}

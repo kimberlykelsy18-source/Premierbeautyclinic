@@ -88,7 +88,7 @@ export function ProductDetail() {
   };
 
   return (
-    <div className="pt-[100px] md:pt-[140px] pb-16 md:pb-24">
+    <div className="pt-[100px] md:pt-[140px] pb-16 md:pb-24 bg-[#F2F1F8] min-h-screen">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         {/* Breadcrumbs */}
         <nav className="flex items-center space-x-2 text-[10px] md:text-[12px] uppercase tracking-widest text-gray-400 mb-6 md:mb-10">

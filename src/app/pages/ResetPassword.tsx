@@ -64,7 +64,7 @@ export function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] pt-[90px] md:pt-[120px] pb-16 md:pb-24 flex items-start justify-center">
+    <div className="min-h-screen bg-[#F2F1F8] pt-[90px] md:pt-[120px] pb-16 md:pb-24 flex items-start justify-center">
       <div className="w-full max-w-md px-4 md:px-6">
         {/* Logo */}
         <Link to="/" className="flex justify-center mb-6 md:mb-8">

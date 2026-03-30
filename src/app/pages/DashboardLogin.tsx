@@ -4,7 +4,6 @@ import { useStore } from '../context/StoreContext';
 import { Lock, Mail, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
-import { ButtonWithLoading } from '../components/Loading';
 import logo from '../../assets/logo.png';
 import { apiFetch } from '../lib/api';
 
@@ -84,30 +83,25 @@ export function DashboardLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-[#1A1A1A] rounded-full p-4 flex items-center justify-center">
+    <div className="min-h-screen bg-[#F2F1F8]">
+      {/* Dark Header with Logo + Portal Tabs */}
+      <div className="bg-[#000000] pb-5 pt-6">
+        <div className="max-w-md mx-auto px-6">
+          {/* Logo */}
+          <div className="flex justify-center mb-5">
             <img
               src={logo}
               alt="Premier Beauty Clinic"
-              className="h-11 w-auto object-contain brightness-0 invert"
+              className="h-10 md:h-12 w-auto object-contain"
             />
           </div>
-        </div>
 
-        {/* Portal Tabs */}
-        <div className="mb-6 space-y-3">
-          <div className="flex gap-2 p-1.5 bg-white rounded-xl shadow-sm border border-gray-100">
+          {/* Portal Tabs */}
+          <div className="flex gap-2 p-1.5 bg-white/10 rounded-xl border border-white/20 backdrop-blur-sm">
             <button
               onClick={() => switchPortal('employee')}
               className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all active:scale-95 ${
-                portalMode === 'employee' ? 'bg-[#1A1A1A] text-white' : 'text-gray-500 hover:text-gray-700'
+                portalMode === 'employee' ? 'bg-[#6D4C91] text-white' : 'text-white/60 hover:text-white'
               }`}
             >
               Employee
@@ -115,22 +109,25 @@ export function DashboardLogin() {
             <button
               onClick={() => switchPortal('admin')}
               className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all active:scale-95 ${
-                portalMode === 'admin' ? 'bg-[#6D4C91] text-white' : 'text-gray-500 hover:text-gray-700'
+                portalMode === 'admin' ? 'bg-[#6D4C91] text-white' : 'text-white/60 hover:text-white'
               }`}
             >
               Admin
             </button>
           </div>
+        </div>
+      </div>
 
-          {/* Context badge */}
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-[#1A1A1A] rounded-xl">
-            <ShieldCheck className="w-4 h-4 text-[#6D4C91] shrink-0" />
-            <p className="text-[11px] text-gray-300 font-bold uppercase tracking-widest">
-              {portalMode === 'admin'
-                ? 'Admin Dashboard Access — full permissions'
-                : 'Staff Dashboard Access — credentials sent by management'}
-            </p>
-          </div>
+      {/* Form Area */}
+      <div className="max-w-md mx-auto px-6 py-6 pb-10">
+        {/* Context badge */}
+        <div className="flex items-center gap-2 px-4 py-3 bg-[#000000] rounded-2xl mb-6">
+          <ShieldCheck className="w-4 h-4 text-[#6D4C91] shrink-0" />
+          <p className="text-[11px] text-white/60 font-bold uppercase tracking-widest">
+            {portalMode === 'admin'
+              ? 'Admin Dashboard — full permissions'
+              : 'Staff Dashboard — credentials sent by management'}
+          </p>
         </div>
 
         {/* Login Form */}
@@ -153,7 +150,7 @@ export function DashboardLogin() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-14 pr-5 py-4 rounded-2xl bg-white border border-gray-100 focus:border-[#6D4C91] outline-none transition-all text-[15px] shadow-sm"
+                  className="w-full pl-14 pr-5 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
                   placeholder={portalMode === 'admin' ? 'admin@premierbeauty.com' : 'staff@premierbeauty.com'}
                 />
               </div>
@@ -169,7 +166,7 @@ export function DashboardLogin() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-14 pr-14 py-4 rounded-2xl bg-white border border-gray-100 focus:border-[#6D4C91] outline-none transition-all text-[15px] shadow-sm"
+                  className="w-full pl-14 pr-14 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
                   placeholder="••••••••"
                 />
                 <button
@@ -182,27 +179,28 @@ export function DashboardLogin() {
               </div>
             </div>
 
-            <ButtonWithLoading
-              isLoading={isLoading}
+            <button
               type="submit"
-              className={`w-full text-white py-5 rounded-full text-[13px] font-bold uppercase tracking-widest transition-all flex items-center justify-center space-x-2 mt-2 ${
-                portalMode === 'admin'
-                  ? 'bg-[#6D4C91] hover:bg-[#5a3e79]'
-                  : 'bg-[#1A1A1A] hover:bg-[#6D4C91]'
-              }`}
+              disabled={isLoading}
+              className="w-full bg-[#000000] text-white py-3.5 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <span>
-                {portalMode === 'admin' ? 'Sign In as Admin' : 'Sign In as Employee'}
-              </span>
-              <ArrowRight className="w-5 h-5" />
-            </ButtonWithLoading>
+              {isLoading
+                ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : <>
+                    <span>{portalMode === 'admin' ? 'Sign In as Admin' : 'Sign In as Employee'}</span>
+                    <ArrowRight className="w-4 h-4 shrink-0" />
+                  </>
+              }
+            </button>
           </motion.form>
         </AnimatePresence>
 
-        <p className="text-center text-[12px] text-gray-400 mt-8">
-          Contact your admin if you need access or a password reset.
-        </p>
-      </motion.div>
+        <div className="mt-8 pt-8 border-t border-gray-200">
+          <p className="text-center text-[12px] text-gray-400">
+            Contact your admin if you need access or a password reset.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

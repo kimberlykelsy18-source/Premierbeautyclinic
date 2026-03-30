@@ -61,7 +61,7 @@ We may update this Privacy Policy from time to time. We will notify you of any c
   `;
 
   return (
-    <div className="min-h-screen pt-24 md:pt-32 pb-12 md:pb-20 px-4 md:px-8">
+    <div className="min-h-screen pt-24 md:pt-32 pb-12 md:pb-20 px-4 md:px-8 bg-[#F2F1F8]">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-[36px] md:text-[48px] lg:text-[64px] font-serif italic mb-6 md:mb-8 text-center">
           Privacy Policy

@@ -269,7 +269,7 @@ export function Book() {
   };
 
   return (
-    <div className="pt-[100px] md:pt-[140px] pb-16 md:pb-24 bg-[#FDFBF7] min-h-screen">
+    <div className="pt-[100px] md:pt-[140px] pb-16 md:pb-24 bg-[#F2F1F8] min-h-screen">
       <div className="max-w-4xl mx-auto px-4 md:px-6">
         {/* Progress Stepper */}
         <div className="flex justify-between items-center mb-10 md:mb-16 relative">

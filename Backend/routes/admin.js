@@ -590,6 +590,104 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     res.json({ created: inserted.length, errors, inserted });
   });
 
+  // ── Shipping Regions ──────────────────────────────────────────────────────
+  router.get('/admin/shipping-regions', authenticate, async (req, res) => {
+    const { data, error } = await adminDb.from('shipping_regions').select('*').order('country').order('county');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  });
+
+  router.post('/admin/shipping-regions', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
+    const { country, region, county, fee } = req.body;
+    if (!country || !region || !county || fee === undefined) {
+      return res.status(400).json({ error: 'country, region, county, and fee are required' });
+    }
+    if (Number(fee) < 0) return res.status(400).json({ error: 'fee cannot be negative' });
+    const { data, error } = await adminDb.from('shipping_regions').insert({
+      country: sanitize(country).slice(0, 100),
+      region:  sanitize(region).slice(0, 100),
+      county:  sanitize(county).slice(0, 100),
+      fee:     Number(fee),
+    }).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  router.patch('/admin/shipping-regions/:id', authenticate, requireEmployeePermission('manage_staff'), validateId, async (req, res) => {
+    const { fee, country, region, county } = req.body;
+    if (fee !== undefined && Number(fee) < 0) return res.status(400).json({ error: 'fee cannot be negative' });
+    const updates = {};
+    if (fee     !== undefined) updates.fee     = Number(fee);
+    if (country !== undefined) updates.country = sanitize(country).slice(0, 100);
+    if (region  !== undefined) updates.region  = sanitize(region).slice(0, 100);
+    if (county  !== undefined) updates.county  = sanitize(county).slice(0, 100);
+    const { data, error } = await adminDb.from('shipping_regions').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  router.delete('/admin/shipping-regions/:id', authenticate, requireEmployeePermission('manage_staff'), validateId, async (req, res) => {
+    const { error } = await adminDb.from('shipping_regions').delete().eq('id', req.params.id);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true });
+  });
+
+  // ── FAQs ──────────────────────────────────────────────────────────────────
+  router.get('/admin/faqs', authenticate, async (req, res) => {
+    const { data, error } = await adminDb.from('faqs').select('*').order('category').order('order_num');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  });
+
+  router.post('/admin/faqs', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
+    const { category, question, answer } = req.body;
+    if (!category || !question || !answer) return res.status(400).json({ error: 'category, question, and answer are required' });
+    const { data: last } = await adminDb.from('faqs').select('order_num').order('order_num', { ascending: false }).limit(1).single();
+    const { data, error } = await adminDb.from('faqs').insert({
+      category: sanitize(category).slice(0, 100),
+      question: sanitize(question).slice(0, 500),
+      answer:   sanitize(answer).slice(0, 3000),
+      order_num: (last?.order_num || 0) + 1,
+    }).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  router.patch('/admin/faqs/:id', authenticate, requireEmployeePermission('manage_staff'), validateId, async (req, res) => {
+    const { category, question, answer } = req.body;
+    const updates = {};
+    if (category) updates.category = sanitize(category).slice(0, 100);
+    if (question) updates.question = sanitize(question).slice(0, 500);
+    if (answer)   updates.answer   = sanitize(answer).slice(0, 3000);
+    const { data, error } = await adminDb.from('faqs').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  router.delete('/admin/faqs/:id', authenticate, requireEmployeePermission('manage_staff'), validateId, async (req, res) => {
+    const { error } = await adminDb.from('faqs').delete().eq('id', req.params.id);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true });
+  });
+
+  // ── Storefront Content ────────────────────────────────────────────────────
+  router.get('/admin/storefront-content', authenticate, async (req, res) => {
+    const { data, error } = await adminDb.from('storefront_content').select('*').eq('id', 1).single();
+    if (error && error.code !== 'PGRST116') return res.status(500).json({ error: error.message });
+    res.json(data || { marquee_items: [], hero: {}, features: [] });
+  });
+
+  router.patch('/admin/storefront-content', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
+    const { marquee_items, hero, features } = req.body;
+    const updates = { id: 1, updated_at: new Date().toISOString() };
+    if (marquee_items !== undefined) updates.marquee_items = marquee_items;
+    if (hero          !== undefined) updates.hero          = hero;
+    if (features      !== undefined) updates.features      = features;
+    const { error } = await adminDb.from('storefront_content').upsert(updates);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true });
+  });
+
   router.patch('/admin/settings', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
     const { clinic_name, support_email, currency, timezone, default_deposit_percentage } = req.body;
 

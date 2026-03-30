@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
-import { LayoutDashboard, ShoppingCart, CalendarDays, Box, Users, Settings, LogOut, Bell, Search, Menu, X, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, CalendarDays, Box, Users, Settings, LogOut, Bell, Search, Menu, X, Lock, Eye, EyeOff, ShieldCheck, Truck } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -59,7 +59,8 @@ export function DashboardLayout() {
     { name: 'Orders',       path: '/staff/orders',        icon: ShoppingCart    },
     { name: 'Appointments', path: '/staff/appointments',  icon: CalendarDays    },
     { name: 'Inventory',    path: '/staff/inventory',     icon: Box             },
-    { name: 'Customers',    path: '/staff/customers',     icon: Users,  permission: 'admin' },
+    { name: 'Customers',    path: '/staff/customers',     icon: Users,   permission: 'admin' },
+    { name: 'Shipping',     path: '/staff/shipping',      icon: Truck,   permission: 'admin' },
     { name: 'Settings',     path: '/staff/settings',      icon: Settings, permission: 'admin' },
   ];
 
@@ -74,9 +75,10 @@ export function DashboardLayout() {
   // ── Loading screen while auth restores ───────────────────────────────────
   if (authLoading) {
     return (
-      <div className="flex h-screen bg-[#F8F9FA] items-center justify-center">
+      <div className="flex h-screen bg-[#F2F1F8] items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#6D4C91] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <img src={logo} alt="Premier Beauty Clinic" className="h-12 w-auto mx-auto mb-6 opacity-60" />
+          <div className="w-10 h-10 border-4 border-[#6D4C91] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-[13px] font-bold uppercase tracking-widest text-gray-400">Loading Dashboard…</p>
         </div>
       </div>
@@ -89,7 +91,7 @@ export function DashboardLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-[#F8F9FA] overflow-hidden relative">
+    <div className="flex h-screen bg-[#F2F1F8] overflow-hidden relative">
       {/* ── Forced Password Reset Overlay ───────────────────────────────── */}
       <AnimatePresence>
         {user.requiresPasswordReset && (
@@ -103,7 +105,7 @@ export function DashboardLayout() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               className="bg-white w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl"
             >
-              <div className="p-8 border-b border-gray-100 bg-[#FDFBF7] text-center">
+              <div className="p-8 border-b border-gray-100 bg-[#F2F1F8] text-center">
                 <div className="w-16 h-16 bg-[#6D4C91]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <ShieldCheck className="w-8 h-8 text-[#6D4C91]" />
                 </div>
@@ -194,55 +196,82 @@ export function DashboardLayout() {
 
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <aside className={`
-        bg-[#1A1A1A] text-white flex flex-col transition-all duration-300
-        fixed inset-y-0 left-0 z-[95] md:relative md:z-auto
+        bg-[#0A0A0A] text-white flex flex-col transition-all duration-300
+        fixed inset-y-0 left-0 z-[95] md:relative md:z-auto border-r border-white/5
         ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        ${isSidebarOpen ? 'w-[280px]' : 'md:w-[80px] w-[280px]'}
+        ${isSidebarOpen ? 'w-[260px]' : 'md:w-[72px] w-[260px]'}
       `}>
-        <div className="p-6 md:p-8 flex items-center justify-between">
-          <Link to="/staff" className={`overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'w-auto' : 'md:w-0 md:opacity-0 w-auto'}`}>
-            <img src={logo} alt="Premier" className="h-10 brightness-0 invert" />
+        {/* Logo row */}
+        <div className="px-5 py-5 flex items-center justify-between border-b border-white/5">
+          <Link to="/staff" className={`overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'w-auto opacity-100' : 'md:w-0 md:opacity-0 w-auto opacity-100'}`}>
+            <img src={logo} alt="Premier" className="h-8" />
           </Link>
-          <div className="flex items-center gap-2">
-            {/* Desktop collapse toggle */}
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:flex p-2 hover:bg-white/10 rounded-lg">
-              {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          <div className="flex items-center gap-1">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:flex p-1.5 hover:bg-white/10 rounded-lg transition-colors">
+              {isSidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
-            {/* Mobile close button */}
-            <button onClick={() => setIsMobileSidebarOpen(false)} className="md:hidden p-2 hover:bg-white/10 rounded-lg">
-              <X className="w-5 h-5" />
+            <button onClick={() => setIsMobileSidebarOpen(false)} className="md:hidden p-1.5 hover:bg-white/10 rounded-lg transition-colors">
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        <nav className="flex-grow px-4 mt-4 md:mt-8 space-y-2">
+        {/* Nav */}
+        <nav className="flex-grow px-3 py-4 space-y-0.5 overflow-y-auto">
+          {isSidebarOpen && (
+            <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/20 px-3 pb-2 pt-1">Menu</p>
+          )}
           {navItems.map((item) => {
-            const isActive    = location.pathname === item.path;
-            const restricted  = isRestricted(item);
+            const isActive   = location.pathname === item.path;
+            const restricted = isRestricted(item);
             return (
               <Link
                 key={item.path}
                 to={restricted ? '#' : item.path}
                 onClick={() => setIsMobileSidebarOpen(false)}
-                className={`flex items-center space-x-4 p-4 rounded-xl transition-all relative group ${isActive ? 'bg-[#6D4C91] text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'} ${restricted ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative group
+                  ${isActive
+                    ? 'bg-[#6D4C91] text-white shadow-lg shadow-[#6D4C91]/20'
+                    : 'text-white/50 hover:bg-white/6 hover:text-white'}
+                  ${restricted ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
-                <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'group-hover:text-white'}`} />
-                <span className={`text-[14px] font-medium font-sans transition-all duration-300 ${isSidebarOpen ? 'md:block' : 'md:hidden'} block`}>{item.name}</span>
-                {restricted && (isSidebarOpen || true) && (
-                  <Lock className="w-4 h-4 ml-auto text-amber-500" />
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors
+                  ${isActive ? 'bg-white/20' : 'bg-white/5 group-hover:bg-white/10'}`}>
+                  <item.icon className="w-4 h-4" />
+                </div>
+                <span className={`text-[13px] font-semibold tracking-wide transition-all duration-300 ${isSidebarOpen ? 'md:block' : 'md:hidden'} block`}>
+                  {item.name}
+                </span>
+                {restricted && (
+                  <Lock className="w-3 h-3 ml-auto text-amber-500/70 shrink-0" />
+                )}
+                {isActive && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60 shrink-0" />
                 )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-white/10">
+        {/* User card + logout */}
+        <div className="px-3 py-3 border-t border-white/5 space-y-1">
+          <div className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 ${isSidebarOpen ? '' : 'md:justify-center'}`}>
+            <div className="w-8 h-8 rounded-lg bg-[#6D4C91] flex items-center justify-center text-white font-bold text-[13px] shrink-0">
+              {user.name?.[0]?.toUpperCase() ?? 'S'}
+            </div>
+            <div className={`min-w-0 transition-all duration-300 ${isSidebarOpen ? 'md:block' : 'md:hidden'} block`}>
+              <p className="text-[12px] font-bold text-white leading-none truncate">{user.name}</p>
+              <p className="text-[10px] text-white/40 uppercase tracking-widest mt-0.5">{user.role}</p>
+            </div>
+          </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center space-x-4 p-4 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-all ${isSidebarOpen ? '' : 'md:justify-center'}`}
           >
-            <LogOut className="w-5 h-5 shrink-0" />
-            <span className={`text-[14px] font-medium font-sans transition-all duration-300 ${isSidebarOpen ? 'md:block' : 'md:hidden'} block`}>Logout</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-white/5">
+              <LogOut className="w-4 h-4" />
+            </div>
+            <span className={`text-[13px] font-semibold transition-all duration-300 ${isSidebarOpen ? 'md:block' : 'md:hidden'} block`}>Logout</span>
           </button>
         </div>
       </aside>
@@ -250,32 +279,43 @@ export function DashboardLayout() {
       {/* ── Main Content Area ────────────────────────────────────────────── */}
       <main className="flex-grow flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="h-[64px] md:h-[80px] bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-8 shrink-0 gap-4">
-          {/* Mobile hamburger */}
-          <button
-            onClick={() => setIsMobileSidebarOpen(true)}
-            className="md:hidden p-2 hover:bg-gray-50 rounded-lg transition-colors shrink-0"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          <div className="hidden md:flex items-center bg-[#F8F9FA] px-4 py-2 rounded-xl w-full max-w-md border border-gray-100">
-            <Search className="w-4 h-4 text-gray-400 mr-3" />
-            <input placeholder="Search orders, appointments…" className="bg-transparent outline-none text-[14px] w-full" />
+        <header className="h-[60px] md:h-[68px] bg-[#0A0A0A] border-b border-white/5 flex items-center justify-between px-4 md:px-6 shrink-0 gap-4">
+          {/* Mobile: hamburger + logo */}
+          <div className="flex items-center gap-3 md:hidden">
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="p-2 text-white/60 hover:text-white transition-colors shrink-0"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <Link to="/staff">
+              <img src={logo} alt="Premier Beauty Clinic" className="h-7 w-auto" />
+            </Link>
           </div>
 
-          <div className="flex items-center space-x-3 md:space-x-6 ml-auto">
-            <button className="relative p-2 text-gray-400 hover:text-black hover:bg-gray-50 rounded-lg transition-all">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+          {/* Desktop: search bar */}
+          <div className="hidden md:flex items-center bg-white/6 border border-white/8 focus-within:border-[#6D4C91]/50 focus-within:bg-white/8 px-4 py-2.5 rounded-xl w-full max-w-xs transition-all gap-3">
+            <Search className="w-4 h-4 text-white/30 shrink-0" />
+            <input
+              placeholder="Search orders, appointments…"
+              className="bg-transparent outline-none text-[13px] text-white placeholder:text-white/25 w-full"
+            />
+            <span className="text-[10px] text-white/20 font-mono bg-white/8 px-1.5 py-0.5 rounded hidden lg:block shrink-0">⌘K</span>
+          </div>
+
+          {/* Right side */}
+          <div className="flex items-center gap-2 md:gap-3 ml-auto">
+            <button className="relative w-9 h-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/8 rounded-xl transition-all">
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
             </button>
-            <div className="h-8 w-[1px] bg-gray-100 hidden md:block" />
-            <div className="flex items-center space-x-3">
+            <div className="h-6 w-px bg-white/10 hidden md:block" />
+            <div className="flex items-center gap-2.5 pl-1">
               <div className="text-right hidden sm:block">
-                <p className="text-[14px] font-bold leading-none mb-1">{user.name}</p>
-                <p className="text-[11px] text-gray-400 uppercase tracking-widest">{user.role}</p>
+                <p className="text-[12px] font-bold text-white leading-none">{user.name}</p>
+                <p className="text-[9px] text-white/35 uppercase tracking-widest mt-0.5">{user.role}</p>
               </div>
-              <div className="w-9 h-9 md:w-10 md:h-10 bg-[#6D4C91]/10 rounded-xl flex items-center justify-center text-[#6D4C91] font-bold shrink-0">
+              <div className="w-8 h-8 bg-[#6D4C91] rounded-lg flex items-center justify-center text-white font-bold text-[12px] shrink-0">
                 {user.name?.[0]?.toUpperCase() ?? 'S'}
               </div>
             </div>
@@ -283,7 +323,7 @@ export function DashboardLayout() {
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-grow overflow-y-auto p-4 md:p-8 bg-[#F8F9FA]">
+        <div className="flex-grow overflow-y-auto p-4 md:p-8 bg-[#F2F1F8]">
           <Outlet />
         </div>
       </main>

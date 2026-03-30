@@ -59,7 +59,7 @@ export function OrderSuccess() {
   }, [orderTrackingId, retryCount]);
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] flex flex-col">
+    <div className="min-h-screen bg-[#F2F1F8] flex flex-col">
       {/* Mini Header */}
       <header className="py-6 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex justify-center">

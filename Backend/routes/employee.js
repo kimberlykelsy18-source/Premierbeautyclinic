@@ -346,5 +346,28 @@ module.exports = ({ supabase, authenticate, requireEmployeePermission, transport
     });
   });
 
+  // ── List all employees ────────────────────────────────────────────────────
+  router.get('/admin/employees', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
+    const { data, error } = await serviceSupabase
+      .from('employees')
+      .select('id, full_name, email, role, permissions, is_temporary_password, created_at')
+      .order('created_at', { ascending: false });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  });
+
+  // ── Remove employee access ────────────────────────────────────────────────
+  router.delete('/admin/employees/:id', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
+    const { id } = req.params;
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid ID format' });
+    if (id === req.user.id) return res.status(400).json({ error: 'You cannot remove your own account' });
+
+    await serviceSupabase.from('employees').delete().eq('id', id);
+    const adminClient = createServiceClient();
+    await adminClient.auth.admin.deleteUser(id);
+    res.json({ success: true });
+  });
+
   return router;
 };

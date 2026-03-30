@@ -160,7 +160,7 @@ export function Shop() {
   });
 
   return (
-    <div className="pt-[100px] md:pt-[140px] pb-16 md:pb-24">
+    <div className="pt-[100px] md:pt-[140px] pb-16 md:pb-24 bg-[#F2F1F8] min-h-screen">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         {/* Header */}
         <div className="mb-8 md:mb-12">
@@ -429,22 +429,22 @@ export function Shop() {
                       </Link>
 
                       <div className="flex flex-col px-1">
-                        <p className="text-[9px] md:text-[11px] text-gray-400 uppercase tracking-widest mb-1 md:mb-2">
+                        <p className="font-eczar text-[9px] md:text-[11px] text-gray-400 uppercase tracking-widest mb-1 md:mb-2">
                           {product.categories?.name ?? 'Product'}
                         </p>
                         <Link to={`/shop/${product.id}`}>
-                          <h3 className="text-[13px] md:text-[16px] font-medium mb-1 hover:text-[#6D4C91] transition-colors line-clamp-2">
+                          <h3 className="font-alice text-[13px] md:text-[16px] mb-1 hover:text-[#6D4C91] transition-colors line-clamp-2">
                             {product.name}
                           </h3>
                         </Link>
                         <div className="mb-1 md:mb-2">
                           {product.stock <= (product.low_stock_threshold ?? 5) ? (
-                            <span className="text-[8px] md:text-[10px] text-red-500 font-bold uppercase tracking-tighter">Low Stock</span>
+                            <span className="font-eczar text-[8px] md:text-[10px] text-red-500 font-bold uppercase tracking-tighter">Low Stock</span>
                           ) : (
-                            <span className="text-[8px] md:text-[10px] text-green-600 font-bold uppercase tracking-tighter">In Stock</span>
+                            <span className="font-eczar text-[8px] md:text-[10px] text-green-600 font-bold uppercase tracking-tighter">In Stock</span>
                           )}
                         </div>
-                        <p className="text-[14px] md:text-[15px] font-bold">{formatPrice(Number(product.price))}</p>
+                        <p className="font-serif text-[14px] md:text-[15px] font-bold">{formatPrice(Number(product.price))}</p>
                       </div>
                     </motion.div>
                   ))
@@ -541,7 +541,7 @@ export function Shop() {
                   </div>
                 </div>
 
-                <button onClick={() => setIsFilterMobileOpen(false)} className="w-full bg-[#1A1A1A] text-white py-5 rounded-full text-[14px] font-bold uppercase tracking-widest active:scale-[0.98] transition-transform">
+                <button onClick={() => setIsFilterMobileOpen(false)} className="w-full bg-[#000000] text-white py-5 rounded-full text-[14px] font-bold uppercase tracking-widest active:scale-[0.98] transition-transform">
                   Show {sortedProducts.length} Results
                 </button>
               </div>

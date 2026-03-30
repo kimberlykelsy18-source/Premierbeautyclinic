@@ -6,6 +6,7 @@ import { DashboardAppointments } from "./pages/dashboard/DashboardAppointments";
 import { DashboardInventory } from "./pages/dashboard/DashboardInventory";
 import { DashboardCustomers } from "./pages/dashboard/DashboardCustomers";
 import { DashboardSettings } from "./pages/dashboard/DashboardSettings";
+import { DashboardShipping } from "./pages/dashboard/DashboardShipping";
 import { DashboardLogin } from "./pages/DashboardLogin";
 import { NotFound } from "./pages/NotFound";
 
@@ -23,6 +24,7 @@ export const dashboardRouter = createBrowserRouter([
       { path: "appointments",      Component: DashboardAppointments },
       { path: "inventory",         Component: DashboardInventory    },
       { path: "customers",         Component: DashboardCustomers    },
+      { path: "shipping",          Component: DashboardShipping     },
       { path: "settings",          Component: DashboardSettings     },
     ],
   },

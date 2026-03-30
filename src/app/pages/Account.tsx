@@ -329,7 +329,7 @@ export function Account() {
   ];
 
   return (
-    <div className="pt-[100px] md:pt-[140px] pb-16 md:pb-24 min-h-screen bg-[#FDFBF7]">
+    <div className="pt-[100px] md:pt-[140px] pb-16 md:pb-24 min-h-screen bg-[#F2F1F8]">
       <div className="max-w-6xl mx-auto px-4 md:px-8">
         <div className="flex flex-col lg:flex-row gap-8 md:gap-12">
 

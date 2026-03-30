@@ -244,7 +244,7 @@ export function Checkout() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F2F1F8]">
       {/* Mini Header */}
       <header className="py-6 md:py-8 border-b border-gray-100 mb-8 md:mb-12">
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex justify-between items-center">
