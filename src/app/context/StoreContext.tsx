@@ -147,6 +147,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [isSearchOpen, setIsSearchOpen]         = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(CURRENCIES[0]);
   const [shippingRegions, setShippingRegions]   = useState<ShippingRegion[]>(DEFAULT_SHIPPING_REGIONS);
+
+  // ── Load live shipping regions from DB ──
+  useEffect(() => {
+    apiFetch('/shipping-regions')
+      .then((data: ShippingRegion[]) => { if (data?.length) setShippingRegions(data); })
+      .catch(() => { /* silently fall back to DEFAULT_SHIPPING_REGIONS */ });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [isFirstTimeUser, setIsFirstTimeUser]   = useState(true);
 
   // ── Guest session ID ──

@@ -332,8 +332,9 @@ export function DashboardSettings() {
 
   // ── Role badge color ──────────────────────────────────────────────────────────
   const roleBadge = (role: string) => {
-    if (role === 'admin')   return 'bg-[#6D4C91]/10 text-[#6D4C91]';
-    if (role === 'finance') return 'bg-blue-50 text-blue-600';
+    if (role === 'admin')        return 'bg-[#6D4C91]/10 text-[#6D4C91]';
+    if (role === 'finance')      return 'bg-blue-50 text-blue-600';
+    if (role === 'practitioner') return 'bg-pink-50 text-pink-600';
     return 'bg-gray-100 text-gray-600';
   };
 
@@ -535,7 +536,8 @@ export function DashboardSettings() {
                     <select value={inviteForm.role} onChange={e => setInviteForm({...inviteForm, role: e.target.value, permissions: []})}
                       className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]">
                       <option value="staff">Staff — custom permissions</option>
-                      <option value="finance">Finance — accounts & reporting</option>
+                      <option value="practitioner">Practitioner — beauty &amp; clinical services</option>
+                      <option value="finance">Finance — accounts &amp; reporting</option>
                       <option value="admin">Admin — full access</option>
                     </select>
                   </div>

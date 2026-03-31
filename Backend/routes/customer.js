@@ -786,6 +786,17 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     res.json(data || []);
   });
 
+  // Public: shipping regions (used at checkout to show delivery options)
+  router.get('/shipping-regions', async (_req, res) => {
+    const { data, error } = await db
+      .from('shipping_regions')
+      .select('id, country, region, county, fee')
+      .order('country')
+      .order('county');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  });
+
   router.get('/appointments', authenticate, async (req, res) => {
     // Use service client so the payments join isn't blocked by RLS
     const { data, error } = await db
