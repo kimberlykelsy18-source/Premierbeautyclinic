@@ -46,21 +46,34 @@ async function authHeaders(traceId) {
 }
 
 // ── Encryption ───────────────────────────────────────────────────────────────
-// Flutterwave V4 uses AES-256-GCM.
-//   Key  = SHA-256(FLW_CLIENT_SECRET)  → 32 bytes
-//   IV   = nonce (12 ASCII chars = 12 bytes, standard AES-GCM nonce length)
-//   Output = base64(ciphertext + 16-byte authTag)
+// Attempt: AES-256-GCM, key = raw FLW_CLIENT_SECRET bytes (32 chars = 32 bytes), IV = nonce (12 bytes)
 function generateNonce() {
-  return crypto.randomBytes(6).toString('hex'); // exactly 12 hex chars — Flutterwave V4 requirement
+  return crypto.randomBytes(6).toString('hex'); // exactly 12 hex chars
 }
 
 function encryptField(value, nonce) {
-  const key    = crypto.createHash('sha256').update(process.env.FLW_CLIENT_SECRET).digest();
-  const iv     = Buffer.from(nonce, 'utf8'); // 12 chars → 12 bytes
+  const secret = process.env.FLW_CLIENT_SECRET || '';
+  // Use raw client secret bytes directly (no hash) — it's exactly 32 chars = 32 bytes for AES-256
+  const key    = Buffer.from(secret.slice(0, 32).padEnd(32, '0'), 'utf8');
+  const iv     = Buffer.from(nonce, 'utf8'); // 12 bytes — standard AES-GCM nonce
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   const encrypted = Buffer.concat([cipher.update(String(value), 'utf8'), cipher.final()]);
-  const authTag   = cipher.getAuthTag(); // 16 bytes
+  const authTag   = cipher.getAuthTag();
   return Buffer.concat([encrypted, authTag]).toString('base64');
+}
+
+// Probe Flutterwave for an encryption key endpoint (run once on startup to discover the right key)
+async function probeEncryptionKey() {
+  const endpoints = ['/encryption-keys', '/encryption-key', '/public-key', '/settings/encryption'];
+  for (const ep of endpoints) {
+    try {
+      const headers = await authHeaders(`probe-${Date.now()}`);
+      const { data } = await axios.get(`${apiBase()}${ep}`, { headers });
+      console.log(`[FLW PROBE] ${ep}:`, JSON.stringify(data, null, 2));
+    } catch (err) {
+      console.log(`[FLW PROBE] ${ep}: ${err.response?.status} — ${err.response?.data?.error?.message || err.message}`);
+    }
+  }
 }
 
 // ── Step 1: Create customer (or fetch existing) ───────────────────────────────
@@ -208,4 +221,4 @@ async function getCharge(chargeId) {
   return data.data;
 }
 
-module.exports = { createCustomer, createPaymentMethod, createCharge, updateCharge, getCharge };
+module.exports = { createCustomer, createPaymentMethod, createCharge, updateCharge, getCharge, probeEncryptionKey };

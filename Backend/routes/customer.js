@@ -431,8 +431,10 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
   // Receives raw card details, creates order in DB, runs V4 flow:
   //   createCustomer → createPaymentMethod → createCharge
   // Returns next_action so frontend can handle 3DS / PIN / OTP
+  let _flwProbed = false;
   router.post('/checkout/card', authenticateOptional, async (req, res) => {
     const flw       = require('../services/flutterwave');
+    if (!_flwProbed) { _flwProbed = true; flw.probeEncryptionKey().catch(() => {}); }
     const userId    = req.user?.id;
     const sessionId = req.body.session_id || req.headers['x-session-id'];
     const { shipping_address, customer_email, billing, card } = req.body;
