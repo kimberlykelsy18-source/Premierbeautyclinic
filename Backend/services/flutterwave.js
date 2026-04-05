@@ -48,7 +48,7 @@ async function authHeaders(traceId) {
 // ── Encryption ───────────────────────────────────────────────────────────────
 // Flutterwave V4 uses AES-256-ECB: nonce is the 32-byte key, fields are base64 output.
 function generateNonce() {
-  return crypto.randomBytes(16).toString('hex'); // 32 hex chars = 32 bytes
+  return crypto.randomBytes(6).toString('hex'); // exactly 12 hex chars — Flutterwave V4 requirement
 }
 
 function encryptField(value, nonce) {
