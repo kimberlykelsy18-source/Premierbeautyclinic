@@ -208,7 +208,7 @@ export function Checkout() {
         }),
       }, token, sessionId);
 
-      // Redirect the browser to PesaPal's hosted payment page
+      // Redirect the browser to Flutterwave's hosted card payment page
       window.location.href = data.redirect_url;
     } catch (err: any) {
       showFeedback('error', 'Card Payment Failed', err.message || 'Failed to initiate card payment. Please try again.');
@@ -466,7 +466,7 @@ export function Checkout() {
                       {paymentMethod === 'card' && <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6 text-[#6D4C91] flex-shrink-0" />}
                     </button>
 
-                    {/* PesaPal redirect notice */}
+                    {/* Flutterwave redirect notice */}
                     {paymentMethod === 'card' && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
@@ -476,9 +476,9 @@ export function Checkout() {
                         <div className="flex items-start space-x-3 p-4 md:p-5 bg-blue-50 rounded-xl md:rounded-2xl border border-blue-100">
                           <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                           <div>
-                            <p className="text-[13px] md:text-[14px] font-bold text-blue-900 mb-1">Secure Hosted Payment</p>
+                            <p className="text-[13px] md:text-[14px] font-bold text-blue-900 mb-1">Secure Card Payment</p>
                             <p className="text-[12px] md:text-[13px] text-blue-700">
-                              You'll be redirected to PesaPal's secure payment page to enter your card details. We never store your card information.
+                              You'll be redirected to Flutterwave's secure card payment page. We never store your card information.
                             </p>
                           </div>
                         </div>
@@ -611,10 +611,10 @@ export function Checkout() {
                               <circle cx="20" cy="16" r="8" fill="#FF5F00" />
                               <circle cx="28" cy="16" r="8" fill="#F79E1B" />
                             </svg>
-                            <span className="text-[15px] md:text-[16px] font-bold">Card via PesaPal</span>
+                            <span className="text-[15px] md:text-[16px] font-bold">Card via Flutterwave</span>
                           </div>
                           <p className="text-[12px] md:text-[13px] text-gray-500">
-                            Clicking "Pay" will redirect you to PesaPal's secure checkout page to complete your card payment.
+                            Clicking "Pay" will redirect you to Flutterwave's secure card checkout page to complete your payment.
                           </p>
                         </div>
                       )}

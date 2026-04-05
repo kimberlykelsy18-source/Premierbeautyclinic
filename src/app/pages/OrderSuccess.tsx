@@ -6,57 +6,58 @@ import { useStore } from '../context/StoreContext';
 import { apiFetch } from '../lib/api';
 import logo from '../../assets/logo.png';
 
-type PaymentStatus = 'loading' | 'completed' | 'failed' | 'reversed' | 'pending' | 'not_found' | 'error';
+type PaymentStatus = 'loading' | 'completed' | 'failed' | 'cancelled' | 'not_found' | 'error';
 
 export function OrderSuccess() {
   const [searchParams] = useSearchParams();
   const { clearCart, token, sessionId } = useStore();
   const [status, setStatus] = useState<PaymentStatus>('loading');
-  const [orderId, setOrderId] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  const orderTrackingId = searchParams.get('OrderTrackingId');
-  const merchantRef     = searchParams.get('OrderMerchantReference');
+  // Flutterwave appends these to the redirect URL after the customer pays:
+  // ?status=successful&tx_ref=ORD-A001&transaction_id=12345
+  const flwStatus      = searchParams.get('status');        // 'successful' | 'cancelled' | 'failed'
+  const txRef          = searchParams.get('tx_ref');        // our short order ID e.g. ORD-A001
+  const transactionId  = searchParams.get('transaction_id'); // Flutterwave numeric transaction ID
 
   useEffect(() => {
-    if (!orderTrackingId) {
+    // Customer cancelled on Flutterwave's page — no API call needed
+    if (flwStatus === 'cancelled') {
+      setStatus('cancelled');
+      return;
+    }
+
+    // No transaction_id means Flutterwave didn't redirect here properly
+    if (!transactionId || !txRef) {
       setStatus('error');
       return;
     }
 
-    let attempts = 0;
-    const maxAttempts = 20; // Poll up to 20 times (60 seconds total)
-
-    async function checkStatus() {
+    async function verify() {
       try {
-        const data = await apiFetch(`/pesapal/status/${orderTrackingId}`, {}, token, sessionId);
+        const data = await apiFetch(
+          `/flutterwave/verify?transaction_id=${transactionId}&tx_ref=${encodeURIComponent(txRef!)}&status=${flwStatus || ''}`,
+          {},
+          token,
+          sessionId
+        );
 
         if (data.status === 'completed') {
-          setOrderId(data.order_id || null);
-          setStatus('completed');
           clearCart();
-        } else if (data.status === 'failed') {
-          setStatus('failed');
-        } else if (data.status === 'reversed') {
-          setStatus('reversed');
-        } else if (data.status === 'not_found') {
-          setStatus('not_found');
-        } else if (data.status === 'pending' && attempts < maxAttempts) {
-          // PesaPal may still be processing — retry after 3 seconds
-          attempts++;
-          setTimeout(checkStatus, 3000);
+          setStatus('completed');
+        } else if (data.status === 'cancelled') {
+          setStatus('cancelled');
         } else {
-          // Timed out waiting
-          setStatus('pending');
+          setStatus('failed');
         }
       } catch {
         setStatus('error');
       }
     }
 
-    checkStatus();
+    verify();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderTrackingId, retryCount]);
+  }, [flwStatus, transactionId, txRef, retryCount]);
 
   return (
     <div className="min-h-screen bg-[#F2F1F8] flex flex-col">
@@ -83,7 +84,7 @@ export function OrderSuccess() {
                 <Loader2 className="w-16 h-16 text-[#6D4C91] animate-spin" />
               </div>
               <h1 className="text-[24px] md:text-[28px] font-serif italic mb-3">Confirming your payment…</h1>
-              <p className="text-[14px] text-gray-500">Please wait while we verify your payment with PesaPal.</p>
+              <p className="text-[14px] text-gray-500">Please wait while we verify your card payment.</p>
             </>
           )}
 
@@ -93,8 +94,8 @@ export function OrderSuccess() {
                 <CheckCircle2 className="w-16 h-16 text-green-500" />
               </div>
               <h1 className="text-[24px] md:text-[28px] font-serif italic mb-3 text-green-800">Payment Successful!</h1>
-              {merchantRef && (
-                <p className="text-[13px] font-bold text-[#6D4C91] uppercase tracking-widest mb-3">{merchantRef}</p>
+              {txRef && (
+                <p className="text-[13px] font-bold text-[#6D4C91] uppercase tracking-widest mb-3">{txRef}</p>
               )}
               <p className="text-[14px] text-gray-600 mb-8">
                 Your order has been confirmed. A receipt has been sent to your email address.
@@ -117,18 +118,18 @@ export function OrderSuccess() {
             </>
           )}
 
-          {(status === 'failed' || status === 'reversed') && (
+          {(status === 'failed' || status === 'cancelled') && (
             <>
               <div className="flex justify-center mb-6">
                 <XCircle className="w-16 h-16 text-red-400" />
               </div>
               <h1 className="text-[24px] md:text-[28px] font-serif italic mb-3 text-red-700">
-                {status === 'reversed' ? 'Payment Reversed' : 'Payment Failed'}
+                {status === 'cancelled' ? 'Payment Cancelled' : 'Payment Failed'}
               </h1>
               <p className="text-[14px] text-gray-600 mb-8">
-                {status === 'reversed'
-                  ? 'Your payment was reversed. No charge was made. Please try again.'
-                  : 'Your card payment was declined or cancelled. Please try again with a different card.'}
+                {status === 'cancelled'
+                  ? 'You cancelled the payment. No charge was made. You can try again whenever you\'re ready.'
+                  : 'Your card payment was declined or could not be processed. Please try again with a different card.'}
               </p>
               <div className="space-y-3">
                 <Link
@@ -147,14 +148,14 @@ export function OrderSuccess() {
             </>
           )}
 
-          {(status === 'pending' || status === 'not_found' || status === 'error') && (
+          {(status === 'not_found' || status === 'error') && (
             <>
               <div className="flex justify-center mb-6">
                 <Loader2 className="w-16 h-16 text-yellow-500" />
               </div>
               <h1 className="text-[24px] md:text-[28px] font-serif italic mb-3 text-yellow-800">Payment Pending</h1>
               <p className="text-[14px] text-gray-600 mb-8">
-                We couldn't confirm your payment status yet. If you were charged, your order will be updated automatically.
+                We couldn't confirm your payment status. If you were charged, your order will be updated automatically.
                 Please check <strong>My Orders</strong> in a few minutes or contact us.
               </p>
               <div className="space-y-3">

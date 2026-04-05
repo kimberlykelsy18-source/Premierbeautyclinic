@@ -57,10 +57,6 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
     next();
   };
 
-  // UUID format guard — prevents arbitrary strings reaching external APIs
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const isValidUUID = id => UUID_RE.test(id);
-
   const formatShippingAddress = address => {
     if (!address) return 'Address not provided';
     if (typeof address === 'string') return address;
@@ -461,92 +457,96 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
     res.json({ success: true });
   });
 
-  const pesapal = require('../services/pesapal');
+  const flutterwave = require('../services/flutterwave');
 
-  // PesaPal IPN — PesaPal calls this (GET) when a payment status changes (production only)
-  router.get('/pesapal/ipn', async (req, res) => {
-    const { OrderTrackingId } = req.query;
-    console.log('PesaPal IPN received:', req.query);
-
-    // Reject malformed or missing IDs before hitting the external API
-    if (!OrderTrackingId || !isValidUUID(OrderTrackingId)) {
-      return res.json({ success: true });
+  // Flutterwave Webhook — Flutterwave POSTs here when a card payment completes (production reliability)
+  router.post('/flutterwave/webhook', async (req, res) => {
+    // Verify the webhook is genuinely from Flutterwave
+    const receivedHash = req.headers['verif-hash'];
+    const expectedHash = process.env.FLW_WEBHOOK_HASH;
+    if (!receivedHash || !expectedHash || receivedHash !== expectedHash) {
+      console.warn('[Flutterwave webhook] Invalid verif-hash — rejected');
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Only process if this tracking ID is actually in our DB (prevents replay abuse)
-    const { data: knownPayment } = await adminDb
-      .from('payments')
-      .select('id')
-      .eq('checkout_request_id', OrderTrackingId)
-      .maybeSingle();
+    const { event, data } = req.body;
+    console.log('[Flutterwave webhook] event:', event, '| tx_ref:', data?.tx_ref, '| status:', data?.status);
 
-    if (!knownPayment) {
-      console.warn(`[PesaPal IPN] Unknown OrderTrackingId: ${OrderTrackingId}`);
-      return res.json({ success: true });
-    }
+    if (event !== 'charge.completed') return res.json({ success: true });
+
+    const { status, tx_ref, id: transactionId } = data;
 
     try {
-      await handlePesapalPayment(OrderTrackingId);
+      if (status === 'successful') {
+        await handleFlutterwavePayment(transactionId, tx_ref, data);
+      } else {
+        // Failed / cancelled at Flutterwave's end
+        const { data: payment } = await adminDb
+          .from('payments')
+          .select('id, order_id')
+          .eq('checkout_request_id', tx_ref)
+          .maybeSingle();
+        if (payment) {
+          await adminDb.from('payments').update({ status: 'failed', failure_reason: 'Card payment failed' }).eq('id', payment.id);
+          await adminDb.from('orders').update({ status: 'cancelled' }).eq('id', payment.order_id);
+        }
+      }
     } catch (err) {
-      console.error('[PesaPal IPN]', err.message);
+      console.error('[Flutterwave webhook]', err.message);
     }
     res.json({ success: true });
   });
 
-  // PesaPal status check — called from /order-success page after PesaPal redirects the customer back
-  router.get('/pesapal/status/:orderTrackingId', async (req, res) => {
-    const { orderTrackingId } = req.params;
+  // Flutterwave verify — called from /order-success after Flutterwave redirects the customer back
+  // Flutterwave appends: ?status=successful&tx_ref=ORD-A001&transaction_id=12345
+  router.get('/flutterwave/verify', async (req, res) => {
+    const { transaction_id, tx_ref, status } = req.query;
 
-    // Reject malformed IDs immediately
-    if (!isValidUUID(orderTrackingId)) {
-      return res.status(400).json({ error: 'Invalid tracking ID format' });
+    // Customer cancelled on Flutterwave's page — no API call needed
+    if (status === 'cancelled') return res.json({ status: 'cancelled' });
+
+    if (!transaction_id || !tx_ref) {
+      return res.status(400).json({ error: 'transaction_id and tx_ref are required' });
     }
 
     try {
+      // Check DB cache — if webhook already processed this, return immediately
       const { data: existing } = await adminDb
         .from('payments')
         .select('status, order_id')
-        .eq('checkout_request_id', orderTrackingId)
+        .eq('checkout_request_id', tx_ref)
         .maybeSingle();
 
-      // Unknown tracking ID — don't hit external API
-      if (!existing) {
-        return res.status(404).json({ error: 'Payment not found' });
-      }
+      if (!existing) return res.status(404).json({ error: 'Payment not found' });
+      if (existing.status === 'paid') return res.json({ status: 'completed', order_id: existing.order_id });
 
-      // Already processed — return cached result immediately
-      if (existing?.status === 'paid') {
-        return res.json({ status: 'completed', order_id: existing.order_id });
-      }
-
-      const result = await handlePesapalPayment(orderTrackingId);
+      const result = await handleFlutterwavePayment(transaction_id, tx_ref);
       return res.json(result);
     } catch (err) {
-      console.error('[PesaPal status]', err.message);
+      console.error('[Flutterwave verify]', err.message);
       return res.status(500).json({ error: err.message });
     }
   });
 
-  // Shared handler — verifies status with PesaPal, updates DB, sends email
-  async function handlePesapalPayment(orderTrackingId) {
-    const txStatus  = await pesapal.getTransactionStatus(orderTrackingId);
-    const statusCode = txStatus.status_code;
-    console.log(`[PesaPal] getTransactionStatus for ${orderTrackingId}:`, JSON.stringify(txStatus));
+  // Shared handler — verifies with Flutterwave API, updates DB, reduces inventory, sends email
+  async function handleFlutterwavePayment(transactionId, txRef, webhookData = null) {
+    // Use webhook data if provided (avoids an extra API call), otherwise fetch from Flutterwave
+    const tx = webhookData || await flutterwave.verifyTransaction(transactionId);
+    console.log(`[Flutterwave] tx status for ${txRef}:`, tx.status, '| flw_ref:', tx.flw_ref);
 
     const { data: payment } = await adminDb
       .from('payments')
       .select('id, order_id, status')
-      .eq('checkout_request_id', orderTrackingId)
+      .eq('checkout_request_id', txRef)
       .maybeSingle();
 
     if (!payment) return { status: 'not_found' };
     if (payment.status === 'paid') return { status: 'completed', order_id: payment.order_id };
 
-    if (statusCode === 1) {
-      // COMPLETED
+    if (tx.status === 'successful') {
       await adminDb.from('payments').update({
-        status:       'paid',
-        mpesa_receipt: txStatus.confirmation_code || null,
+        status:        'paid',
+        mpesa_receipt: tx.flw_ref || null,
       }).eq('id', payment.id);
 
       const { data: order } = await adminDb
@@ -581,7 +581,7 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
         }));
       }
 
-      // Send order confirmation email via Resend (HTTP — works on Railway)
+      // Send order confirmation email
       if (order?.customer_email) {
         const shortId = toShortOrderId(order.order_number);
         resend.emails.send({
@@ -599,13 +599,13 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
               </div>
               <div style="padding:36px 32px">
                 <p style="color:#555;margin:0 0 24px;font-size:15px">
-                  Thank you for your purchase! Your order has been received and payment confirmed via ${txStatus.payment_method || 'Card'}.
+                  Thank you for your purchase! Your order has been confirmed and payment received via Card.
                 </p>
                 <table style="background:#FDFBF7;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
                   <tr><td style="padding:8px 12px;color:#888;font-size:13px;width:140px">Order ID</td><td style="padding:8px 12px;font-weight:bold;font-size:14px;color:#6D4C91">${shortId}</td></tr>
-                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Payment</td><td style="padding:8px 12px;font-weight:bold;font-size:14px">${txStatus.payment_method || 'Card'}</td></tr>
-                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Amount Paid</td><td style="padding:8px 12px;font-weight:bold;font-size:14px">KES ${Number(txStatus.amount)?.toLocaleString()}</td></tr>
-                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Reference</td><td style="padding:8px 12px;font-size:14px">${txStatus.confirmation_code || '—'}</td></tr>
+                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Payment</td><td style="padding:8px 12px;font-weight:bold;font-size:14px">${tx.payment_type || 'Card'}</td></tr>
+                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Amount Paid</td><td style="padding:8px 12px;font-weight:bold;font-size:14px">KES ${Number(tx.amount)?.toLocaleString()}</td></tr>
+                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Reference</td><td style="padding:8px 12px;font-size:14px">${tx.flw_ref || '—'}</td></tr>
                 </table>
                 <div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:12px 16px;border-radius:4px;margin:24px 0 0;font-size:13px;color:#166534">
                   <strong>What's next?</strong> Your order will be packed and dispatched within 1–2 business days. You'll receive a shipping update by email.
@@ -617,29 +617,21 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
               </div>
             </div>
           `,
-        }).catch(err => console.error('[PesaPal email]', err.message));
-        console.log(`PesaPal order confirmation email sent to ${order.customer_email}`);
+        }).catch(err => console.error('[Flutterwave email]', err.message));
+        console.log(`Flutterwave order confirmation email sent to ${order.customer_email}`);
       }
 
       return { status: 'completed', order_id: payment.order_id };
 
-    } else if (statusCode === 2) {
-      // FAILED
+    } else {
+      // failed / error status from Flutterwave
       await adminDb.from('payments').update({
-        status: 'failed',
-        failure_reason: txStatus.payment_status_description || 'Card payment failed',
+        status:         'failed',
+        failure_reason: tx.processor_response || 'Card payment failed',
       }).eq('id', payment.id);
       await adminDb.from('orders').update({ status: 'cancelled' }).eq('id', payment.order_id);
       return { status: 'failed' };
-
-    } else if (statusCode === 3) {
-      // REVERSED
-      await adminDb.from('payments').update({ status: 'failed', failure_reason: 'Payment reversed' }).eq('id', payment.id);
-      return { status: 'reversed' };
     }
-
-    // INVALID (0) or still pending
-    return { status: 'pending' };
   }
 
   return router;

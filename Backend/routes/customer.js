@@ -427,9 +427,9 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     }
   });
 
-  // Card payment checkout via PesaPal — creates the order in DB then redirects to PesaPal hosted page
+  // Card payment checkout via Flutterwave — creates the order in DB then redirects to Flutterwave hosted card page
   router.post('/checkout/card', authenticateOptional, async (req, res) => {
-    const pesapal = require('../services/pesapal');
+    const flutterwave = require('../services/flutterwave');
     const userId    = req.user?.id;
     const sessionId = req.body.session_id || req.headers['x-session-id'];
     const { shipping_address, customer_email, billing } = req.body;
@@ -494,49 +494,38 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       .single();
 
     try {
-      const shortOrderId   = `ORD-${order.order_number || order.id.slice(0, 7)}`;
-      const frontendUrl    = process.env.FRONTEND_URL || 'http://localhost:5173';
-      const backendUrl     = process.env.BACKEND_URL  || 'https://premierbeautyclinic-production.up.railway.app';
-      const ipnId          = await pesapal.getOrRegisterIPN(`${backendUrl}/pesapal/ipn`);
+      const shortOrderId = `ORD-${order.order_number || order.id.slice(0, 7)}`;
+      const frontendUrl  = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-      const pesapalResult = await pesapal.submitOrder({
-        merchantReference: shortOrderId,
-        amount:            total,
-        currency:          'KES',
-        description:       `Premier Beauty Clinic - Order ${shortOrderId}`,
-        callbackUrl:       `${frontendUrl}/order-success`,
-        cancellationUrl:   `${frontendUrl}/checkout`,
-        ipnId,
-        billingAddress: {
-          email_address: finalEmail || '',
-          phone_number:  billing?.phone || '',
-          country_code:  'KE',
-          first_name:    billing?.firstName || '',
-          last_name:     billing?.lastName  || '',
-          line_1:        normalizedShipping?.street || normalizedShipping?.streetAddress || '',
-          city:          normalizedShipping?.city   || '',
-        },
+      const flwResult = await flutterwave.initializePayment({
+        txRef:         shortOrderId,
+        amount:        total,
+        currency:      'KES',
+        redirectUrl:   `${frontendUrl}/order-success`,
+        customerEmail: finalEmail || '',
+        customerName:  `${billing?.firstName || ''} ${billing?.lastName || ''}`.trim(),
+        customerPhone: billing?.phone || '',
+        description:   `Premier Beauty Clinic — Order ${shortOrderId}`,
       });
 
-      // Reuse checkout_request_id column to store the PesaPal orderTrackingId for status polling
+      // Store the tx_ref (shortOrderId) in checkout_request_id so we can look up payment by tx_ref on verify
       if (payment) {
         await db
           .from('payments')
-          .update({ checkout_request_id: pesapalResult.order_tracking_id })
+          .update({ checkout_request_id: shortOrderId })
           .eq('id', payment.id);
       }
 
       return res.json({
-        success:            true,
-        redirect_url:       pesapalResult.redirect_url,
-        order_tracking_id:  pesapalResult.order_tracking_id,
-        merchant_reference: shortOrderId,
-        order_id:           order.id,
+        success:      true,
+        redirect_url: flwResult.link,
+        tx_ref:       shortOrderId,
+        order_id:     order.id,
         total,
       });
 
     } catch (err) {
-      console.error('PesaPal checkout error:', err.response?.data || err.message);
+      console.error('Flutterwave checkout error:', err.response?.data || err.message);
       if (payment) await db.from('payments').update({ status: 'failed' }).eq('id', payment.id);
       await db.from('orders').update({ status: 'cancelled' }).eq('id', order.id);
       return res.status(502).json({ error: 'Failed to initiate card payment. Please try again.' });
