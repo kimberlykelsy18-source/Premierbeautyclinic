@@ -46,17 +46,21 @@ async function authHeaders(traceId) {
 }
 
 // ── Encryption ───────────────────────────────────────────────────────────────
-// Flutterwave V4 uses AES-256-ECB: nonce is the 32-byte key, fields are base64 output.
+// Flutterwave V4 uses AES-256-GCM.
+//   Key  = SHA-256(FLW_CLIENT_SECRET)  → 32 bytes
+//   IV   = nonce (12 ASCII chars = 12 bytes, standard AES-GCM nonce length)
+//   Output = base64(ciphertext + 16-byte authTag)
 function generateNonce() {
   return crypto.randomBytes(6).toString('hex'); // exactly 12 hex chars — Flutterwave V4 requirement
 }
 
 function encryptField(value, nonce) {
-  // Pad/trim nonce to exactly 32 bytes
-  const key    = Buffer.from(nonce.slice(0, 32).padEnd(32, '0'));
-  const cipher = crypto.createCipheriv('aes-256-ecb', key, null);
-  cipher.setAutoPadding(true);
-  return cipher.update(String(value), 'utf8', 'base64') + cipher.final('base64');
+  const key    = crypto.createHash('sha256').update(process.env.FLW_CLIENT_SECRET).digest();
+  const iv     = Buffer.from(nonce, 'utf8'); // 12 chars → 12 bytes
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(String(value), 'utf8'), cipher.final()]);
+  const authTag   = cipher.getAuthTag(); // 16 bytes
+  return Buffer.concat([encrypted, authTag]).toString('base64');
 }
 
 // ── Step 1: Create customer (or fetch existing) ───────────────────────────────
