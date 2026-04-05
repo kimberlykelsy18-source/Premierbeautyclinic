@@ -34,14 +34,22 @@ async function getToken() {
   return _cachedToken;
 }
 
+function makeId(prefix) {
+  // Generates a unique ID guaranteed to be 12–36 chars
+  return `${prefix}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+}
+
 async function authHeaders(traceId) {
   const token = await getToken();
-  const id = traceId || `pbc-${Date.now()}`;
+  // X-Trace-Id: use provided prefix + timestamp, min 12 chars
+  const xTrace    = traceId ? makeId(traceId) : makeId('pbc');
+  // X-Idempotency-Key: always a fresh unique value (different from trace ID)
+  const xIdem     = makeId('ik');
   return {
     Authorization:       `Bearer ${token}`,
     'Content-Type':      'application/json',
-    'X-Trace-Id':        id,
-    'X-Idempotency-Key': id,
+    'X-Trace-Id':        xTrace,
+    'X-Idempotency-Key': xIdem,
   };
 }
 
@@ -156,10 +164,13 @@ async function createPaymentMethod({ cardNumber, expiryMonth, expiryYear, cvv })
 async function createCharge({ customerId, paymentMethodId, txRef, amount, currency, redirectUrl, description }) {
   const headers = await authHeaders(txRef);
 
+  // reference must be 6–42 chars. Pad short refs (e.g. ORD-1 → ORD-001)
+  const ref = txRef.length >= 6 ? txRef.slice(0, 42) : txRef.padEnd(6, '0');
+
   let chargeResp;
   try {
     chargeResp = await axios.post(`${apiBase()}/charges`, {
-      reference:         txRef,
+      reference:         ref,
       currency:          currency || 'KES',
       amount,
       customer_id:       customerId,
