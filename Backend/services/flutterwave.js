@@ -87,18 +87,37 @@ async function createPaymentMethod({ cardNumber, expiryMonth, expiryYear, cvv })
   const nonce   = generateNonce();
   const headers = await authHeaders(`pmd-${Date.now()}`);
 
-  const { data } = await axios.post(`${apiBase()}/payment-methods`, {
+  // Flutterwave V4 expects 2-digit month (08) and 2-digit year (32 not 2032)
+  const month = String(expiryMonth).padStart(2, '0').slice(-2);
+  const year  = String(expiryYear).slice(-2); // always 2-digit
+
+  const payload = {
     type: 'card',
     card: {
       encrypted_card_number:  encryptField(cardNumber.replace(/\s/g, ''), nonce),
-      encrypted_expiry_month: encryptField(String(expiryMonth).padStart(2, '0'), nonce),
-      encrypted_expiry_year:  encryptField(String(expiryYear), nonce),
+      encrypted_expiry_month: encryptField(month, nonce),
+      encrypted_expiry_year:  encryptField(year, nonce),
       encrypted_cvv:          encryptField(cvv, nonce),
       nonce,
     },
-  }, { headers });
+  };
 
-  if (!data.data?.id) throw new Error('[FLW] Payment method create failed: ' + JSON.stringify(data));
+  console.log('[FLW] createPaymentMethod — expiry:', month + '/' + year, '| nonce len:', nonce.length);
+
+  let response;
+  try {
+    response = await axios.post(`${apiBase()}/payment-methods`, payload, { headers });
+  } catch (err) {
+    const errData = err.response?.data;
+    console.error('[FLW] Payment method FULL error:', JSON.stringify(errData, null, 2));
+    throw new Error('[FLW] Payment method create failed: ' + JSON.stringify(errData));
+  }
+
+  const { data } = response;
+  if (!data.data?.id) {
+    console.error('[FLW] Payment method unexpected response:', JSON.stringify(data, null, 2));
+    throw new Error('[FLW] Payment method create failed: ' + JSON.stringify(data));
+  }
   console.log('[FLW] Payment method:', data.data.id);
   return data.data;
 }
@@ -107,16 +126,24 @@ async function createPaymentMethod({ cardNumber, expiryMonth, expiryYear, cvv })
 async function createCharge({ customerId, paymentMethodId, txRef, amount, currency, redirectUrl, description }) {
   const headers = await authHeaders(txRef);
 
-  const { data } = await axios.post(`${apiBase()}/charges`, {
-    reference:         txRef,
-    currency:          currency || 'KES',
-    amount,
-    customer_id:       customerId,
-    payment_method_id: paymentMethodId,
-    redirect_url:      redirectUrl,
-    meta:              description ? { description } : {},
-  }, { headers });
+  let chargeResp;
+  try {
+    chargeResp = await axios.post(`${apiBase()}/charges`, {
+      reference:         txRef,
+      currency:          currency || 'KES',
+      amount,
+      customer_id:       customerId,
+      payment_method_id: paymentMethodId,
+      redirect_url:      redirectUrl,
+      meta:              description ? { description } : {},
+    }, { headers });
+  } catch (err) {
+    const errData = err.response?.data;
+    console.error('[FLW] Charge FULL error:', JSON.stringify(errData, null, 2));
+    throw new Error('[FLW] Charge create failed: ' + JSON.stringify(errData));
+  }
 
+  const { data } = chargeResp;
   if (!data.data) throw new Error('[FLW] Charge create failed: ' + JSON.stringify(data));
   console.log('[FLW] Charge:', data.data.id, '| next_action:', data.data.next_action?.type || 'none');
   return data.data;
