@@ -59,13 +59,12 @@ function encryptField(value, nonce) {
   return cipher.update(String(value), 'utf8', 'base64') + cipher.final('base64');
 }
 
-// ── Step 1: Create customer ───────────────────────────────────────────────────
+// ── Step 1: Create customer (or fetch existing) ───────────────────────────────
 async function createCustomer({ email, name, phone }) {
   const parts     = (name || '').trim().split(/\s+/);
   const firstName = parts[0] || email;
   const lastName  = parts.slice(1).join(' ') || parts[0] || email;
 
-  // Normalise phone to digits only (strip country code prefix)
   const phoneDigits = (phone || '').replace(/\D/g, '').replace(/^(254|0)/, '');
 
   const payload = {
@@ -75,11 +74,35 @@ async function createCustomer({ email, name, phone }) {
   if (phoneDigits) payload.phone = { country_code: '254', number: phoneDigits };
 
   const headers = await authHeaders(`cus-${Date.now()}`);
-  const { data } = await axios.post(`${apiBase()}/customers`, payload, { headers });
 
-  if (!data.data?.id) throw new Error('[FLW] Customer create failed: ' + JSON.stringify(data));
-  console.log('[FLW] Customer:', data.data.id);
-  return data.data;
+  try {
+    const { data } = await axios.post(`${apiBase()}/customers`, payload, { headers });
+    if (!data.data?.id) throw new Error('[FLW] Customer create failed: ' + JSON.stringify(data));
+    console.log('[FLW] Customer created:', data.data.id);
+    return data.data;
+  } catch (err) {
+    // 10409 = customer already exists — fetch the existing one by email
+    const code = err.response?.data?.error?.code;
+    if (code === '10409') {
+      console.log('[FLW] Customer already exists, fetching by email:', email);
+      return await getCustomerByEmail(email, headers);
+    }
+    const errData = err.response?.data;
+    console.error('[FLW] Customer FULL error:', JSON.stringify(errData, null, 2));
+    throw new Error('[FLW] Customer create failed: ' + JSON.stringify(errData));
+  }
+}
+
+async function getCustomerByEmail(email, headers) {
+  const { data } = await axios.get(
+    `${apiBase()}/customers?email=${encodeURIComponent(email)}`,
+    { headers: headers || (await authHeaders(`cus-get-${Date.now()}`)) }
+  );
+  // Response may be array or single object
+  const customer = Array.isArray(data.data) ? data.data[0] : data.data;
+  if (!customer?.id) throw new Error('[FLW] Existing customer not found for email: ' + email);
+  console.log('[FLW] Existing customer found:', customer.id);
+  return customer;
 }
 
 // ── Step 2: Create payment method (encrypted card) ────────────────────────────
