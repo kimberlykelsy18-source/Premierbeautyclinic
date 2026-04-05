@@ -427,18 +427,26 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     }
   });
 
-  // Card payment checkout via Flutterwave — creates the order in DB then redirects to Flutterwave hosted card page
+  // Card payment checkout via Flutterwave V4 direct card API
+  // Receives raw card details, creates order in DB, runs V4 flow:
+  //   createCustomer → createPaymentMethod → createCharge
+  // Returns next_action so frontend can handle 3DS / PIN / OTP
   router.post('/checkout/card', authenticateOptional, async (req, res) => {
-    const flutterwave = require('../services/flutterwave');
+    const flw       = require('../services/flutterwave');
     const userId    = req.user?.id;
     const sessionId = req.body.session_id || req.headers['x-session-id'];
-    const { shipping_address, customer_email, billing } = req.body;
+    const { shipping_address, customer_email, billing, card } = req.body;
+
+    if (!card?.number || !card?.expiry_month || !card?.expiry_year || !card?.cvv) {
+      return res.status(400).json({ error: 'Card details are required' });
+    }
 
     const normalizedShipping = normalizeShippingAddress(shipping_address);
     const finalEmail = customer_email || req.user?.email;
 
     if (!normalizedShipping) return res.status(400).json({ error: 'shipping_address required' });
     if (!userId && !sessionId) return res.status(400).json({ error: 'session_id or login required' });
+    if (!finalEmail)           return res.status(400).json({ error: 'customer_email required for card payments' });
 
     const cart = await getOrCreateCart(userId, sessionId);
     if (!cart) return res.status(400).json({ error: 'Cart is empty' });
@@ -469,7 +477,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       shipping_address: normalizedShipping,
       status:           'pending',
       payment_method:   'card',
-      customer_email:   finalEmail || null,
+      customer_email:   finalEmail,
     };
     if (userId)    orderData.user_id    = userId;
     if (sessionId) orderData.session_id = sessionId;
@@ -496,39 +504,94 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     try {
       const shortOrderId = `ORD-${order.order_number || order.id.slice(0, 7)}`;
       const frontendUrl  = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const customerName = `${billing?.firstName || ''} ${billing?.lastName || ''}`.trim();
 
-      const flwResult = await flutterwave.initializePayment({
-        txRef:         shortOrderId,
-        amount:        total,
-        currency:      'KES',
-        redirectUrl:   `${frontendUrl}/order-success`,
-        customerEmail: finalEmail || '',
-        customerName:  `${billing?.firstName || ''} ${billing?.lastName || ''}`.trim(),
-        customerPhone: billing?.phone || '',
-        description:   `Premier Beauty Clinic — Order ${shortOrderId}`,
+      // V4 Step 1: Create customer
+      const customer = await flw.createCustomer({
+        email: finalEmail,
+        name:  customerName || finalEmail,
+        phone: billing?.phone || '',
       });
 
-      // Store the tx_ref (shortOrderId) in checkout_request_id so we can look up payment by tx_ref on verify
+      // V4 Step 2: Create payment method with encrypted card
+      const paymentMethod = await flw.createPaymentMethod({
+        cardNumber:  card.number,
+        expiryMonth: card.expiry_month,
+        expiryYear:  card.expiry_year,
+        cvv:         card.cvv,
+      });
+
+      // V4 Step 3: Create charge
+      const charge = await flw.createCharge({
+        customerId:      customer.id,
+        paymentMethodId: paymentMethod.id,
+        txRef:           shortOrderId,
+        amount:          total,
+        currency:        'KES',
+        redirectUrl:     `${frontendUrl}/order-success`,
+        description:     `Premier Beauty Clinic — Order ${shortOrderId}`,
+      });
+
+      // Store tx_ref + charge ID so we can verify later
+      // mpesa_receipt column reused for charge ID (card payments don't use M-Pesa receipt)
       if (payment) {
-        await db
-          .from('payments')
-          .update({ checkout_request_id: shortOrderId })
-          .eq('id', payment.id);
+        await db.from('payments').update({
+          checkout_request_id: shortOrderId,
+          mpesa_receipt:       charge.id,
+        }).eq('id', payment.id);
+      }
+
+      // If charge already succeeded (no auth needed)
+      if (charge.status === 'succeeded' || charge.status === 'successful') {
+        return res.json({
+          success:     true,
+          charge_id:   charge.id,
+          tx_ref:      shortOrderId,
+          order_id:    order.id,
+          next_action: null,
+        });
       }
 
       return res.json({
-        success:      true,
-        redirect_url: flwResult.link,
-        tx_ref:       shortOrderId,
-        order_id:     order.id,
-        total,
+        success:     true,
+        charge_id:   charge.id,
+        tx_ref:      shortOrderId,
+        order_id:    order.id,
+        next_action: charge.next_action || null,
       });
 
     } catch (err) {
       console.error('Flutterwave checkout error:', err.response?.data || err.message);
       if (payment) await db.from('payments').update({ status: 'failed' }).eq('id', payment.id);
       await db.from('orders').update({ status: 'cancelled' }).eq('id', order.id);
-      return res.status(502).json({ error: 'Failed to initiate card payment. Please try again.' });
+      return res.status(502).json({ error: err.response?.data?.error?.message || 'Failed to initiate card payment. Please try again.' });
+    }
+  });
+
+  // Card payment authorization — called after frontend receives a next_action (PIN / OTP / AVS)
+  router.post('/checkout/card/authorize', authenticateOptional, async (req, res) => {
+    const flw = require('../services/flutterwave');
+    const { charge_id, authorization } = req.body;
+
+    if (!charge_id || !authorization?.type) {
+      return res.status(400).json({ error: 'charge_id and authorization are required' });
+    }
+
+    try {
+      const charge = await flw.updateCharge(charge_id, authorization);
+
+      if (charge.status === 'succeeded' || charge.status === 'successful') {
+        return res.json({ success: true, charge_id, next_action: null });
+      }
+
+      return res.json({
+        success:     true,
+        charge_id,
+        next_action: charge.next_action || null,
+      });
+    } catch (err) {
+      console.error('Flutterwave authorize error:', err.response?.data || err.message);
+      return res.status(502).json({ error: err.response?.data?.error?.message || 'Authorization failed. Please try again.' });
     }
   });
 

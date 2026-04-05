@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { ArrowLeft, CheckCircle2, Truck, ShieldCheck, MapPin, CreditCard, Smartphone, Edit2, Check } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Truck, ShieldCheck, MapPin, CreditCard, Smartphone, Edit2, Check, Lock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
@@ -32,6 +32,20 @@ export function Checkout() {
   const navigate = useNavigate();
 
   const [isCardLoading, setIsCardLoading] = useState(false);
+
+  // Card form data
+  const [cardData, setCardData] = useState({ number: '', expiryMonth: '', expiryYear: '', cvv: '' });
+  // V4 auth flow state
+  type CardStage = 'form' | 'pin' | 'otp' | 'processing';
+  const [cardStage, setCardStage]       = useState<CardStage>('form');
+  const [pendingChargeId, setPendingChargeId] = useState('');
+  const [pendingTxRef, setPendingTxRef]       = useState('');
+  const [pinInput, setPinInput] = useState('');
+  const [otpInput, setOtpInput] = useState('');
+
+  function formatCardNumber(val: string) {
+    return val.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
+  }
 
   // Form data - Initialize with user data if logged in
   const [formData, setFormData] = useState(() => {
@@ -185,6 +199,17 @@ export function Checkout() {
   };
 
   const handleCardPayment = async () => {
+    const rawNumber = cardData.number.replace(/\s/g, '');
+    if (!rawNumber || rawNumber.length < 13) {
+      showFeedback('error', 'Invalid Card', 'Please enter a valid card number.'); return;
+    }
+    if (!cardData.expiryMonth || !cardData.expiryYear) {
+      showFeedback('error', 'Invalid Expiry', 'Please enter the card expiry date.'); return;
+    }
+    if (!cardData.cvv || cardData.cvv.length < 3) {
+      showFeedback('error', 'Invalid CVV', 'Please enter the 3–4 digit CVV on your card.'); return;
+    }
+
     setIsCardLoading(true);
     try {
       const data = await apiFetch('/checkout/card', {
@@ -205,13 +230,95 @@ export function Checkout() {
             lastName:  formData.lastName,
             phone:     formData.phone,
           },
+          card: {
+            number:       rawNumber,
+            expiry_month: cardData.expiryMonth,
+            expiry_year:  cardData.expiryYear,
+            cvv:          cardData.cvv,
+          },
         }),
       }, token, sessionId);
 
-      // Redirect the browser to Flutterwave's hosted card payment page
-      window.location.href = data.redirect_url;
+      setPendingChargeId(data.charge_id);
+      setPendingTxRef(data.tx_ref);
+
+      const action = data.next_action;
+      if (!action) {
+        // No auth needed — done
+        navigate(`/order-success?status=successful&reference=${encodeURIComponent(data.tx_ref)}`);
+      } else if (action.type === 'redirect_url') {
+        // 3DS — redirect customer to bank auth page
+        window.location.href = action.redirect_url.url;
+      } else if (action.type === 'requires_pin') {
+        setCardStage('pin');
+        setIsCardLoading(false);
+      } else {
+        showFeedback('error', 'Auth Required', `Unsupported auth type: ${action.type}. Please try a different card.`);
+        setIsCardLoading(false);
+      }
     } catch (err: any) {
       showFeedback('error', 'Card Payment Failed', err.message || 'Failed to initiate card payment. Please try again.');
+      setIsCardLoading(false);
+    }
+  };
+
+  const handleSubmitPin = async () => {
+    if (!pinInput || pinInput.length < 4) {
+      showFeedback('error', 'Invalid PIN', 'Please enter your 4-digit card PIN.'); return;
+    }
+    setIsCardLoading(true);
+    try {
+      const data = await apiFetch('/checkout/card/authorize', {
+        method: 'POST',
+        body: JSON.stringify({
+          charge_id:     pendingChargeId,
+          authorization: { type: 'pin', pin: { rawPin: pinInput } },
+        }),
+      }, token, sessionId);
+
+      setPinInput('');
+      const action = data.next_action;
+      if (!action) {
+        navigate(`/order-success?status=successful&reference=${encodeURIComponent(pendingTxRef)}`);
+      } else if (action.type === 'requires_otp' || action.type === 'otp') {
+        setCardStage('otp');
+        setIsCardLoading(false);
+      } else if (action.type === 'redirect_url') {
+        window.location.href = action.redirect_url.url;
+      } else {
+        showFeedback('error', 'Auth Failed', 'Could not complete PIN authorization. Please try again.');
+        setIsCardLoading(false);
+      }
+    } catch (err: any) {
+      showFeedback('error', 'PIN Failed', err.message || 'Incorrect PIN. Please try again.');
+      setIsCardLoading(false);
+    }
+  };
+
+  const handleSubmitOtp = async () => {
+    if (!otpInput || otpInput.length < 4) {
+      showFeedback('error', 'Invalid OTP', 'Please enter the OTP sent to your phone.'); return;
+    }
+    setIsCardLoading(true);
+    try {
+      const data = await apiFetch('/checkout/card/authorize', {
+        method: 'POST',
+        body: JSON.stringify({
+          charge_id:     pendingChargeId,
+          authorization: { type: 'otp', otp: { code: otpInput } },
+        }),
+      }, token, sessionId);
+
+      setOtpInput('');
+      if (!data.next_action) {
+        navigate(`/order-success?status=successful&reference=${encodeURIComponent(pendingTxRef)}`);
+      } else {
+        showFeedback('error', 'OTP Failed', 'Payment could not be completed. Please try again.');
+        setCardStage('form');
+        setIsCardLoading(false);
+      }
+    } catch (err: any) {
+      showFeedback('error', 'OTP Failed', err.message || 'Invalid OTP. Please try again.');
       setIsCardLoading(false);
     }
   };
@@ -466,22 +573,71 @@ export function Checkout() {
                       {paymentMethod === 'card' && <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6 text-[#6D4C91] flex-shrink-0" />}
                     </button>
 
-                    {/* Flutterwave redirect notice */}
+                    {/* Card input fields */}
                     {paymentMethod === 'card' && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
-                        className="pt-2"
+                        className="pt-2 space-y-4"
                       >
-                        <div className="flex items-start space-x-3 p-4 md:p-5 bg-blue-50 rounded-xl md:rounded-2xl border border-blue-100">
-                          <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex items-center space-x-2 mb-1">
+                          <Lock className="w-4 h-4 text-[#6D4C91]" />
+                          <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Secure Card Details</span>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Card Number *</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={19}
+                            placeholder="0000 0000 0000 0000"
+                            value={cardData.number}
+                            onChange={e => setCardData({ ...cardData, number: formatCardNumber(e.target.value) })}
+                            className="w-full px-5 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px] tracking-widest"
+                          />
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
                           <div>
-                            <p className="text-[13px] md:text-[14px] font-bold text-blue-900 mb-1">Secure Card Payment</p>
-                            <p className="text-[12px] md:text-[13px] text-blue-700">
-                              You'll be redirected to Flutterwave's secure card payment page. We never store your card information.
-                            </p>
+                            <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Month *</label>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={2}
+                              placeholder="MM"
+                              value={cardData.expiryMonth}
+                              onChange={e => setCardData({ ...cardData, expiryMonth: e.target.value.replace(/\D/g, '').slice(0, 2) })}
+                              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px] text-center tracking-widest"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Year *</label>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={4}
+                              placeholder="YYYY"
+                              value={cardData.expiryYear}
+                              onChange={e => setCardData({ ...cardData, expiryYear: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px] text-center tracking-widest"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">CVV *</label>
+                            <input
+                              type="password"
+                              inputMode="numeric"
+                              maxLength={4}
+                              placeholder="•••"
+                              value={cardData.cvv}
+                              onChange={e => setCardData({ ...cardData, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px] text-center"
+                            />
                           </div>
                         </div>
+                        <p className="text-[11px] text-gray-400 flex items-center space-x-1">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Card details are encrypted end-to-end. We never store them.</span>
+                        </p>
                       </motion.div>
                     )}
 
@@ -601,7 +757,7 @@ export function Checkout() {
                         </div>
                       ) : (
                         <div>
-                          <div className="flex items-center space-x-3 mb-3">
+                          <div className="flex items-center space-x-3 mb-4">
                             <svg className="w-10 h-7" viewBox="0 0 48 32" fill="none">
                               <rect width="48" height="32" rx="4" fill="#1434CB" />
                               <path d="M17 10h14M17 16h14M17 22h8" stroke="white" strokeWidth="2" strokeLinecap="round" />
@@ -611,31 +767,86 @@ export function Checkout() {
                               <circle cx="20" cy="16" r="8" fill="#FF5F00" />
                               <circle cx="28" cy="16" r="8" fill="#F79E1B" />
                             </svg>
-                            <span className="text-[15px] md:text-[16px] font-bold">Card via Flutterwave</span>
+                            <span className="text-[15px] md:text-[16px] font-bold">
+                              {cardStage === 'form' ? 'Card via Flutterwave' : cardStage === 'pin' ? 'Enter Card PIN' : 'Enter OTP'}
+                            </span>
                           </div>
-                          <p className="text-[12px] md:text-[13px] text-gray-500">
-                            Clicking "Pay" will redirect you to Flutterwave's secure card checkout page to complete your payment.
-                          </p>
+
+                          {/* PIN stage */}
+                          {cardStage === 'pin' && (
+                            <div className="space-y-4">
+                              <p className="text-[13px] text-gray-600">Your bank requires your card PIN to authorise this payment.</p>
+                              <input
+                                type="password"
+                                inputMode="numeric"
+                                maxLength={4}
+                                placeholder="••••"
+                                value={pinInput}
+                                onChange={e => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                className="w-full px-5 py-4 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[20px] text-center tracking-[0.5em]"
+                              />
+                              <ButtonWithLoading
+                                isLoading={isCardLoading}
+                                onClick={handleSubmitPin}
+                                className="w-full bg-[#6D4C91] text-white py-4 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all"
+                              >
+                                Submit PIN
+                              </ButtonWithLoading>
+                            </div>
+                          )}
+
+                          {/* OTP stage */}
+                          {cardStage === 'otp' && (
+                            <div className="space-y-4">
+                              <p className="text-[13px] text-gray-600">An OTP has been sent to your registered phone number. Enter it below to complete payment.</p>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={8}
+                                placeholder="Enter OTP"
+                                value={otpInput}
+                                onChange={e => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                                className="w-full px-5 py-4 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[20px] text-center tracking-[0.5em]"
+                              />
+                              <ButtonWithLoading
+                                isLoading={isCardLoading}
+                                onClick={handleSubmitOtp}
+                                className="w-full bg-[#6D4C91] text-white py-4 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all"
+                              >
+                                Confirm OTP
+                              </ButtonWithLoading>
+                            </div>
+                          )}
+
+                          {cardStage === 'form' && (
+                            <p className="text-[12px] md:text-[13px] text-gray-500 flex items-center space-x-1">
+                              <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Your card details are encrypted. You may be asked for your PIN or an OTP to complete the payment.</span>
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
 
-                    <div className="flex gap-3 md:gap-4">
-                      <button 
-                        onClick={() => setStep(2)} 
-                        disabled={isLoading || awaitingPayment}
-                        className="flex-1 py-4 md:py-5 rounded-full border border-gray-200 text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all disabled:opacity-50"
-                      >
-                        Back
-                      </button>
-                      <ButtonWithLoading
-                        isLoading={paymentMethod === 'mpesa' ? isLoading : isCardLoading}
-                        onClick={paymentMethod === 'mpesa' ? handleConfirmMpesaPayment : handleCardPayment}
-                        className="flex-[2] bg-[#6D4C91] text-white py-4 md:py-5 rounded-full text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all shadow-xl"
-                      >
-                        {paymentMethod === 'mpesa' ? 'Confirm Payment' : `Pay ${formatPrice(total)}`}
-                      </ButtonWithLoading>
-                    </div>
+                    {/* Hide back/pay buttons while PIN or OTP stage is active */}
+                    {(paymentMethod === 'mpesa' || cardStage === 'form') && (
+                      <div className="flex gap-3 md:gap-4">
+                        <button
+                          onClick={() => setStep(2)}
+                          disabled={isLoading || awaitingPayment}
+                          className="flex-1 py-4 md:py-5 rounded-full border border-gray-200 text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all disabled:opacity-50"
+                        >
+                          Back
+                        </button>
+                        <ButtonWithLoading
+                          isLoading={paymentMethod === 'mpesa' ? isLoading : isCardLoading}
+                          onClick={paymentMethod === 'mpesa' ? handleConfirmMpesaPayment : handleCardPayment}
+                          className="flex-[2] bg-[#6D4C91] text-white py-4 md:py-5 rounded-full text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all shadow-xl"
+                        >
+                          {paymentMethod === 'mpesa' ? 'Confirm Payment' : `Pay ${formatPrice(total)}`}
+                        </ButtonWithLoading>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}

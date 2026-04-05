@@ -457,30 +457,31 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
     res.json({ success: true });
   });
 
-  const flutterwave = require('../services/flutterwave');
+  const flw = require('../services/flutterwave');
 
-  // Flutterwave Webhook — Flutterwave POSTs here when a card payment completes (production reliability)
+  // Flutterwave Webhook — called when a card charge completes
   router.post('/flutterwave/webhook', async (req, res) => {
-    // Verify the webhook is genuinely from Flutterwave
     const receivedHash = req.headers['verif-hash'];
     const expectedHash = process.env.FLW_WEBHOOK_HASH;
     if (!receivedHash || !expectedHash || receivedHash !== expectedHash) {
-      console.warn('[Flutterwave webhook] Invalid verif-hash — rejected');
+      console.warn('[FLW webhook] Invalid verif-hash — rejected');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { event, data } = req.body;
-    // V4 webhook: event name may be 'charge.completed' or 'charge.updated'
-    console.log('[Flutterwave webhook] event:', event, '| reference:', data?.reference, '| status:', data?.status);
+    // V4 uses 'type' field; guard against both 'event' (legacy) and 'type' (V4)
+    const eventName = req.body.type || req.body.event;
+    const data      = req.body.data;
+    console.log('[FLW webhook] event:', eventName, '| ref:', data?.reference, '| status:', data?.status);
 
-    if (!event?.startsWith('charge.')) return res.json({ success: true });
+    if (!eventName?.startsWith('charge.')) return res.json({ success: true });
 
-    // V4 uses 'reference' (our tx_ref/shortOrderId), not 'tx_ref'
+    // V4 uses data.reference; also accept data.tx_ref for any future V3 fallback
     const reference = data?.reference || data?.tx_ref;
     const status    = data?.status;
 
     try {
-      if (status === 'successful') {
+      // V4 success status is 'succeeded'; also accept 'successful' for compatibility
+      if (status === 'succeeded' || status === 'successful') {
         await handleFlutterwavePayment(reference, data);
       } else {
         const { data: payment } = await adminDb
@@ -489,27 +490,24 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
           .eq('checkout_request_id', reference)
           .maybeSingle();
         if (payment) {
-          await adminDb.from('payments').update({ status: 'failed', failure_reason: 'Card payment failed' }).eq('id', payment.id);
+          await adminDb.from('payments').update({ status: 'failed', failure_reason: 'Card payment failed or cancelled' }).eq('id', payment.id);
           await adminDb.from('orders').update({ status: 'cancelled' }).eq('id', payment.order_id);
         }
       }
     } catch (err) {
-      console.error('[Flutterwave webhook]', err.message);
+      console.error('[FLW webhook]', err.message);
     }
     res.json({ success: true });
   });
 
-  // Flutterwave verify — called from /order-success after Flutterwave redirects the customer back
-  // V4 appends: ?status=successful&reference=ORD-A001  (or may use tx_ref — handle both)
+  // Flutterwave verify — called from /order-success after 3DS redirect back, or after PIN/OTP completes
+  // Query params: ?reference=ORD-xxx&status=successful (V4) or ?tx_ref=ORD-xxx (fallback)
   router.get('/flutterwave/verify', async (req, res) => {
     const { reference, tx_ref, status } = req.query;
-    const ref = reference || tx_ref; // accept either param name
+    const ref = reference || tx_ref;
 
     if (status === 'cancelled') return res.json({ status: 'cancelled' });
-
-    if (!ref) {
-      return res.status(400).json({ error: 'reference is required' });
-    }
+    if (!ref) return res.status(400).json({ error: 'reference is required' });
 
     try {
       const { data: existing } = await adminDb
@@ -524,31 +522,40 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
       const result = await handleFlutterwavePayment(ref);
       return res.json(result);
     } catch (err) {
-      console.error('[Flutterwave verify]', err.message);
+      console.error('[FLW verify]', err.message);
       return res.status(500).json({ error: err.message });
     }
   });
 
-  // Shared handler — verifies with Flutterwave API, updates DB, reduces inventory, sends email
+  // Shared handler — verifies charge with Flutterwave, updates DB, reduces inventory, sends email
   async function handleFlutterwavePayment(reference, webhookData = null) {
-    // Use webhook data if provided, otherwise fetch from Flutterwave by reference
-    const tx = webhookData || await flutterwave.verifyTransaction(reference);
-    console.log(`[Flutterwave] tx status for ${reference}:`, tx.status);
-
+    // Look up payment by tx_ref to get the stored charge ID (saved in mpesa_receipt on checkout)
     const { data: payment } = await adminDb
       .from('payments')
-      .select('id, order_id, status')
+      .select('id, order_id, status, mpesa_receipt')
       .eq('checkout_request_id', reference)
       .maybeSingle();
 
     if (!payment) return { status: 'not_found' };
     if (payment.status === 'paid') return { status: 'completed', order_id: payment.order_id };
 
-    // V4 uses tx.status === 'successful'; V3 used 'successful' too — consistent
-    if (tx.status === 'successful') {
+    // Get the charge — use webhook data if provided, otherwise fetch by charge ID
+    let tx;
+    if (webhookData) {
+      tx = webhookData;
+    } else if (payment.mpesa_receipt) {
+      tx = await flw.getCharge(payment.mpesa_receipt);
+    } else {
+      return { status: 'not_found' };
+    }
+
+    console.log(`[FLW] charge status for ${reference}:`, tx.status);
+
+    // V4 success is 'succeeded'; also accept 'successful'
+    if (tx.status === 'succeeded' || tx.status === 'successful') {
       await adminDb.from('payments').update({
         status:        'paid',
-        mpesa_receipt: tx.flw_ref || tx.reference || null,
+        mpesa_receipt: tx.id || payment.mpesa_receipt,
       }).eq('id', payment.id);
 
       const { data: order } = await adminDb
