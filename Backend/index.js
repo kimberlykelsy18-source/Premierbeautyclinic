@@ -22,15 +22,20 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1); // trust first proxy so req.ip is the real client IP
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL,                          // e.g. https://www.premierbeautyclinic.co.ke
+  process.env.FRONTEND_URL,                          // production frontend URL
+  process.env.DASHBOARD_URL,                         // production dashboard URL (if separate)
   'http://localhost:5173',                            // local dev (store)
   'http://localhost:5174',                            // local dev (dashboard)
 ].filter(Boolean);
 
+// Allow all Vercel preview deployments for this project
+const vercelPreviewRe = /^https:\/\/premierbeautyclinic[\w-]*\.vercel\.app$/;
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow server-to-server requests (no origin) and whitelisted origins
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    if (!origin) return callback(null, true); // server-to-server (no origin header)
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (vercelPreviewRe.test(origin)) return callback(null, true);
     callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
@@ -46,12 +51,12 @@ app.use(helmet({
       fontSrc:     ["'self'", "https://fonts.gstatic.com"],
       imgSrc:      ["'self'", "data:", "https:", "blob:"],
       connectSrc:  ["'self'", process.env.BACKEND_URL, process.env.VITE_SUPABASE_URL, "https://maps.googleapis.com"],
-      frameSrc:    ["'self'", "https://pay.pesapal.com"],
+      frameSrc:    ["'self'", "https://checkout.flutterwave.com"],
       objectSrc:   ["'none'"],
       upgradeInsecureRequests: [],
     },
   },
-  crossOriginEmbedderPolicy: false, // needed for PesaPal iframe redirect
+  crossOriginEmbedderPolicy: false,
 }));
 app.use(morgan('dev'));
 
