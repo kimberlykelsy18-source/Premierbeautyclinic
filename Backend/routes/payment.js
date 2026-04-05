@@ -470,21 +470,23 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
     }
 
     const { event, data } = req.body;
-    console.log('[Flutterwave webhook] event:', event, '| tx_ref:', data?.tx_ref, '| status:', data?.status);
+    // V4 webhook: event name may be 'charge.completed' or 'charge.updated'
+    console.log('[Flutterwave webhook] event:', event, '| reference:', data?.reference, '| status:', data?.status);
 
-    if (event !== 'charge.completed') return res.json({ success: true });
+    if (!event?.startsWith('charge.')) return res.json({ success: true });
 
-    const { status, tx_ref, id: transactionId } = data;
+    // V4 uses 'reference' (our tx_ref/shortOrderId), not 'tx_ref'
+    const reference = data?.reference || data?.tx_ref;
+    const status    = data?.status;
 
     try {
       if (status === 'successful') {
-        await handleFlutterwavePayment(transactionId, tx_ref, data);
+        await handleFlutterwavePayment(reference, data);
       } else {
-        // Failed / cancelled at Flutterwave's end
         const { data: payment } = await adminDb
           .from('payments')
           .select('id, order_id')
-          .eq('checkout_request_id', tx_ref)
+          .eq('checkout_request_id', reference)
           .maybeSingle();
         if (payment) {
           await adminDb.from('payments').update({ status: 'failed', failure_reason: 'Card payment failed' }).eq('id', payment.id);
@@ -498,29 +500,28 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
   });
 
   // Flutterwave verify — called from /order-success after Flutterwave redirects the customer back
-  // Flutterwave appends: ?status=successful&tx_ref=ORD-A001&transaction_id=12345
+  // V4 appends: ?status=successful&reference=ORD-A001  (or may use tx_ref — handle both)
   router.get('/flutterwave/verify', async (req, res) => {
-    const { transaction_id, tx_ref, status } = req.query;
+    const { reference, tx_ref, status } = req.query;
+    const ref = reference || tx_ref; // accept either param name
 
-    // Customer cancelled on Flutterwave's page — no API call needed
     if (status === 'cancelled') return res.json({ status: 'cancelled' });
 
-    if (!transaction_id || !tx_ref) {
-      return res.status(400).json({ error: 'transaction_id and tx_ref are required' });
+    if (!ref) {
+      return res.status(400).json({ error: 'reference is required' });
     }
 
     try {
-      // Check DB cache — if webhook already processed this, return immediately
       const { data: existing } = await adminDb
         .from('payments')
         .select('status, order_id')
-        .eq('checkout_request_id', tx_ref)
+        .eq('checkout_request_id', ref)
         .maybeSingle();
 
       if (!existing) return res.status(404).json({ error: 'Payment not found' });
       if (existing.status === 'paid') return res.json({ status: 'completed', order_id: existing.order_id });
 
-      const result = await handleFlutterwavePayment(transaction_id, tx_ref);
+      const result = await handleFlutterwavePayment(ref);
       return res.json(result);
     } catch (err) {
       console.error('[Flutterwave verify]', err.message);
@@ -529,24 +530,25 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
   });
 
   // Shared handler — verifies with Flutterwave API, updates DB, reduces inventory, sends email
-  async function handleFlutterwavePayment(transactionId, txRef, webhookData = null) {
-    // Use webhook data if provided (avoids an extra API call), otherwise fetch from Flutterwave
-    const tx = webhookData || await flutterwave.verifyTransaction(transactionId);
-    console.log(`[Flutterwave] tx status for ${txRef}:`, tx.status, '| flw_ref:', tx.flw_ref);
+  async function handleFlutterwavePayment(reference, webhookData = null) {
+    // Use webhook data if provided, otherwise fetch from Flutterwave by reference
+    const tx = webhookData || await flutterwave.verifyTransaction(reference);
+    console.log(`[Flutterwave] tx status for ${reference}:`, tx.status);
 
     const { data: payment } = await adminDb
       .from('payments')
       .select('id, order_id, status')
-      .eq('checkout_request_id', txRef)
+      .eq('checkout_request_id', reference)
       .maybeSingle();
 
     if (!payment) return { status: 'not_found' };
     if (payment.status === 'paid') return { status: 'completed', order_id: payment.order_id };
 
+    // V4 uses tx.status === 'successful'; V3 used 'successful' too — consistent
     if (tx.status === 'successful') {
       await adminDb.from('payments').update({
         status:        'paid',
-        mpesa_receipt: tx.flw_ref || null,
+        mpesa_receipt: tx.flw_ref || tx.reference || null,
       }).eq('id', payment.id);
 
       const { data: order } = await adminDb

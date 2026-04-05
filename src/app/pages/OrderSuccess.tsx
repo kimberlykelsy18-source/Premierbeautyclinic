@@ -14,11 +14,10 @@ export function OrderSuccess() {
   const [status, setStatus] = useState<PaymentStatus>('loading');
   const [retryCount, setRetryCount] = useState(0);
 
-  // Flutterwave appends these to the redirect URL after the customer pays:
-  // ?status=successful&tx_ref=ORD-A001&transaction_id=12345
-  const flwStatus      = searchParams.get('status');        // 'successful' | 'cancelled' | 'failed'
-  const txRef          = searchParams.get('tx_ref');        // our short order ID e.g. ORD-A001
-  const transactionId  = searchParams.get('transaction_id'); // Flutterwave numeric transaction ID
+  // Flutterwave V4 appends: ?status=successful&reference=ORD-A001
+  // (V3 fallback)         : ?status=successful&tx_ref=ORD-A001&transaction_id=12345
+  const flwStatus = searchParams.get('status');
+  const ref       = searchParams.get('reference') || searchParams.get('tx_ref'); // V4 or V3
 
   useEffect(() => {
     // Customer cancelled on Flutterwave's page — no API call needed
@@ -27,8 +26,7 @@ export function OrderSuccess() {
       return;
     }
 
-    // No transaction_id means Flutterwave didn't redirect here properly
-    if (!transactionId || !txRef) {
+    if (!ref) {
       setStatus('error');
       return;
     }
@@ -36,7 +34,7 @@ export function OrderSuccess() {
     async function verify() {
       try {
         const data = await apiFetch(
-          `/flutterwave/verify?transaction_id=${transactionId}&tx_ref=${encodeURIComponent(txRef!)}&status=${flwStatus || ''}`,
+          `/flutterwave/verify?reference=${encodeURIComponent(ref!)}&status=${flwStatus || ''}`,
           {},
           token,
           sessionId
@@ -57,7 +55,7 @@ export function OrderSuccess() {
 
     verify();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flwStatus, transactionId, txRef, retryCount]);
+  }, [flwStatus, ref, retryCount]);
 
   return (
     <div className="min-h-screen bg-[#F2F1F8] flex flex-col">
@@ -94,8 +92,8 @@ export function OrderSuccess() {
                 <CheckCircle2 className="w-16 h-16 text-green-500" />
               </div>
               <h1 className="text-[24px] md:text-[28px] font-serif italic mb-3 text-green-800">Payment Successful!</h1>
-              {txRef && (
-                <p className="text-[13px] font-bold text-[#6D4C91] uppercase tracking-widest mb-3">{txRef}</p>
+              {ref && (
+                <p className="text-[13px] font-bold text-[#6D4C91] uppercase tracking-widest mb-3">{ref}</p>
               )}
               <p className="text-[14px] text-gray-600 mb-8">
                 Your order has been confirmed. A receipt has been sent to your email address.
