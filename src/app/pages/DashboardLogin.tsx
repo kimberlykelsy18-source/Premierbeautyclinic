@@ -101,24 +101,20 @@ export function DashboardLogin() {
       {/* ── LEFT PANEL ─────────────────────────────────────────────────────── */}
       <div
         className="relative flex-shrink-0 w-full md:w-[55%] min-h-[200px] md:min-h-0 overflow-hidden flex flex-col items-center justify-center px-10 py-12 md:py-0"
-        style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 30%, #2d1054 60%, #3b1f6b 100%)' }}
+        style={{ background: '#000000' }}
       >
-        {/* Animated blobs — dark black/plum palette for the staff portal */}
+        {/* Organic flowing wave shapes — staff portal (inverted flow: lighter top → darker bottom) */}
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="120" cy="800" rx="360" ry="260" fill="#3b1f6b" fillOpacity="0.50">
-            <animateTransform attributeName="transform" type="rotate" from="0 120 800" to="360 120 800" dur="30s" repeatCount="indefinite" />
-          </ellipse>
-          <ellipse cx="700" cy="100" rx="300" ry="210" fill="#6D4C91" fillOpacity="0.35">
-            <animateTransform attributeName="transform" type="rotate" from="0 700 100" to="-360 700 100" dur="24s" repeatCount="indefinite" />
-          </ellipse>
-          <ellipse cx="400" cy="460" rx="240" ry="170" fill="#1a0a2e" fillOpacity="0.40">
-            <animate attributeName="cy" values="460;420;460" dur="10s" repeatCount="indefinite" />
-          </ellipse>
-          <circle cx="620" cy="680" r="140" fill="#9b6bbf" fillOpacity="0.18">
-            <animate attributeName="r" values="140;160;140" dur="8s" repeatCount="indefinite" />
-          </circle>
-          <path d="M0 280 Q200 220 400 280 Q600 340 800 280 L800 0 L0 0 Z" fill="#000000" fillOpacity="0.25" />
-          <path d="M0 750 Q200 690 400 750 Q600 810 800 750 L800 900 L0 900 Z" fill="#000000" fillOpacity="0.30" />
+          {/* Top light lavender wave */}
+          <path d="M -20 80 C 110 44 290 96 490 58 C 690 20 752 74 820 46 L 820 -10 L -20 -10 Z" fill="#F2F1F8" fillOpacity="0.10"/>
+          {/* Soft upper purple wave */}
+          <path d="M -20 230 C 120 190 295 246 495 208 C 695 170 752 228 820 198 L 820 -10 L -20 -10 Z" fill="#9b6bbf" fillOpacity="0.20"/>
+          {/* Brand purple mid wave */}
+          <path d="M 0 400 C 145 358 320 418 515 378 C 710 338 758 398 800 368 L 800 -10 L 0 -10 Z" fill="#6D4C91" fillOpacity="0.38"/>
+          {/* Deep purple lower wave */}
+          <path d="M 0 570 C 160 528 340 590 535 550 C 730 510 768 570 800 540 L 800 -10 L 0 -10 Z" fill="#3b1f6b" fillOpacity="0.60"/>
+          {/* Darkest bottom fill */}
+          <path d="M 0 730 C 155 692 330 750 528 712 C 726 674 766 732 800 702 L 800 -10 L 0 -10 Z" fill="#1a0a2e" fillOpacity="0.75"/>
         </svg>
 
         {/* Branding content */}

@@ -194,30 +194,20 @@ export function Login() {
 
       {/* ── LEFT PANEL ─────────────────────────────────────────────────────── */}
       <div className="relative flex-shrink-0 w-full md:w-[55%] min-h-[200px] md:min-h-0 overflow-hidden flex flex-col items-center justify-center px-10 py-12 md:py-0"
-        style={{ background: 'linear-gradient(135deg, #1a0a2e 0%, #3b1f6b 35%, #6D4C91 65%, #9b6bbf 100%)' }}
+        style={{ background: '#0a0a0a' }}
       >
-        {/* Animated wave blobs — company purple/plum palette */}
+        {/* Organic flowing wave shapes — project color palette */}
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-          {/* Large bottom-left blob */}
-          <ellipse cx="100" cy="820" rx="340" ry="240" fill="#4a2070" fillOpacity="0.55">
-            <animateTransform attributeName="transform" type="rotate" from="0 100 820" to="360 100 820" dur="28s" repeatCount="indefinite" />
-          </ellipse>
-          {/* Top-right arc */}
-          <ellipse cx="720" cy="80" rx="280" ry="200" fill="#8a4fbf" fillOpacity="0.40">
-            <animateTransform attributeName="transform" type="rotate" from="0 720 80" to="-360 720 80" dur="22s" repeatCount="indefinite" />
-          </ellipse>
-          {/* Center floating blob */}
-          <ellipse cx="400" cy="450" rx="220" ry="160" fill="#2d1054" fillOpacity="0.35">
-            <animate attributeName="cy" values="450;410;450" dur="9s" repeatCount="indefinite" />
-          </ellipse>
-          {/* Small accent circle */}
-          <circle cx="630" cy="700" r="130" fill="#b07ed4" fillOpacity="0.22">
-            <animate attributeName="r" values="130;150;130" dur="7s" repeatCount="indefinite" />
-          </circle>
-          {/* Thin top wave line */}
-          <path d="M0 260 Q200 200 400 260 Q600 320 800 260 L800 0 L0 0 Z" fill="#000000" fillOpacity="0.18" />
-          {/* Bottom wave fill */}
-          <path d="M0 760 Q200 700 400 760 Q600 820 800 760 L800 900 L0 900 Z" fill="#000000" fillOpacity="0.20" />
+          {/* Deep base wave — bottom fill */}
+          <path d="M 0 640 C 180 595 360 660 540 618 C 720 576 768 638 800 608 L 800 900 L 0 900 Z" fill="#3b1f6b" fillOpacity="0.95"/>
+          {/* Brand purple mid wave */}
+          <path d="M 0 460 C 150 416 330 478 520 438 C 710 398 758 460 800 430 L 800 900 L 0 900 Z" fill="#6D4C91" fillOpacity="0.80"/>
+          {/* Soft medium purple upper wave */}
+          <path d="M 0 295 C 130 254 305 310 498 272 C 691 234 746 292 800 262 L 800 640 L 0 640 Z" fill="#9b6bbf" fillOpacity="0.55"/>
+          {/* Light lavender top accent wave */}
+          <path d="M -20 130 C 110 94 288 144 490 108 C 692 72 752 126 820 98 L 820 440 L -20 440 Z" fill="#F2F1F8" fillOpacity="0.12"/>
+          {/* Subtle right-side glow blob */}
+          <ellipse cx="750" cy="200" rx="180" ry="140" fill="#b07ed4" fillOpacity="0.10"/>
         </svg>
 
         {/* Branding content */}
