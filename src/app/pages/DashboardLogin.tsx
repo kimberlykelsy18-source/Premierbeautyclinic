@@ -5,6 +5,7 @@ import { Lock, Mail, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
 import logo from '../../assets/logo.png';
+import bgImage from '../../assets/Background.png';
 import { apiFetch } from '../lib/api';
 
 type PortalMode = 'employee' | 'admin';
@@ -96,28 +97,14 @@ export function DashboardLogin() {
   const copy = PORTAL_COPY[portalMode];
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col md:flex-row bg-white overflow-auto">
+    <div
+      className="fixed inset-0 z-50 flex flex-col md:flex-row overflow-auto"
+      style={{ backgroundImage: `url(${bgImage})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed' }}
+    >
 
-      {/* ── LEFT PANEL ─────────────────────────────────────────────────────── */}
-      <div
-        className="relative flex-shrink-0 w-full md:w-[55%] min-h-[200px] md:min-h-0 overflow-hidden flex flex-col items-center justify-center px-10 py-12 md:py-0"
-        style={{ background: '#000000' }}
-      >
-        {/* Organic flowing wave shapes — staff portal (inverted flow: lighter top → darker bottom) */}
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-          {/* Top light lavender wave */}
-          <path d="M -20 80 C 110 44 290 96 490 58 C 690 20 752 74 820 46 L 820 -10 L -20 -10 Z" fill="#F2F1F8" fillOpacity="0.10"/>
-          {/* Soft upper purple wave */}
-          <path d="M -20 230 C 120 190 295 246 495 208 C 695 170 752 228 820 198 L 820 -10 L -20 -10 Z" fill="#9b6bbf" fillOpacity="0.20"/>
-          {/* Brand purple mid wave */}
-          <path d="M 0 400 C 145 358 320 418 515 378 C 710 338 758 398 800 368 L 800 -10 L 0 -10 Z" fill="#6D4C91" fillOpacity="0.38"/>
-          {/* Deep purple lower wave */}
-          <path d="M 0 570 C 160 528 340 590 535 550 C 730 510 768 570 800 540 L 800 -10 L 0 -10 Z" fill="#3b1f6b" fillOpacity="0.60"/>
-          {/* Darkest bottom fill */}
-          <path d="M 0 730 C 155 692 330 750 528 712 C 726 674 766 732 800 702 L 800 -10 L 0 -10 Z" fill="#1a0a2e" fillOpacity="0.75"/>
-        </svg>
-
-        {/* Branding content */}
+      {/* ── LEFT PANEL — transparent, branding floats over full bg ───────── */}
+      <div className="relative flex-shrink-0 w-full md:w-[55%] min-h-[220px] md:min-h-0 flex flex-col items-center justify-center px-10 py-12 md:py-0">
+        {/* Branding */}
         <AnimatePresence mode="wait">
           <motion.div
             key={portalMode}
@@ -127,32 +114,32 @@ export function DashboardLogin() {
             transition={{ duration: 0.4 }}
             className="relative z-10 flex flex-col items-center text-center gap-5 max-w-sm"
           >
-            <img src={logo} alt="Premier Beauty Clinic" className="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-xl" />
+            <img src={logo} alt="Premier Beauty Clinic" className="w-24 h-24 md:w-32 md:h-32 object-contain" />
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 mb-3">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#b07ed4]" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#6D4C91]/15 border border-[#6D4C91]/30 mb-3">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#6D4C91]" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#3b1f6b]">
                   {portalMode === 'admin' ? 'Admin Access' : 'Staff Access'}
                 </span>
               </div>
-              <h2 className="text-white text-[20px] md:text-[26px] font-serif font-bold leading-snug drop-shadow">
+              <h2 className="text-[#1a0a2e] text-[20px] md:text-[26px] font-serif font-bold leading-snug">
                 {copy.heading}
               </h2>
-              <p className="mt-2 text-white/70 text-[13px] md:text-[15px] leading-relaxed">
+              <p className="mt-2 text-[#3b1f6b]/80 text-[13px] md:text-[15px] leading-relaxed">
                 {copy.tagline}
               </p>
             </div>
             <div className="flex gap-2 mt-1">
               {[0, 1, 2].map((i) => (
-                <span key={i} className="w-1.5 h-1.5 rounded-full bg-white/35" />
+                <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#6D4C91]/50" />
               ))}
             </div>
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* ── RIGHT PANEL ────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-white px-6 py-10 md:py-0 overflow-y-auto">
+      {/* ── RIGHT PANEL — transparent, form floats over background ──────── */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 md:py-0 overflow-y-auto">
         <div className="w-full max-w-[420px]">
 
           {/* Portal switcher tabs */}

@@ -7,6 +7,7 @@ import { useFeedback } from '../components/Feedback';
 import { TermsModal } from '../components/TermsModal';
 import { apiFetch } from '../lib/api';
 import logo from '../../assets/logo.png';
+import bgImage from '../../assets/Background.png';
 
 type ViewMode = 'signup' | 'login' | 'forgot-password';
 
@@ -189,28 +190,14 @@ export function Login() {
   const panelCopy = PANEL_COPY[viewMode];
 
   return (
-    // Full-screen split layout — bypasses the Root navbar padding
-    <div className="fixed inset-0 z-50 flex flex-col md:flex-row bg-white overflow-auto">
+    <div
+      className="fixed inset-0 z-50 flex flex-col md:flex-row overflow-auto"
+      style={{ backgroundImage: `url(${bgImage})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed' }}
+    >
 
-      {/* ── LEFT PANEL ─────────────────────────────────────────────────────── */}
-      <div className="relative flex-shrink-0 w-full md:w-[55%] min-h-[200px] md:min-h-0 overflow-hidden flex flex-col items-center justify-center px-10 py-12 md:py-0"
-        style={{ background: '#0a0a0a' }}
-      >
-        {/* Organic flowing wave shapes — project color palette */}
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-          {/* Deep base wave — bottom fill */}
-          <path d="M 0 640 C 180 595 360 660 540 618 C 720 576 768 638 800 608 L 800 900 L 0 900 Z" fill="#3b1f6b" fillOpacity="0.95"/>
-          {/* Brand purple mid wave */}
-          <path d="M 0 460 C 150 416 330 478 520 438 C 710 398 758 460 800 430 L 800 900 L 0 900 Z" fill="#6D4C91" fillOpacity="0.80"/>
-          {/* Soft medium purple upper wave */}
-          <path d="M 0 295 C 130 254 305 310 498 272 C 691 234 746 292 800 262 L 800 640 L 0 640 Z" fill="#9b6bbf" fillOpacity="0.55"/>
-          {/* Light lavender top accent wave */}
-          <path d="M -20 130 C 110 94 288 144 490 108 C 692 72 752 126 820 98 L 820 440 L -20 440 Z" fill="#F2F1F8" fillOpacity="0.12"/>
-          {/* Subtle right-side glow blob */}
-          <ellipse cx="750" cy="200" rx="180" ry="140" fill="#b07ed4" fillOpacity="0.10"/>
-        </svg>
-
-        {/* Branding content */}
+      {/* ── LEFT PANEL — transparent, branding floats over full bg ───────── */}
+      <div className="relative flex-shrink-0 w-full md:w-[55%] min-h-[220px] md:min-h-0 flex flex-col items-center justify-center px-10 py-12 md:py-0">
+        {/* Branding */}
         <AnimatePresence mode="wait">
           <motion.div
             key={viewMode}
@@ -220,27 +207,26 @@ export function Login() {
             transition={{ duration: 0.4 }}
             className="relative z-10 flex flex-col items-center text-center gap-5 max-w-sm"
           >
-            <img src={logo} alt="Premier Beauty Clinic" className="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-xl" />
+            <img src={logo} alt="Premier Beauty Clinic" className="w-24 h-24 md:w-32 md:h-32 object-contain" />
             <div>
-              <h2 className="text-white text-[20px] md:text-[26px] font-serif font-bold leading-snug drop-shadow">
+              <h2 className="text-[#1a0a2e] text-[20px] md:text-[26px] font-serif font-bold leading-snug">
                 {panelCopy.heading}
               </h2>
-              <p className="mt-2 text-white/75 text-[13px] md:text-[15px] leading-relaxed">
+              <p className="mt-2 text-[#3b1f6b]/80 text-[13px] md:text-[15px] leading-relaxed">
                 {panelCopy.tagline}
               </p>
             </div>
-            {/* Subtle divider dots */}
             <div className="flex gap-2 mt-1">
               {[0, 1, 2].map((i) => (
-                <span key={i} className="w-1.5 h-1.5 rounded-full bg-white/40" />
+                <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#6D4C91]/50" />
               ))}
             </div>
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* ── RIGHT PANEL ────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-white px-6 py-10 md:py-0 overflow-y-auto">
+      {/* ── RIGHT PANEL — transparent, form floats over background ─────────── */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 md:py-0 overflow-y-auto">
         <div className="w-full max-w-[420px]">
           <AnimatePresence mode="wait">
 
