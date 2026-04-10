@@ -6,8 +6,13 @@ import { useEffect } from "react";
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
+// Routes where the Navbar, Footer, and WhatsApp button are hidden
+// so the page can render a full-screen layout.
+const BARE_ROUTES = ['/login'];
+
 export function Root() {
   const { pathname } = useLocation();
+  const isBareRoute = BARE_ROUTES.includes(pathname);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -27,12 +32,12 @@ export function Root() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex flex-col font-sans text-[#1A1A1A]">
-      <Navbar />
+      {!isBareRoute && <Navbar />}
       <main className="flex-grow">
         <Outlet />
       </main>
-      <Footer />
-      <WhatsAppButton />
+      {!isBareRoute && <Footer />}
+      {!isBareRoute && <WhatsAppButton />}
     </div>
   );
 }

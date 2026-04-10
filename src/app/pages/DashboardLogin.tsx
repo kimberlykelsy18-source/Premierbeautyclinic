@@ -9,6 +9,17 @@ import { apiFetch } from '../lib/api';
 
 type PortalMode = 'employee' | 'admin';
 
+const PORTAL_COPY: Record<PortalMode, { heading: string; tagline: string }> = {
+  employee: {
+    heading: 'Staff Portal',
+    tagline: 'Access your schedule, manage appointments, and serve clients with confidence.',
+  },
+  admin: {
+    heading: 'Admin Portal',
+    tagline: 'Full dashboard access — manage staff, inventory, orders, and clinic settings.',
+  },
+};
+
 export function DashboardLogin() {
   const { user, authLoading, login } = useStore();
   const [searchParams] = useSearchParams();
@@ -82,123 +93,174 @@ export function DashboardLogin() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#F2F1F8]">
-      {/* Dark Header with Logo + Portal Tabs */}
-      <div className="bg-[#000000] pb-5 pt-6">
-        <div className="max-w-md mx-auto px-6">
-          {/* Logo */}
-          <div className="flex justify-center mb-5">
-            <img
-              src={logo}
-              alt="Premier Beauty Clinic"
-              className="h-10 md:h-12 w-auto object-contain"
-            />
-          </div>
+  const copy = PORTAL_COPY[portalMode];
 
-          {/* Portal Tabs */}
-          <div className="flex gap-2 p-1.5 bg-white/10 rounded-xl border border-white/20 backdrop-blur-sm">
-            <button
-              onClick={() => switchPortal('employee')}
-              className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all active:scale-95 ${
-                portalMode === 'employee' ? 'bg-[#6D4C91] text-white' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              Employee
-            </button>
-            <button
-              onClick={() => switchPortal('admin')}
-              className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all active:scale-95 ${
-                portalMode === 'admin' ? 'bg-[#6D4C91] text-white' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              Admin
-            </button>
-          </div>
-        </div>
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col md:flex-row bg-white overflow-auto">
+
+      {/* ── LEFT PANEL ─────────────────────────────────────────────────────── */}
+      <div
+        className="relative flex-shrink-0 w-full md:w-[55%] min-h-[200px] md:min-h-0 overflow-hidden flex flex-col items-center justify-center px-10 py-12 md:py-0"
+        style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 30%, #2d1054 60%, #3b1f6b 100%)' }}
+      >
+        {/* Animated blobs — dark black/plum palette for the staff portal */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="120" cy="800" rx="360" ry="260" fill="#3b1f6b" fillOpacity="0.50">
+            <animateTransform attributeName="transform" type="rotate" from="0 120 800" to="360 120 800" dur="30s" repeatCount="indefinite" />
+          </ellipse>
+          <ellipse cx="700" cy="100" rx="300" ry="210" fill="#6D4C91" fillOpacity="0.35">
+            <animateTransform attributeName="transform" type="rotate" from="0 700 100" to="-360 700 100" dur="24s" repeatCount="indefinite" />
+          </ellipse>
+          <ellipse cx="400" cy="460" rx="240" ry="170" fill="#1a0a2e" fillOpacity="0.40">
+            <animate attributeName="cy" values="460;420;460" dur="10s" repeatCount="indefinite" />
+          </ellipse>
+          <circle cx="620" cy="680" r="140" fill="#9b6bbf" fillOpacity="0.18">
+            <animate attributeName="r" values="140;160;140" dur="8s" repeatCount="indefinite" />
+          </circle>
+          <path d="M0 280 Q200 220 400 280 Q600 340 800 280 L800 0 L0 0 Z" fill="#000000" fillOpacity="0.25" />
+          <path d="M0 750 Q200 690 400 750 Q600 810 800 750 L800 900 L0 900 Z" fill="#000000" fillOpacity="0.30" />
+        </svg>
+
+        {/* Branding content */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={portalMode}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.4 }}
+            className="relative z-10 flex flex-col items-center text-center gap-5 max-w-sm"
+          >
+            <img src={logo} alt="Premier Beauty Clinic" className="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-xl" />
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 mb-3">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#b07ed4]" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+                  {portalMode === 'admin' ? 'Admin Access' : 'Staff Access'}
+                </span>
+              </div>
+              <h2 className="text-white text-[20px] md:text-[26px] font-serif font-bold leading-snug drop-shadow">
+                {copy.heading}
+              </h2>
+              <p className="mt-2 text-white/70 text-[13px] md:text-[15px] leading-relaxed">
+                {copy.tagline}
+              </p>
+            </div>
+            <div className="flex gap-2 mt-1">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="w-1.5 h-1.5 rounded-full bg-white/35" />
+              ))}
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      {/* Form Area */}
-      <div className="max-w-md mx-auto px-6 py-6 pb-10">
-        {/* Context badge */}
-        <div className="flex items-center gap-2 px-4 py-3 bg-[#000000] rounded-2xl mb-6">
-          <ShieldCheck className="w-4 h-4 text-[#6D4C91] shrink-0" />
-          <p className="text-[11px] text-white/60 font-bold uppercase tracking-widest">
-            {portalMode === 'admin'
-              ? 'Admin Dashboard — full permissions'
-              : 'Staff Dashboard — credentials sent by management'}
-          </p>
-        </div>
+      {/* ── RIGHT PANEL ────────────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col items-center justify-center bg-white px-6 py-10 md:py-0 overflow-y-auto">
+        <div className="w-full max-w-[420px]">
 
-        {/* Login Form */}
-        <AnimatePresence mode="wait">
-          <motion.form
-            key={portalMode}
-            initial={{ opacity: 0, x: portalMode === 'admin' ? 20 : -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: portalMode === 'admin' ? -20 : 20 }}
-            onSubmit={handleLogin}
-            className="space-y-5"
-          >
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-14 pr-5 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
-                  placeholder={portalMode === 'admin' ? 'admin@premierbeauty.com' : 'staff@premierbeauty.com'}
-                />
-              </div>
-            </div>
+          {/* Portal switcher tabs */}
+          <div className="flex gap-2 p-1 bg-gray-100 rounded-xl mb-7">
+            {(['employee', 'admin'] as PortalMode[]).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => switchPortal(mode)}
+                className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all active:scale-95 ${
+                  portalMode === mode
+                    ? 'bg-[#6D4C91] text-white shadow-sm'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                {mode === 'employee' ? 'Employee' : 'Admin'}
+              </button>
+            ))}
+          </div>
 
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-14 pr-14 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-[#000000] text-white py-3.5 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          {/* Login Form */}
+          <AnimatePresence mode="wait">
+            <motion.form
+              key={portalMode}
+              initial={{ opacity: 0, x: portalMode === 'admin' ? 24 : -24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: portalMode === 'admin' ? -24 : 24 }}
+              transition={{ duration: 0.3 }}
+              onSubmit={handleLogin}
+              className="space-y-4"
             >
-              {isLoading
-                ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                : <>
-                    <span>{portalMode === 'admin' ? 'Sign In as Admin' : 'Sign In as Employee'}</span>
-                    <ArrowRight className="w-4 h-4 shrink-0" />
-                  </>
-              }
-            </button>
-          </motion.form>
-        </AnimatePresence>
+              <div className="mb-6">
+                <h1 className="text-[28px] md:text-[32px] font-bold text-gray-900 leading-tight">
+                  {portalMode === 'admin' ? 'Admin Sign In' : 'Staff Sign In'}
+                </h1>
+                <p className="text-[13px] text-gray-400 mt-1">
+                  {portalMode === 'admin'
+                    ? 'Sign in with your admin credentials.'
+                    : 'Use the credentials sent by your manager.'}
+                </p>
+              </div>
 
-        <div className="mt-8 pt-8 border-t border-gray-200">
-          <p className="text-center text-[12px] text-gray-400">
-            Contact your admin if you need access or a password reset.
-          </p>
+              {/* Email */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                    placeholder={portalMode === 'admin' ? 'admin@premierbeauty.com' : 'staff@premierbeauty.com'}
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-[#000000] text-white py-3.5 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isLoading
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <>
+                      <span>{portalMode === 'admin' ? 'Sign In as Admin' : 'Sign In as Employee'}</span>
+                      <ArrowRight className="w-4 h-4 shrink-0" />
+                    </>
+                }
+              </button>
+            </motion.form>
+          </AnimatePresence>
+
+          {/* Footer note */}
+          <div className="mt-8 flex items-center justify-center gap-2 text-[11px] text-gray-300">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Contact your admin if you need access or a password reset.</span>
+          </div>
         </div>
       </div>
     </div>

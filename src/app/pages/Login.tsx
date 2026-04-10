@@ -6,13 +6,31 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
 import { TermsModal } from '../components/TermsModal';
 import { apiFetch } from '../lib/api';
+import logo from '../assets/logo.png';
 
 type ViewMode = 'signup' | 'login' | 'forgot-password';
+
+// ── Left panel branding copy per view ──────────────────────────────────────
+const PANEL_COPY: Record<ViewMode, { heading: string; tagline: string }> = {
+  signup: {
+    heading: 'Welcome to Premier Beauty Clinic',
+    tagline: 'Manage your appointments, products, and beauty services all in one place.',
+  },
+  login: {
+    heading: 'Welcome Back',
+    tagline: 'Sign in to access your bookings, orders, and exclusive beauty services.',
+  },
+  'forgot-password': {
+    heading: 'Reset Your Password',
+    tagline: "No worries — we'll send a secure link straight to your inbox.",
+  },
+};
 
 export function Login() {
   const { user, authLoading, isFirstTimeUser, setIsFirstTimeUser, login } = useStore();
   const [viewMode, setViewMode] = useState<ViewMode>(isFirstTimeUser ? 'signup' : 'login');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const { showFeedback } = useFeedback();
@@ -34,13 +52,10 @@ export function Login() {
   }, [user, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Holds the API response temporarily between "Create Account" click and "Accept Terms" click.
-  // We can't log the user in until they accept terms, but we don't want to call the API twice.
   const [pendingAuthData, setPendingAuthData] = useState<{ user: any; session: any } | null>(null);
 
   // ── Signup ──────────────────────────────────────────────────────────────
-  // Calls POST /auth/signup. On success, shows the Terms modal.
-  // The actual login() call happens in handleTermsAccept below.
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
@@ -76,7 +91,6 @@ export function Login() {
         }),
       });
 
-      // Save the response — we'll use it when the user accepts terms
       setPendingAuthData(data);
       setShowTerms(true);
     } catch (error) {
@@ -87,7 +101,6 @@ export function Login() {
   };
 
   // Called when the user clicks "Accept" in the Terms modal.
-  // Now we have their consent — log them in with the API response we saved.
   const handleTermsAccept = () => {
     setShowTerms(false);
 
@@ -109,7 +122,7 @@ export function Login() {
   };
 
   // ── Login ────────────────────────────────────────────────────────────────
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!formData.email || !formData.password) {
@@ -145,9 +158,7 @@ export function Login() {
   };
 
   // ── Forgot Password ──────────────────────────────────────────────────────
-  // Calls POST /auth/forgot-password. The backend uses Supabase to send
-  // a reset email with a magic link pointing back to our /reset-password page.
-  const handleForgotPassword = async (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!formData.email) {
@@ -175,271 +186,353 @@ export function Login() {
     }
   };
 
+  const panelCopy = PANEL_COPY[viewMode];
+
   return (
-    <div className="min-h-screen bg-[#F2F1F8] pt-[90px] md:pt-[120px] pb-16">
-      <div className="max-w-md mx-auto px-4 md:px-6 py-8 md:py-12">
+    // Full-screen split layout — bypasses the Root navbar padding
+    <div className="fixed inset-0 z-50 flex flex-col md:flex-row bg-white overflow-auto">
+
+      {/* ── LEFT PANEL ─────────────────────────────────────────────────────── */}
+      <div className="relative flex-shrink-0 w-full md:w-[55%] min-h-[200px] md:min-h-0 overflow-hidden flex flex-col items-center justify-center px-10 py-12 md:py-0"
+        style={{ background: 'linear-gradient(135deg, #1a0a2e 0%, #3b1f6b 35%, #6D4C91 65%, #9b6bbf 100%)' }}
+      >
+        {/* Animated wave blobs — company purple/plum palette */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          {/* Large bottom-left blob */}
+          <ellipse cx="100" cy="820" rx="340" ry="240" fill="#4a2070" fillOpacity="0.55">
+            <animateTransform attributeName="transform" type="rotate" from="0 100 820" to="360 100 820" dur="28s" repeatCount="indefinite" />
+          </ellipse>
+          {/* Top-right arc */}
+          <ellipse cx="720" cy="80" rx="280" ry="200" fill="#8a4fbf" fillOpacity="0.40">
+            <animateTransform attributeName="transform" type="rotate" from="0 720 80" to="-360 720 80" dur="22s" repeatCount="indefinite" />
+          </ellipse>
+          {/* Center floating blob */}
+          <ellipse cx="400" cy="450" rx="220" ry="160" fill="#2d1054" fillOpacity="0.35">
+            <animate attributeName="cy" values="450;410;450" dur="9s" repeatCount="indefinite" />
+          </ellipse>
+          {/* Small accent circle */}
+          <circle cx="630" cy="700" r="130" fill="#b07ed4" fillOpacity="0.22">
+            <animate attributeName="r" values="130;150;130" dur="7s" repeatCount="indefinite" />
+          </circle>
+          {/* Thin top wave line */}
+          <path d="M0 260 Q200 200 400 260 Q600 320 800 260 L800 0 L0 0 Z" fill="#000000" fillOpacity="0.18" />
+          {/* Bottom wave fill */}
+          <path d="M0 760 Q200 700 400 760 Q600 820 800 760 L800 900 L0 900 Z" fill="#000000" fillOpacity="0.20" />
+        </svg>
+
+        {/* Branding content */}
         <AnimatePresence mode="wait">
-          {/* SIGNUP FORM */}
-          {viewMode === 'signup' && (
-            <motion.form
-              key="signup"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              onSubmit={handleSignup}
-              className="space-y-5 md:space-y-6"
-            >
-              <div className="mb-2">
-                <h1 className="text-[26px] md:text-[32px] font-serif font-bold leading-tight mb-1">Create Account</h1>
-                <p className="text-[13px] text-gray-500">Join Premier Beauty Clinic today.</p>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Full Name *</label>
-                <div className="relative">
-                  <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full pl-14 pr-5 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
-                    placeholder="John Doe"
-                  />
-                </div>
-              </div>
+          <motion.div
+            key={viewMode}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.4 }}
+            className="relative z-10 flex flex-col items-center text-center gap-5 max-w-sm"
+          >
+            <img src={logo} alt="Premier Beauty Clinic" className="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-xl" />
+            <div>
+              <h2 className="text-white text-[20px] md:text-[26px] font-serif font-bold leading-snug drop-shadow">
+                {panelCopy.heading}
+              </h2>
+              <p className="mt-2 text-white/75 text-[13px] md:text-[15px] leading-relaxed">
+                {panelCopy.tagline}
+              </p>
+            </div>
+            {/* Subtle divider dots */}
+            <div className="flex gap-2 mt-1">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="w-1.5 h-1.5 rounded-full bg-white/40" />
+              ))}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Email Address *</label>
-                <div className="relative">
-                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full pl-14 pr-5 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
-                    placeholder="you@example.com"
-                  />
-                </div>
-              </div>
+      {/* ── RIGHT PANEL ────────────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col items-center justify-center bg-white px-6 py-10 md:py-0 overflow-y-auto">
+        <div className="w-full max-w-[420px]">
+          <AnimatePresence mode="wait">
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Phone Number *</label>
-                <div className="relative">
-                  <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    className="w-full pl-14 pr-5 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
-                    placeholder="07XX XXX XXX"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Password *</label>
-                <div className="relative">
-                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="w-full pl-14 pr-14 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Confirm Password *</label>
-                <div className="relative">
-                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                    className="w-full pl-14 pr-5 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-[#6D4C91] text-white py-3.5 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all flex items-center justify-center gap-2 mt-6 shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+            {/* SIGNUP FORM */}
+            {viewMode === 'signup' && (
+              <motion.form
+                key="signup"
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -24 }}
+                transition={{ duration: 0.3 }}
+                onSubmit={handleSignup}
+                className="space-y-4"
               >
-                {isLoading
-                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  : <><span>Create Account</span><ArrowRight className="w-4 h-4 shrink-0" /></>
-                }
-              </button>
+                <div className="mb-6">
+                  <h1 className="text-[28px] md:text-[32px] font-bold text-gray-900 leading-tight">Create Account</h1>
+                  <p className="text-[13px] text-gray-400 mt-1">Join Premier Beauty Clinic today.</p>
+                </div>
 
-              <div className="text-center pt-4">
-                <p className="text-[13px] md:text-[14px] text-gray-500">
+                {/* Full Name */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Full Name</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      placeholder="John Doe"
+                    />
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      placeholder="07XX XXX XXX"
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Confirm Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-[#6D4C91] text-white py-3.5 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isLoading
+                    ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : <><span>Create Account</span><ArrowRight className="w-4 h-4 shrink-0" /></>
+                  }
+                </button>
+
+                <p className="text-center text-[13px] text-gray-400 pt-2">
                   Already have an account?{' '}
                   <button
                     type="button"
                     onClick={() => setViewMode('login')}
-                    className="text-[#6D4C91] font-bold hover:underline"
+                    className="text-[#6D4C91] font-semibold hover:underline"
                   >
                     Sign In
                   </button>
                 </p>
-              </div>
-            </motion.form>
-          )}
+              </motion.form>
+            )}
 
-          {/* LOGIN FORM */}
-          {viewMode === 'login' && (
-            <motion.form
-              key="login"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              onSubmit={handleLogin}
-              className="space-y-5 md:space-y-6"
-            >
-              <div className="mb-2">
-                <h1 className="text-[26px] md:text-[32px] font-serif font-bold leading-tight mb-1">Welcome Back</h1>
-                <p className="text-[13px] text-gray-500">Sign in to your account.</p>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full pl-14 pr-5 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
-                    placeholder="you@example.com"
-                  />
+            {/* LOGIN FORM */}
+            {viewMode === 'login' && (
+              <motion.form
+                key="login"
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -24 }}
+                transition={{ duration: 0.3 }}
+                onSubmit={handleLogin}
+                className="space-y-4"
+              >
+                <div className="mb-6">
+                  <h1 className="text-[28px] md:text-[32px] font-bold text-gray-900 leading-tight">Welcome Back</h1>
+                  <p className="text-[13px] text-gray-400 mt-1">Sign in to your account.</p>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="w-full pl-14 pr-14 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
-                    placeholder="••••••••"
-                  />
+                {/* Email */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-right -mt-1">
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    onClick={() => setViewMode('forgot-password')}
+                    className="text-[12px] text-[#6D4C91] hover:underline font-medium"
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    Forgot Password?
                   </button>
                 </div>
-              </div>
 
-              <div className="text-right">
                 <button
-                  type="button"
-                  onClick={() => setViewMode('forgot-password')}
-                  className="text-[13px] text-[#6D4C91] hover:underline font-medium"
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-[#000000] text-white py-3.5 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  Forgot Password?
+                  {isLoading
+                    ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : <><span>Sign In</span><ArrowRight className="w-4 h-4 shrink-0" /></>
+                  }
                 </button>
-              </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-[#000000] text-white py-3.5 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isLoading
-                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  : <><span>Sign In</span><ArrowRight className="w-4 h-4 shrink-0" /></>
-                }
-              </button>
-
-              <div className="text-center pt-4">
-                <p className="text-[13px] md:text-[14px] text-gray-500">
+                <p className="text-center text-[13px] text-gray-400 pt-2">
                   Don't have an account?{' '}
                   <button
                     type="button"
                     onClick={() => setViewMode('signup')}
-                    className="text-[#6D4C91] font-bold hover:underline"
+                    className="text-[#6D4C91] font-semibold hover:underline"
                   >
                     Sign Up
                   </button>
                 </p>
-              </div>
-            </motion.form>
-          )}
+              </motion.form>
+            )}
 
-          {/* FORGOT PASSWORD FORM */}
-          {viewMode === 'forgot-password' && (
-            <motion.form
-              key="forgot"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              onSubmit={handleForgotPassword}
-              className="space-y-5 md:space-y-6"
-            >
-              <div className="mb-2">
-                <h1 className="text-[26px] md:text-[32px] font-serif font-bold leading-tight mb-1">Reset Password</h1>
-                <p className="text-[13px] text-gray-500">Enter your email and we'll send a reset link.</p>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full pl-14 pr-5 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px]"
-                    placeholder="you@example.com"
-                  />
-                </div>
-                <p className="text-[12px] md:text-[13px] text-gray-500 mt-2">
-                  We'll send password reset instructions to this email
-                </p>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-[#6D4C91] text-white py-3.5 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
+            {/* FORGOT PASSWORD FORM */}
+            {viewMode === 'forgot-password' && (
+              <motion.form
+                key="forgot"
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -24 }}
+                transition={{ duration: 0.3 }}
+                onSubmit={handleForgotPassword}
+                className="space-y-4"
               >
-                {isLoading
-                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  : <span>Send Reset Link</span>
-                }
-              </button>
+                <div className="mb-6">
+                  <h1 className="text-[28px] md:text-[32px] font-bold text-gray-900 leading-tight">Reset Password</h1>
+                  <p className="text-[13px] text-gray-400 mt-1">Enter your email and we'll send a reset link.</p>
+                </div>
 
-              <div className="text-center pt-4">
+                {/* Email */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                  <p className="text-[12px] text-gray-400 mt-2">
+                    We'll send password reset instructions to this email.
+                  </p>
+                </div>
+
                 <button
-                  type="button"
-                  onClick={() => setViewMode('login')}
-                  className="text-[13px] md:text-[14px] text-gray-500 hover:text-gray-700 flex items-center justify-center space-x-2 mx-auto"
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-[#6D4C91] text-white py-3.5 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back to Login</span>
+                  {isLoading
+                    ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : <span>Send Reset Link</span>
+                  }
                 </button>
-              </div>
-            </motion.form>
-          )}
-        </AnimatePresence>
 
-        <div className="mt-8 pt-8 border-t border-gray-100">
-          <div className="flex items-center justify-center space-x-2 text-[12px] text-gray-400">
-            <ShieldCheck className="w-4 h-4" />
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('login')}
+                    className="text-[13px] text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1.5 mx-auto transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to Login</span>
+                  </button>
+                </div>
+              </motion.form>
+            )}
+
+          </AnimatePresence>
+
+          {/* Security badge */}
+          <div className="mt-8 flex items-center justify-center gap-2 text-[11px] text-gray-300">
+            <ShieldCheck className="w-3.5 h-3.5" />
             <span>Secure 256-bit SSL Encryption</span>
           </div>
         </div>
