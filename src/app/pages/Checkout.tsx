@@ -8,16 +8,7 @@ import { ButtonWithLoading } from '../components/Loading';
 import logo from '../../assets/logo.png';
 import mpesaLogo from '../../assets/mpesa.png';
 import { apiFetch } from '../lib/api';
-
-// Convert any common Kenyan phone format to the 254XXXXXXXXX format Daraja requires.
-// Examples: 0712345678 → 254712345678, +254712345678 → 254712345678
-function normalizeMpesaPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('0') && digits.length === 10) return '254' + digits.slice(1);
-  if (digits.startsWith('254') && digits.length === 12) return digits;
-  if (digits.startsWith('7') && digits.length === 9) return '254' + digits;
-  return digits; // return as-is and let the backend/Safaricom reject if invalid
-}
+import { normalizeMpesaPhone } from '../lib/phone';
 
 export function Checkout() {
   const { cart, formatPrice, getShippingFee, shippingRegions, clearCart, user, updateUser, token, sessionId } = useStore();

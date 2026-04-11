@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRef } from 'react';
-import * as XLSX from 'xlsx';
 import { Search, Plus, AlertCircle, ArrowUpDown, Edit2, Trash2, X, Upload, Check, ChevronLeft, ChevronRight, FileSpreadsheet, PackagePlus, Eye, EyeOff, RefreshCw, ImagePlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -52,8 +51,9 @@ function slugify(name: string) {
 function parseBulkFile(file: File): Promise<BulkRow[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = async e => {
       try {
+        const XLSX = await import('xlsx');
         const data = new Uint8Array(e.target!.result as ArrayBuffer);
         const wb   = XLSX.read(data, { type: 'array' });
         const ws   = wb.Sheets[wb.SheetNames[0]];
@@ -184,7 +184,8 @@ export function DashboardInventory() {
     }
   }
 
-  function downloadBulkTemplate() {
+  async function downloadBulkTemplate() {
+    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([
       ['Name', 'Brand', 'Category', 'Price (KES)', 'Stock', 'Low Stock Threshold', 'Description'],

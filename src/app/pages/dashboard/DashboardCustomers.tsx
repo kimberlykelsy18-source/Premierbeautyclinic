@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { Search, Filter, Mail, Phone, ChevronRight, UserPlus, Download } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { apiFetch } from '../../lib/api';
+import { formatShortDate } from '../../lib/dateFormatters';
+import { buildCsv, downloadCsv } from '../../lib/csv';
+import { StatCard } from '../../components/StatCard';
+import { LoadingSpinner } from '../../components/LoadingSpinner';
 
 interface ApiCustomer {
   id: string;
@@ -50,10 +54,7 @@ function mapCustomer(c: ApiCustomer): DisplayCustomer {
   };
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return 'No orders yet';
-  return new Date(iso).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
-}
+const formatDate = formatShortDate;
 
 export function DashboardCustomers() {
   const { token, sessionId } = useStore();
@@ -84,28 +85,15 @@ export function DashboardCustomers() {
   }).length;
 
   const exportCustomersCSV = () => {
-    const rows = [
+    const csv = buildCsv(
       ['Customer ID', 'Name', 'Email', 'Phone', 'Total Spent (KES)', 'Orders', 'Status', 'Joined', 'Last Order'],
-      ...filtered.map(c => [
-        `#${c.id}`,
-        c.name,
-        c.email,
-        c.phone,
-        String(c.totalSpent),
-        String(c.orders),
-        c.status,
-        formatDate(c.joinedAt),
-        formatDate(c.lastOrder),
+      filtered.map(c => [
+        `#${c.id}`, c.name, c.email, c.phone,
+        c.totalSpent, c.orders, c.status,
+        formatDate(c.joinedAt), formatDate(c.lastOrder),
       ]),
-    ];
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `customers-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    );
+    downloadCsv(csv, `customers-${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   return (
@@ -128,28 +116,15 @@ export function DashboardCustomers() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-gray-400 mb-2">Total Customers</p>
-          <p className="text-[28px] font-bold">{loading ? '—' : customers.length.toLocaleString()}</p>
-          <p className="text-[11px] text-gray-400 font-bold">All registered profiles</p>
-        </div>
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-gray-400 mb-2">Active Clients</p>
-          <p className="text-[28px] font-bold">{loading ? '—' : activeCount.toLocaleString()}</p>
-          <p className="text-[11px] text-gray-400 font-bold">
-            {loading || customers.length === 0 ? '—' : `${Math.round((activeCount / customers.length) * 100)}% of total base`}
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-gray-400 mb-2">Avg. Order Value</p>
-          <p className="text-[28px] font-bold">{loading ? '—' : `KES ${avgOrderValue.toLocaleString()}`}</p>
-          <p className="text-[11px] text-gray-400 font-bold">Across {totalOrders} orders</p>
-        </div>
-        <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-gray-400 mb-2">New This Month</p>
-          <p className="text-[28px] font-bold">{loading ? '—' : newThisMonth}</p>
-          <p className="text-[11px] text-gray-400 font-bold">Joined this calendar month</p>
-        </div>
+        <StatCard label="Total Customers" value={customers.length.toLocaleString()} subtitle="All registered profiles" loading={loading} />
+        <StatCard
+          label="Active Clients"
+          value={activeCount.toLocaleString()}
+          subtitle={!loading && customers.length > 0 ? `${Math.round((activeCount / customers.length) * 100)}% of total base` : '—'}
+          loading={loading}
+        />
+        <StatCard label="Avg. Order Value" value={`KES ${avgOrderValue.toLocaleString()}`} subtitle={`Across ${totalOrders} orders`} loading={loading} />
+        <StatCard label="New This Month" value={newThisMonth} subtitle="Joined this calendar month" loading={loading} />
       </div>
 
       <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
@@ -170,10 +145,7 @@ export function DashboardCustomers() {
         </div>
 
         {loading ? (
-          <div className="p-16 text-center">
-            <div className="w-8 h-8 border-4 border-[#6D4C91] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-400 text-[13px] font-bold uppercase tracking-widest">Loading customers…</p>
-          </div>
+          <LoadingSpinner message="Loading customers…" />
         ) : filtered.length === 0 ? (
           <div className="p-16 text-center">
             <p className="text-gray-400 text-[15px]">{searchTerm ? 'No customers match your search.' : 'No customers found.'}</p>

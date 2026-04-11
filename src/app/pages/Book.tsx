@@ -6,6 +6,7 @@ import mpesaLogo from '../../assets/mpesa.png';
 import { useStore } from '../context/StoreContext';
 import { useNavigate, Link } from 'react-router';
 import { apiFetch } from '../lib/api';
+import { normalizeMpesaPhone } from '../lib/phone';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Shape returned by GET /services
@@ -70,15 +71,6 @@ function buildAppointmentTime(date: Date, timeStr: string): string {
   const dt = new Date(date);
   dt.setHours(hour, minute, 0, 0);
   return dt.toISOString();
-}
-
-// Normalize any Kenyan phone format to 254XXXXXXXXX for Daraja
-function normalizeMpesaPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('0') && digits.length === 10) return '254' + digits.slice(1);
-  if (digits.startsWith('254') && digits.length === 12) return digits;
-  if (digits.startsWith('7') && digits.length === 9) return '254' + digits;
-  return digits;
 }
 
 // ─── Static time slots ───────────────────────────────────────────────────────

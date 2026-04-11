@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useEffect, useState, lazy, Suspense } from 'react';
+
+// Lazy-load SalesChart so recharts (~250 KB) is only fetched when an admin opens the overview
+const SalesChart = lazy(() => import('./SalesChart'));
 import { ShoppingBag, Calendar, Users, ArrowUpRight, ArrowDownRight, DollarSign, Download, Lock } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { apiFetch } from '../../lib/api';
+import { timeAgo } from '../../lib/dateFormatters';
+import { StatCard } from '../../components/StatCard';
 
 // Fallback chart data shown to non-admins (chart is blurred/locked anyway)
 const MOCK_DATA = [
@@ -58,17 +62,6 @@ interface ActivityItem {
   detail: string;
   amount: string;
   time: string;
-}
-
-function timeAgo(isoString: string): string {
-  const diff = Date.now() - new Date(isoString).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} min${mins !== 1 ? 's' : ''} ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-  const days = Math.floor(hours / 24);
-  return `${days} day${days !== 1 ? 's' : ''} ago`;
 }
 
 function formatPeriod(period: string): string {
@@ -271,22 +264,9 @@ export function DashboardOverview() {
 
           <div className="h-[220px] md:h-[400px]">
             {isAdmin && (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#6D4C91" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#6D4C91" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F1F1" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                  <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                  <Area type="monotone" dataKey="sales"        stroke="#6D4C91" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
-                  <Area type="monotone" dataKey="appointments" stroke="#1A1A1A" strokeWidth={3} fill="transparent" />
-                </AreaChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<div className="h-full flex items-center justify-center text-gray-300 text-[12px]">Loading chart…</div>}>
+                <SalesChart data={chartData} />
+              </Suspense>
             )}
           </div>
         </div>

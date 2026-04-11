@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { useStore } from '../../context/StoreContext';
 import { apiFetch, toShortAptId, toShortWalkInId } from '../../lib/api';
+import { normalizeMpesaPhone } from '../../lib/phone';
+import { formatShortDate, formatLongDate, formatTime, isToday, isTomorrow, isThisWeek } from '../../lib/dateFormatters';
+import { mapAppointmentStatus, mapWalkInStatus } from '../../lib/statusMappers';
 import logoUrl from '../../../assets/logo.png';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -71,48 +74,9 @@ const EMPTY_FORM = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatAptDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-function formatAptTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' });
-}
-function isToday(iso: string)    { return new Date(iso).toDateString() === new Date().toDateString(); }
-function isTomorrow(iso: string) {
-  const t = new Date(); t.setDate(t.getDate() + 1);
-  return new Date(iso).toDateString() === t.toDateString();
-}
-function isThisWeek(iso: string) {
-  const d = new Date(iso), now = new Date();
-  const start = new Date(now); start.setDate(now.getDate() - now.getDay());
-  const end   = new Date(start); end.setDate(start.getDate() + 6);
-  return d >= start && d <= end;
-}
-
-function mapAptStatus(status: string) {
-  const map: Record<string, string> = {
-    confirmed: 'Confirmed', pending: 'Pending',
-    completed: 'Completed', cancelled: 'Cancelled', failed: 'Failed',
-  };
-  return map[status] ?? (status.charAt(0).toUpperCase() + status.slice(1));
-}
-
-function mapWalkInStatus(status: string) {
-  const map: Record<string, string> = {
-    pending:   'Pending',
-    paid:      'Paid',
-    completed: 'Completed',
-  };
-  return map[status] ?? (status.charAt(0).toUpperCase() + status.slice(1));
-}
-
-function normalizeMpesaPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('0') && digits.length === 10) return '254' + digits.slice(1);
-  if (digits.startsWith('254') && digits.length === 12) return digits;
-  if (digits.startsWith('7') && digits.length === 9) return '254' + digits;
-  return digits;
-}
+// Aliases to match the naming used in this file's call sites
+const formatAptDate = formatShortDate;
+const formatAptTime = formatTime;
 
 // ─── Print: appointment receipt ────────────────────────────────────────────────
 
@@ -123,8 +87,8 @@ function printAptReceipt(apt: ApiAppointment, logoSrc: string) {
   const shortId     = toShortAptId(apt.appointment_number);
   const serviceName = apt.services?.name ?? 'Service';
   const clientName  = apt.profiles?.full_name ?? 'Client';
-  const date        = new Date(apt.appointment_time).toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const time        = new Date(apt.appointment_time).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' });
+  const date        = formatLongDate(apt.appointment_time);
+  const time        = formatTime(apt.appointment_time);
   const isFullyPaid = apt.status === 'completed' || !!balancePayment || (apt.deposit_amount === 0 && !!depositPayment);
   const totalPaid   = isFullyPaid ? apt.total_amount : (depositPayment ? apt.deposit_amount : 0);
   const balanceDue  = apt.total_amount - totalPaid;
@@ -180,12 +144,8 @@ function printWalkInReceipt(wk: WalkIn, logoSrc: string) {
   const clientName  = wk.customer_name;
   const serviceName = wk.services?.name ?? 'Service';
   const isPaid      = wk.status === 'paid' || wk.status === 'completed' || !!paidPayment;
-  const dateStr     = wk.appointment_time
-    ? new Date(wk.appointment_time).toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-    : new Date(wk.created_at).toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const timeStr = wk.appointment_time
-    ? new Date(wk.appointment_time).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' })
-    : 'Walk-in';
+  const dateStr = formatLongDate(wk.appointment_time ?? wk.created_at);
+  const timeStr = wk.appointment_time ? formatTime(wk.appointment_time) : 'Walk-in';
 
   const win = window.open('', '_blank', 'width=520,height=780');
   if (!win) return;
@@ -739,7 +699,7 @@ export function DashboardAppointments() {
             {filteredBookings.map((booking) => {
               if (booking.kind === 'online') {
                 const apt             = booking.apt;
-                const displayStatus   = mapAptStatus(apt.status);
+                const displayStatus   = mapAppointmentStatus(apt.status);
                 const receiptPayments = apt.payments?.filter(p => p.status === 'paid' && !!p.mpesa_receipt) ?? [];
                 const depositPayment  = receiptPayments[0] ?? null;
                 const balancePayment  = receiptPayments[1] ?? null;
@@ -936,7 +896,7 @@ export function DashboardAppointments() {
       <AnimatePresence>
         {selectedApt && (() => {
           const apt              = selectedApt;
-          const displayStatus    = mapAptStatus(apt.status);
+          const displayStatus    = mapAppointmentStatus(apt.status);
           const receiptPayments  = apt.payments?.filter(p => p.status === 'paid' && !!p.mpesa_receipt) ?? [];
           const depositPayment   = receiptPayments[0] ?? null;
           const balancePayment   = receiptPayments[1] ?? null;

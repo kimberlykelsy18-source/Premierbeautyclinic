@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { useStore } from '../../context/StoreContext';
 import { apiFetch, toShortOrderId } from '../../lib/api';
+import { formatShortDate } from '../../lib/dateFormatters';
+import { mapOrderStatus } from '../../lib/statusMappers';
+import { buildCsv, downloadCsv } from '../../lib/csv';
 import logoUrl from '../../../assets/logo.png';
 
 interface ApiOrderItem {
@@ -42,20 +45,8 @@ interface ApiOrder {
   payments: ApiPayment[] | null;
 }
 
-function formatOrderDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function mapStatus(status: string) {
-  const map: Record<string, string> = {
-    pending: 'Processing',
-    paid: 'Processing',
-    shipped: 'Shipped',
-    delivered: 'Delivered',
-    cancelled: 'Cancelled',
-  };
-  return map[status] ?? (status.charAt(0).toUpperCase() + status.slice(1));
-}
+const formatOrderDate = formatShortDate;
+const mapStatus = mapOrderStatus;
 
 function formatAddress(addr: ApiOrder['shipping_address']) {
   if (!addr) return '—';
@@ -91,9 +82,7 @@ function resolvePayment(order: ApiOrder) {
 function printInvoice(order: ApiOrder, logoSrc: string) {
   const { payLabel, pay, failureReason } = resolvePayment(order);
   const shortId = toShortOrderId(order.order_number);
-  const orderDate = new Date(order.created_at).toLocaleDateString('en-KE', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  });
+  const orderDate = formatShortDate(order.created_at);
   const itemsRows = (order.order_items || []).map(item => `
     <tr>
       <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:13px;">${item.products?.name ?? 'Product'}</td>
@@ -291,15 +280,15 @@ export function DashboardOrders() {
   };
 
   const exportOrdersCSV = () => {
-    const rows = [
+    const csv = buildCsv(
       ['Order ID', 'Customer', 'Date', 'Amount (KES)', 'Payment Status', 'M-Pesa Receipt', 'Transaction ID', 'Failure Reason', 'Order Status', 'Items', 'Shipping Address'],
-      ...displayOrders.map(o => {
+      displayOrders.map(o => {
         const { payLabel, pay } = resolvePayment(o);
         return [
           toShortOrderId(o.order_number),
           o.customer_email || 'Guest',
           formatOrderDate(o.created_at),
-          String(o.total),
+          o.total,
           payLabel,
           pay?.mpesa_receipt || '',
           pay?.checkout_request_id || '',
@@ -309,15 +298,8 @@ export function DashboardOrders() {
           formatAddress(o.shipping_address),
         ];
       }),
-    ];
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    );
+    downloadCsv(csv, `orders-${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   if (loading) {

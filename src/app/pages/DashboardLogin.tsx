@@ -4,7 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { Lock, Mail, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
-import logo from '../../assets/logo.png';
+import logo from '../../assets/premier logo-1.png';
 import bgImage from '../../assets/Background.png';
 import { apiFetch } from '../lib/api';
 
