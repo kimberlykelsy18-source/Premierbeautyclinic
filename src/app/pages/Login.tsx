@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
 import { TermsModal } from '../components/TermsModal';
 import { apiFetch } from '../lib/api';
-import logo from '../../assets/logo.png';
+import logo from '../../assets/premier logo-1.png';
 import bgImage from '../../assets/Background.png';
 
 type ViewMode = 'signup' | 'login' | 'forgot-password';
