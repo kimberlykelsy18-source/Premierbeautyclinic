@@ -5,7 +5,7 @@ import { Lock, Mail, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
 import logo from '../../assets/premier logo-1.png';
-import bgImage from '../../assets/Background.png';
+import bgImage from '../../assets/purple-v2.webp';
 import { apiFetch } from '../lib/api';
 
 type PortalMode = 'employee' | 'admin';
@@ -99,7 +99,7 @@ export function DashboardLogin() {
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col md:flex-row overflow-auto"
-      style={{ backgroundImage: `url(${bgImage})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed' }}
+      style={{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
     >
 
       {/* ── LEFT PANEL — transparent, branding floats over full bg ───────── */}

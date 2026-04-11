@@ -7,7 +7,7 @@ import { useFeedback } from '../components/Feedback';
 import { TermsModal } from '../components/TermsModal';
 import { apiFetch } from '../lib/api';
 import logo from '../../assets/premier logo-1.png';
-import bgImage from '../../assets/Background.png';
+import bgImage from '../../assets/purple-v2.webp';
 
 type ViewMode = 'signup' | 'login' | 'forgot-password';
 
@@ -192,7 +192,7 @@ export function Login() {
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col md:flex-row overflow-hidden"
-      style={{ backgroundImage: `url(${bgImage})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed' }}
+      style={{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
     >
 
       {/* ── LEFT PANEL — transparent, branding floats over full bg ───────── */}
