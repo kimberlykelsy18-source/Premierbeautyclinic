@@ -387,13 +387,13 @@ export function DashboardSettings() {
                     <div key={key} className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</label>
                       <input type={type} value={(settings as any)[key]} onChange={e => setSettings({...settings, [key]: e.target.value})}
-                        className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px]" />
+                        className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] text-gray-900" />
                     </div>
                   ))}
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Currency</label>
                     <select value={settings.currency} onChange={e => setSettings({...settings, currency: e.target.value})}
-                      className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]">
+                      className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900">
                       <option value="KES">Kenyan Shilling (KES)</option>
                       <option value="USD">US Dollar (USD)</option>
                       <option value="TZS">Tanzanian Shilling (TZS)</option>
@@ -403,7 +403,7 @@ export function DashboardSettings() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Timezone</label>
                     <select value={settings.timezone} onChange={e => setSettings({...settings, timezone: e.target.value})}
-                      className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]">
+                      className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900">
                       <option value="Africa/Nairobi">(GMT+03:00) Nairobi</option>
                       <option value="Africa/Dar_es_Salaam">(GMT+03:00) Dar es Salaam</option>
                       <option value="Africa/Kampala">(GMT+03:00) Kampala</option>
@@ -444,7 +444,7 @@ export function DashboardSettings() {
                   <p className="text-[12px] text-gray-400">Used as the default deposit percentage for new services.</p>
                   <input type="number" min={1} max={100} value={settings.default_deposit_percentage}
                     onChange={e => setSettings({...settings, default_deposit_percentage: Number(e.target.value)})}
-                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] max-w-xs"/>
+                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900 max-w-xs"/>
                 </div>
               )}
               <div className="pt-6 border-t border-gray-100">
@@ -523,13 +523,13 @@ export function DashboardSettings() {
                     <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Full Name *</label>
                     <input value={inviteForm.name} onChange={e => setInviteForm({...inviteForm, name: e.target.value})}
                       placeholder="e.g. Mary Wambui"
-                      className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]"/>
+                      className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"/>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Email Address *</label>
                     <input type="email" value={inviteForm.email} onChange={e => setInviteForm({...inviteForm, email: e.target.value})}
                       placeholder="mary@premierbeauty.com"
-                      className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]"/>
+                      className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"/>
                   </div>
                   <div className="md:col-span-2 space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Role</label>
@@ -753,7 +753,7 @@ export function DashboardSettings() {
                                 <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</label>
                                 <input value={(heroForm as any)[key]} onChange={e => setHeroForm({...heroForm, [key]: e.target.value})}
                                   placeholder={placeholder}
-                                  className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]"/>
+                                  className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"/>
                               </div>
                             ))}
                             <div className="flex gap-3 pt-2">
@@ -854,14 +854,14 @@ export function DashboardSettings() {
                   <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Question *</label>
                   <input value={faqForm.question} onChange={e => setFaqForm({...faqForm, question: e.target.value})}
                     placeholder="What would a customer ask?"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]"/>
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"/>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Answer *</label>
                   <textarea value={faqForm.answer} onChange={e => setFaqForm({...faqForm, answer: e.target.value})}
                     placeholder="Provide a clear, helpful answer…"
                     rows={4}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] resize-y"/>
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900 resize-y"/>
                 </div>
               </div>
               <div className="px-8 pb-8 flex gap-3">
@@ -902,14 +902,14 @@ export function DashboardSettings() {
                   <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Title *</label>
                   <input value={featureForm.title} onChange={e => setFeatureForm({...featureForm, title: e.target.value})}
                     placeholder="e.g. Fast Delivery"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]"/>
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"/>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Description *</label>
                   <textarea value={featureForm.description} onChange={e => setFeatureForm({...featureForm, description: e.target.value})}
                     placeholder="Short description shown under the title…"
                     rows={2}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] resize-none"/>
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900 resize-none"/>
                 </div>
               </div>
               <div className="px-8 pb-8 flex gap-3">

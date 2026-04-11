@@ -444,7 +444,7 @@ export function DashboardInventory() {
               <input
                 placeholder="e.g. Ultra Hydrating Serum"
                 {...npField('name')}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] text-gray-900"
               />
               {newProduct.name && (
                 <p className="text-[11px] text-gray-400">Slug: <span className="font-mono text-gray-600">{slugify(newProduct.name)}</span></p>
@@ -455,14 +455,14 @@ export function DashboardInventory() {
               <input
                 placeholder="e.g. La Roche-Posay"
                 {...npField('brand')}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] text-gray-900"
               />
             </div>
             <div className="space-y-2">
               <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Category</label>
               <select
                 {...npField('category_id')}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] text-gray-900"
               >
                 <option value="">Select Category</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -475,7 +475,7 @@ export function DashboardInventory() {
               rows={4}
               placeholder="Describe the benefits, key results, and feel..."
               {...npField('description')}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] resize-none"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] text-gray-900 resize-none"
             />
           </div>
         </motion.div>
@@ -492,7 +492,7 @@ export function DashboardInventory() {
                 min="0"
                 placeholder="0.00"
                 {...npField('price')}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] text-gray-900"
               />
             </div>
             <div className="space-y-2">
@@ -502,7 +502,7 @@ export function DashboardInventory() {
                 min="0"
                 placeholder="0"
                 {...npField('stock')}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] text-gray-900"
               />
             </div>
             <div className="space-y-2">
@@ -512,7 +512,7 @@ export function DashboardInventory() {
                 min="1"
                 placeholder="5"
                 {...npField('low_stock_threshold')}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] text-gray-900"
               />
               <p className="text-[11px] text-gray-400">Alert appears when stock falls to or below this number.</p>
             </div>
@@ -962,7 +962,7 @@ export function DashboardInventory() {
                     <input
                       value={editForm.name}
                       onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"
                     />
                   </div>
                   <div className="space-y-2">
@@ -971,7 +971,7 @@ export function DashboardInventory() {
                       value={editForm.brand}
                       onChange={e => setEditForm(prev => ({ ...prev, brand: e.target.value }))}
                       placeholder="e.g. La Roche-Posay"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"
                     />
                   </div>
                   <div className="space-y-2">
@@ -979,7 +979,7 @@ export function DashboardInventory() {
                     <select
                       value={editForm.category_id}
                       onChange={e => setEditForm(prev => ({ ...prev, category_id: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"
                     >
                       <option value="">— No category —</option>
                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -992,7 +992,7 @@ export function DashboardInventory() {
                       min="0"
                       value={editForm.price}
                       onChange={e => setEditForm(prev => ({ ...prev, price: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1002,7 +1002,7 @@ export function DashboardInventory() {
                       min="1"
                       value={editForm.low_stock_threshold}
                       onChange={e => setEditForm(prev => ({ ...prev, low_stock_threshold: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"
                     />
                   </div>
                 </div>

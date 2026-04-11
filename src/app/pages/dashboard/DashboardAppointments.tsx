@@ -1066,7 +1066,7 @@ export function DashboardAppointments() {
                         <select
                           value={aptPractitioner}
                           onChange={e => setAptPractitioner(e.target.value)}
-                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]"
+                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"
                         >
                           <option value="">Select practitioner (optional)</option>
                           {PRACTITIONERS.map(p => <option key={p} value={p}>{p}</option>)}
@@ -1097,7 +1097,7 @@ export function DashboardAppointments() {
                         <div className="space-y-3">
                           <div className="relative">
                             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input type="tel" value={checkInPhone} onChange={e => setCheckInPhone(e.target.value)} placeholder="07XX XXX XXX" className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]" />
+                            <input type="tel" value={checkInPhone} onChange={e => setCheckInPhone(e.target.value)} placeholder="07XX XXX XXX" className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900" />
                           </div>
                           <div className="flex gap-2">
                             <button onClick={resetCheckIn} className="flex-1 py-3 border border-gray-200 rounded-xl text-[12px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all">Cancel</button>
@@ -1360,7 +1360,7 @@ export function DashboardAppointments() {
                               value={wkPayPhone}
                               onChange={e => setWkPayPhone(e.target.value)}
                               placeholder={wk.phone ?? '07XX XXX XXX'}
-                              className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500/20 text-[14px]"
+                              className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500/20 text-[14px] text-gray-900"
                             />
                           </div>
                           <div className="flex gap-2">
@@ -1457,28 +1457,28 @@ export function DashboardAppointments() {
                         <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Customer Name *</label>
                         <div className="relative">
                           <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input {...field('customer_name')} placeholder="Full name" className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]" />
+                          <input {...field('customer_name')} placeholder="Full name" className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900" />
                         </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Phone Number</label>
                         <div className="relative">
                           <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input {...field('phone')} placeholder="+254 XXX XXX XXX" className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]" />
+                          <input {...field('phone')} placeholder="+254 XXX XXX XXX" className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900" />
                         </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Email Address</label>
                         <div className="relative">
                           <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                          <input {...field('email')} type="email" placeholder="customer@example.com" className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]" />
+                          <input {...field('email')} type="email" placeholder="customer@example.com" className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900" />
                         </div>
                         <p className="text-[10px] text-gray-400">For booking confirmation and payment receipt emails</p>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Client Notes / Concerns</label>
-                      <textarea {...field('notes')} rows={3} placeholder="Any specific skin concerns or medical history..." className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] resize-none" />
+                      <textarea {...field('notes')} rows={3} placeholder="Any specific skin concerns or medical history..." className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900 resize-none" />
                     </div>
                   </motion.div>
                 )}
@@ -1490,7 +1490,7 @@ export function DashboardAppointments() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Service *</label>
-                        <select {...field('service_id')} className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]">
+                        <select {...field('service_id')} className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900">
                           <option value="">Select Service</option>
                           {services.map(s => (
                             <option key={s.id} value={String(s.id)}>
@@ -1501,7 +1501,7 @@ export function DashboardAppointments() {
                       </div>
                       <div className="space-y-2">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Practitioner</label>
-                        <select {...field('practitioner')} className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]">
+                        <select {...field('practitioner')} className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900">
                           <option value="">Assign Practitioner</option>
                           {PRACTITIONERS.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
@@ -1510,14 +1510,14 @@ export function DashboardAppointments() {
                         <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Date</label>
                         <div className="relative">
                           <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input type="date" {...field('appointment_date')} min={new Date().toISOString().slice(0, 10)} className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]" />
+                          <input type="date" {...field('appointment_date')} min={new Date().toISOString().slice(0, 10)} className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900" />
                         </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Time</label>
                         <div className="relative">
                           <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <select {...field('appointment_time')} className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px]">
+                          <select {...field('appointment_time')} className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900">
                             {['09:00','10:00','11:00','13:00','14:00','15:00','16:00','17:00'].map(t => (
                               <option key={t} value={t}>{t}</option>
                             ))}

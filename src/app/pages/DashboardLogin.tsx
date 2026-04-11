@@ -193,7 +193,7 @@ export function DashboardLogin() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                    className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                     placeholder={portalMode === 'admin' ? 'admin@premierbeauty.com' : 'staff@premierbeauty.com'}
                   />
                 </div>
@@ -210,7 +210,7 @@ export function DashboardLogin() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                    className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                     placeholder="••••••••"
                   />
                   <button

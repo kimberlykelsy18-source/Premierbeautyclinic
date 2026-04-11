@@ -191,12 +191,12 @@ export function Login() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col md:flex-row overflow-auto"
+      className="fixed inset-0 z-50 flex flex-col md:flex-row overflow-hidden"
       style={{ backgroundImage: `url(${bgImage})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed' }}
     >
 
       {/* ── LEFT PANEL — transparent, branding floats over full bg ───────── */}
-      <div className="relative flex-shrink-0 w-full md:w-[55%] min-h-[220px] md:min-h-0 flex flex-col items-center justify-center px-10 py-12 md:py-0">
+      <div className="relative flex-shrink-0 w-full md:w-[55%] flex flex-col items-center justify-center px-8 py-5 md:py-0 md:min-h-0">
         {/* Branding */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -207,12 +207,12 @@ export function Login() {
             transition={{ duration: 0.4 }}
             className="relative z-10 flex flex-col items-center text-center gap-5 max-w-sm"
           >
-            <img src={logo} alt="Premier Beauty Clinic" className="w-24 h-24 md:w-32 md:h-32 object-contain" />
+            <img src={logo} alt="Premier Beauty Clinic" className="w-16 h-16 md:w-32 md:h-32 object-contain" />
             <div>
-              <h2 className="text-[#1a0a2e] text-[20px] md:text-[26px] font-serif font-bold leading-snug">
+              <h2 className="text-[#1a0a2e] text-[17px] md:text-[26px] font-serif font-bold leading-snug">
                 {panelCopy.heading}
               </h2>
-              <p className="mt-2 text-[#3b1f6b]/80 text-[13px] md:text-[15px] leading-relaxed">
+              <p className="mt-1 text-[#3b1f6b]/80 text-[12px] md:text-[15px] leading-relaxed hidden sm:block">
                 {panelCopy.tagline}
               </p>
             </div>
@@ -226,7 +226,7 @@ export function Login() {
       </div>
 
       {/* ── RIGHT PANEL — transparent, form floats over background ─────────── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 md:py-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-start md:justify-center px-6 py-8 md:py-0 overflow-y-auto">
         <div className="w-full max-w-[420px]">
           <AnimatePresence mode="wait">
 
@@ -255,7 +255,7 @@ export function Login() {
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="John Doe"
                     />
                   </div>
@@ -270,7 +270,7 @@ export function Login() {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="you@example.com"
                     />
                   </div>
@@ -285,7 +285,7 @@ export function Login() {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="07XX XXX XXX"
                     />
                   </div>
@@ -300,7 +300,7 @@ export function Login() {
                       type={showPassword ? 'text' : 'password'}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="••••••••"
                     />
                     <button
@@ -322,7 +322,7 @@ export function Login() {
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="••••••••"
                     />
                     <button
@@ -384,7 +384,7 @@ export function Login() {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="you@example.com"
                     />
                   </div>
@@ -399,7 +399,7 @@ export function Login() {
                       type={showPassword ? 'text' : 'password'}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="••••••••"
                     />
                     <button
@@ -471,7 +471,7 @@ export function Login() {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-800 placeholder:text-gray-300"
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="you@example.com"
                     />
                   </div>
