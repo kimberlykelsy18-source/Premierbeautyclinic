@@ -29,7 +29,7 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 // Allow all Vercel preview deployments for this project
-const vercelPreviewRe = /^https:\/\/premierbeautyclinic[\w-]*\.vercel\.app$/;
+const vercelPreviewRe = /^https:\/\/premier[\w-]*\.vercel\.app$/;
 
 app.use(cors({
   origin: (origin, callback) => {
