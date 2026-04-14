@@ -1,7 +1,5 @@
-const express     = require('express');
-const path        = require('path');
-const { Resend }  = require('resend');
-const resend      = new Resend(process.env.RESEND_API_KEY);
+const express = require('express');
+const path    = require('path');
 
 // Converts a sequential number → short human-readable ID (A001…A999→B001…)
 function toShortId(prefix, n) {
@@ -457,189 +455,154 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
     res.json({ success: true });
   });
 
-  const flw = require('../services/flutterwave');
+  // ── Paystack Webhook ─────────────────────────────────────────────────────────
+  // Register URL in Paystack Dashboard → Settings → API Keys → Webhook URL:
+  //   {BACKEND_URL}/paystack/webhook
+  //
+  // Paystack signs the raw body with HMAC-SHA512 using your secret key.
+  // Signature is in the 'x-paystack-signature' header.
+  //
+  // IMPORTANT: rawBody must be captured in index.js express.json verify callback.
+  // Event handled:
+  //   charge.success → confirms a card order (3DS redirect case) + sends email
+  router.post('/paystack/webhook', async (req, res) => {
+    const paystack  = require('../services/paystack');
+    const signature = req.headers['x-paystack-signature'];
+    const rawBody   = req.rawBody; // Buffer saved by express.json verify in index.js
 
-  // Flutterwave Webhook — called when a card charge completes
-  router.post('/flutterwave/webhook', async (req, res) => {
-    const receivedHash = req.headers['verif-hash'];
-    const expectedHash = process.env.FLW_WEBHOOK_HASH;
-    if (!receivedHash || !expectedHash || receivedHash !== expectedHash) {
-      console.warn('[FLW webhook] Invalid verif-hash — rejected');
-      return res.status(401).json({ error: 'Unauthorized' });
+    if (!rawBody || !paystack.verifyWebhookSignature(rawBody, signature)) {
+      console.warn('[Paystack Webhook] Invalid signature — rejected');
+      return res.status(401).send('Unauthorized');
     }
 
-    // V4 uses 'type' field; guard against both 'event' (legacy) and 'type' (V4)
-    const eventName = req.body.type || req.body.event;
-    const data      = req.body.data;
-    console.log('[FLW webhook] event:', eventName, '| ref:', data?.reference, '| status:', data?.status);
+    // Acknowledge immediately — Paystack expects a fast 200
+    res.status(200).send('OK');
 
-    if (!eventName?.startsWith('charge.')) return res.json({ success: true });
+    const event     = req.body;
+    const eventType = event?.event;
+    const data      = event?.data;
+    console.log('[Paystack Webhook]', eventType, '| ref:', data?.reference);
 
-    // V4 uses data.reference; also accept data.tx_ref for any future V3 fallback
-    const reference = data?.reference || data?.tx_ref;
-    const status    = data?.status;
-
-    try {
-      // V4 success status is 'succeeded'; also accept 'successful' for compatibility
-      if (status === 'succeeded' || status === 'successful') {
-        await handleFlutterwavePayment(reference, data);
-      } else {
-        const { data: payment } = await adminDb
-          .from('payments')
-          .select('id, order_id')
-          .eq('checkout_request_id', reference)
-          .maybeSingle();
-        if (payment) {
-          await adminDb.from('payments').update({ status: 'failed', failure_reason: 'Card payment failed or cancelled' }).eq('id', payment.id);
-          await adminDb.from('orders').update({ status: 'cancelled' }).eq('id', payment.order_id);
-        }
-      }
-    } catch (err) {
-      console.error('[FLW webhook]', err.message);
+    if (eventType !== 'charge.success') {
+      console.log('[Paystack Webhook] Unhandled event:', eventType);
+      return;
     }
-    res.json({ success: true });
-  });
-
-  // Flutterwave verify — called from /order-success after 3DS redirect back, or after PIN/OTP completes
-  // Query params: ?reference=ORD-xxx&status=successful (V4) or ?tx_ref=ORD-xxx (fallback)
-  router.get('/flutterwave/verify', async (req, res) => {
-    const { reference, tx_ref, status } = req.query;
-    const ref = reference || tx_ref;
-
-    if (status === 'cancelled') return res.json({ status: 'cancelled' });
-    if (!ref) return res.status(400).json({ error: 'reference is required' });
 
     try {
-      const { data: existing } = await adminDb
-        .from('payments')
-        .select('status, order_id')
-        .eq('checkout_request_id', ref)
-        .maybeSingle();
-
-      if (!existing) return res.status(404).json({ error: 'Payment not found' });
-      if (existing.status === 'paid') return res.json({ status: 'completed', order_id: existing.order_id });
-
-      const result = await handleFlutterwavePayment(ref);
-      return res.json(result);
+      await handlePaystackChargeSuccess(data);
     } catch (err) {
-      console.error('[FLW verify]', err.message);
-      return res.status(500).json({ error: err.message });
+      console.error('[Paystack Webhook] Handler error:', err.message);
     }
   });
 
-  // Shared handler — verifies charge with Flutterwave, updates DB, reduces inventory, sends email
-  async function handleFlutterwavePayment(reference, webhookData = null) {
-    // Look up payment by tx_ref to get the stored charge ID (saved in mpesa_receipt on checkout)
+  // Shared charge.success handler — idempotent, covers 3DS open_url redirect case.
+  // For direct inline charges (pin/otp), customer.js already finalizes — this is a no-op.
+  async function handlePaystackChargeSuccess(data) {
+    const reference = data?.reference;
+    if (!reference) return;
+
     const { data: payment } = await adminDb
       .from('payments')
-      .select('id, order_id, status, mpesa_receipt')
+      .select('id, order_id, status')
       .eq('checkout_request_id', reference)
       .maybeSingle();
 
-    if (!payment) return { status: 'not_found' };
-    if (payment.status === 'paid') return { status: 'completed', order_id: payment.order_id };
-
-    // Get the charge — use webhook data if provided, otherwise fetch by charge ID
-    let tx;
-    if (webhookData) {
-      tx = webhookData;
-    } else if (payment.mpesa_receipt) {
-      tx = await flw.getCharge(payment.mpesa_receipt);
-    } else {
-      return { status: 'not_found' };
+    if (!payment) {
+      console.warn('[Paystack Webhook] No payment found for ref:', reference);
+      return;
     }
 
-    console.log(`[FLW] charge status for ${reference}:`, tx.status);
+    if (payment.status === 'paid') {
+      console.log('[Paystack Webhook] Already paid — skipping:', reference);
+      return; // idempotent
+    }
 
-    // V4 success is 'succeeded'; also accept 'successful'
-    if (tx.status === 'succeeded' || tx.status === 'successful') {
-      await adminDb.from('payments').update({
-        status:        'paid',
-        mpesa_receipt: tx.id || payment.mpesa_receipt,
-      }).eq('id', payment.id);
+    const amountPaid = (data.amount || 0) / 100; // kobo → KES
 
-      const { data: order } = await adminDb
-        .from('orders')
-        .select('*, order_number, customer_email')
-        .eq('id', payment.order_id)
-        .single();
+    await adminDb.from('payments').update({
+      status:            'paid',
+      payment_reference: reference,
+    }).eq('id', payment.id);
 
-      await adminDb.from('orders').update({ status: 'paid' }).eq('id', payment.order_id);
+    const { data: order } = await adminDb
+      .from('orders')
+      .select('*, order_number, customer_email')
+      .eq('id', payment.order_id)
+      .single();
 
-      // Reduce inventory
-      const { data: orderItems } = await adminDb
-        .from('order_items')
-        .select('product_id, quantity')
-        .eq('order_id', payment.order_id);
+    await adminDb.from('orders').update({ status: 'paid' }).eq('id', payment.order_id);
 
-      if (orderItems && orderItems.length > 0) {
-        const shortOrderId = toShortOrderId(order?.order_number);
-        await Promise.all(orderItems.map(async (item) => {
-          const { data: prod } = await adminDb.from('products').select('stock').eq('id', item.product_id).single();
-          if (prod !== null) {
-            await adminDb.from('products')
-              .update({ stock: Math.max(0, (prod.stock || 0) - item.quantity) })
-              .eq('id', item.product_id);
-          }
-          await adminDb.from('inventory_logs').insert({
-            product_id:      item.product_id,
-            staff_id:        null,
-            quantity_change: -item.quantity,
-            reason:          `Sale — Order ${shortOrderId}`,
-          });
-        }));
-      }
+    // Reduce inventory
+    const { data: orderItems } = await adminDb
+      .from('order_items')
+      .select('product_id, quantity')
+      .eq('order_id', payment.order_id);
 
-      // Send order confirmation email
-      if (order?.customer_email) {
-        const shortId = toShortOrderId(order.order_number);
-        resend.emails.send({
-          from:    'Premier Beauty Clinic <onboarding@resend.dev>',
-          to:      order.customer_email,
-          subject: `Order Confirmed — ${shortId} · Premier Beauty Clinic`,
-          html: `
-            <div style="font-family:sans-serif;max-width:520px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee">
-              <div style="background:#1A1A1A;padding:28px 32px;text-align:center">
-                <p style="color:#fff;font-size:20px;font-weight:bold;margin:0">Premier Beauty Clinic</p>
-              </div>
-              <div style="background:#6D4C91;padding:24px 32px;text-align:center">
-                <p style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:2px;margin:0 0 6px">Order Confirmed</p>
-                <h2 style="color:#fff;margin:0;font-size:22px">${shortId}</h2>
-              </div>
-              <div style="padding:36px 32px">
-                <p style="color:#555;margin:0 0 24px;font-size:15px">
-                  Thank you for your purchase! Your order has been confirmed and payment received via Card.
-                </p>
-                <table style="background:#FDFBF7;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
-                  <tr><td style="padding:8px 12px;color:#888;font-size:13px;width:140px">Order ID</td><td style="padding:8px 12px;font-weight:bold;font-size:14px;color:#6D4C91">${shortId}</td></tr>
-                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Payment</td><td style="padding:8px 12px;font-weight:bold;font-size:14px">${tx.payment_type || 'Card'}</td></tr>
-                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Amount Paid</td><td style="padding:8px 12px;font-weight:bold;font-size:14px">KES ${Number(tx.amount)?.toLocaleString()}</td></tr>
-                  <tr><td style="padding:8px 12px;color:#888;font-size:13px">Reference</td><td style="padding:8px 12px;font-size:14px">${tx.flw_ref || '—'}</td></tr>
-                </table>
-                <div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:12px 16px;border-radius:4px;margin:24px 0 0;font-size:13px;color:#166534">
-                  <strong>What's next?</strong> Your order will be packed and dispatched within 1–2 business days. You'll receive a shipping update by email.
-                </div>
-              </div>
-              <div style="background:#FDFBF7;padding:20px 32px;text-align:center;border-top:1px solid #eee">
-                <p style="color:#aaa;font-size:12px;margin:0">© ${new Date().getFullYear()} Premier Beauty Clinic · Nairobi, Kenya</p>
-                <p style="color:#aaa;font-size:12px;margin:6px 0 0">Questions? Email us at ${process.env.SUPPORT_EMAIL || 'support@premierbeauty.com'}</p>
+    if (orderItems?.length) {
+      const shortOrderId = toShortOrderId(order?.order_number);
+      await Promise.all(orderItems.map(async item => {
+        const { data: prod } = await adminDb.from('products').select('stock').eq('id', item.product_id).single();
+        if (prod !== null) {
+          await adminDb.from('products')
+            .update({ stock: Math.max(0, (prod.stock || 0) - item.quantity) })
+            .eq('id', item.product_id);
+        }
+        await adminDb.from('inventory_logs').insert({
+          product_id:      item.product_id,
+          staff_id:        null,
+          quantity_change: -item.quantity,
+          reason:          `Sale — Order ${shortOrderId}`,
+        });
+      }));
+      console.log(`[Paystack Webhook] Inventory reduced for ${toShortOrderId(order?.order_number)}`);
+    }
+
+    // Send order confirmation email
+    if (order?.customer_email) {
+      const shortId = toShortOrderId(order.order_number);
+      transporter.sendMail({
+        from:        `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+        to:          order.customer_email,
+        subject:     `Order Confirmed — ${shortId} · Premier Beauty Clinic`,
+        attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee">
+            <div style="background:#1A1A1A;padding:28px 32px;text-align:center">
+              <img src="cid:premier_logo" alt="Premier Beauty Clinic" style="height:48px;object-fit:contain" />
+            </div>
+            <div style="background:#6D4C91;padding:24px 32px;text-align:center">
+              <p style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:2px;margin:0 0 6px">Order Confirmed</p>
+              <h2 style="color:#fff;margin:0;font-size:22px">${shortId}</h2>
+            </div>
+            <div style="padding:36px 32px">
+              <p style="color:#555;margin:0 0 24px;font-size:15px">
+                Thank you for your purchase! Your order has been received and payment confirmed via card.
+              </p>
+              <table style="background:#FDFBF7;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
+                <tr>
+                  <td style="padding:8px 12px;color:#888;font-size:13px;width:140px">Order ID</td>
+                  <td style="padding:8px 12px;font-weight:bold;font-size:14px;color:#6D4C91">${shortId}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;color:#888;font-size:13px">Payment Ref</td>
+                  <td style="padding:8px 12px;font-weight:bold;font-size:14px">${reference}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;color:#888;font-size:13px">Amount Paid</td>
+                  <td style="padding:8px 12px;font-weight:bold;font-size:14px">KES ${amountPaid.toLocaleString()}</td>
+                </tr>
+              </table>
+              <div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:12px 16px;border-radius:4px;margin:24px 0 0;font-size:13px;color:#166534">
+                <strong>What is next?</strong> Your order will be packed and dispatched within 1-2 business days. You will receive a shipping update by email.
               </div>
             </div>
-          `,
-        }).catch(err => console.error('[Flutterwave email]', err.message));
-        console.log(`Flutterwave order confirmation email sent to ${order.customer_email}`);
-      }
-
-      return { status: 'completed', order_id: payment.order_id };
-
-    } else {
-      // failed / error status from Flutterwave
-      await adminDb.from('payments').update({
-        status:         'failed',
-        failure_reason: tx.processor_response || 'Card payment failed',
-      }).eq('id', payment.id);
-      await adminDb.from('orders').update({ status: 'cancelled' }).eq('id', payment.order_id);
-      return { status: 'failed' };
+            <div style="background:#FDFBF7;padding:20px 32px;text-align:center;border-top:1px solid #eee">
+              <p style="color:#aaa;font-size:12px;margin:0">2025 Premier Beauty Clinic - Nairobi, Kenya</p>
+              <p style="color:#aaa;font-size:12px;margin:6px 0 0">Questions? Email us at support@premierbeauty.com</p>
+            </div>
+          </div>`,
+      }).catch(err => console.error('[Paystack Webhook email]', err.message));
+      console.log('[Paystack Webhook] Confirmation email sent to', order.customer_email);
     }
   }
 

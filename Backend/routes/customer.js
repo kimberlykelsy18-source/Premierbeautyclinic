@@ -427,12 +427,113 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     }
   });
 
-  // Card payment checkout via Flutterwave V4 direct card API
-  // Receives raw card details, creates order in DB, runs V4 flow:
-  //   createCustomer → createPaymentMethod → createCharge
-  // Returns next_action so frontend can handle 3DS / PIN / OTP
+  // ── Paystack direct card charge flow ─────────────────────────────────────────
+  // POST /checkout/card           → initiate charge (returns next_action or null)
+  // POST /checkout/card/submit_pin → submit card PIN after send_pin
+  // POST /checkout/card/submit_otp → submit OTP after send_otp
+  //
+  // next_action types: send_pin | send_otp | open_url | null (immediate success)
+  // On success: payment marked 'paid', inventory reduced, email sent.
+  // On open_url (3DS): frontend opens Paystack's 3DS URL; webhook confirms payment.
+
+  // Shared helper — marks payment+order as paid, reduces inventory, sends email.
+  // Idempotent: exits early if already paid.
+  async function finalizePaystackPayment(reference, order) {
+    const { data: pmt } = await db
+      .from('payments')
+      .select('id, status')
+      .eq('checkout_request_id', reference)
+      .maybeSingle();
+
+    if (!pmt || pmt.status === 'paid') return; // already processed
+
+    await db.from('payments').update({ status: 'paid', payment_reference: reference }).eq('id', pmt.id);
+    await db.from('orders').update({ status: 'paid' }).eq('id', order.id);
+
+    // Reduce stock for every line item
+    const { data: orderItems } = await db
+      .from('order_items')
+      .select('product_id, quantity')
+      .eq('order_id', order.id);
+
+    if (orderItems?.length) {
+      const shortId = toShortId('ORD', order.order_number);
+      await Promise.all(orderItems.map(async item => {
+        const { data: prod } = await db.from('products').select('stock').eq('id', item.product_id).single();
+        if (prod !== null) {
+          await db.from('products')
+            .update({ stock: Math.max(0, (prod.stock || 0) - item.quantity) })
+            .eq('id', item.product_id);
+        }
+        await db.from('inventory_logs').insert({
+          product_id:      item.product_id,
+          staff_id:        null,
+          quantity_change: -item.quantity,
+          reason:          `Sale — Order ${shortId}`,
+        });
+      }));
+      console.log(`[Paystack] Inventory reduced for order ${shortId}`);
+    }
+
+    // Send confirmation email
+    if (order.customer_email) {
+      const shortId = toShortId('ORD', order.order_number);
+      transporter.sendMail({
+        from:        `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+        to:          order.customer_email,
+        subject:     `Order Confirmed — ${shortId} · Premier Beauty Clinic`,
+        attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee">
+            <div style="background:#1A1A1A;padding:28px 32px;text-align:center">
+              <img src="cid:premier_logo" alt="Premier Beauty Clinic" style="height:48px;object-fit:contain" />
+            </div>
+            <div style="background:#6D4C91;padding:24px 32px;text-align:center">
+              <p style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:2px;margin:0 0 6px">Order Confirmed</p>
+              <h2 style="color:#fff;margin:0;font-size:22px">${shortId}</h2>
+            </div>
+            <div style="padding:36px 32px">
+              <p style="color:#555;margin:0 0 24px;font-size:15px">
+                Thank you for your purchase! Your order has been received and payment confirmed via card.
+              </p>
+              <table style="background:#FDFBF7;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
+                <tr>
+                  <td style="padding:8px 12px;color:#888;font-size:13px;width:140px">Order ID</td>
+                  <td style="padding:8px 12px;font-weight:bold;font-size:14px;color:#6D4C91">${shortId}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;color:#888;font-size:13px">Payment Ref</td>
+                  <td style="padding:8px 12px;font-weight:bold;font-size:14px">${reference}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;color:#888;font-size:13px">Amount Paid</td>
+                  <td style="padding:8px 12px;font-weight:bold;font-size:14px">KES ${Number(order.total).toLocaleString()}</td>
+                </tr>
+              </table>
+              <div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:12px 16px;border-radius:4px;margin:24px 0 0;font-size:13px;color:#166534">
+                <strong>What's next?</strong> Your order will be packed and dispatched within 1–2 business days. You'll receive a shipping update by email.
+              </div>
+            </div>
+            <div style="background:#FDFBF7;padding:20px 32px;text-align:center;border-top:1px solid #eee">
+              <p style="color:#aaa;font-size:12px;margin:0">© ${new Date().getFullYear()} Premier Beauty Clinic · Nairobi, Kenya</p>
+              <p style="color:#aaa;font-size:12px;margin:6px 0 0">Questions? Email us at ${process.env.SUPPORT_EMAIL || 'support@premierbeauty.com'}</p>
+            </div>
+          </div>`,
+      }).catch(e => console.error('[Paystack] Card confirmation email failed:', e.message));
+    }
+  }
+
+  // Translate a Paystack result status into the next_action shape the frontend expects.
+  function buildCardNextAction(result) {
+    if (result.status === 'success') return null;
+    if (result.status === 'open_url') return { type: 'open_url', url: result.url, display_text: result.display_text };
+    // send_pin | send_otp | send_phone | send_birthday
+    return { type: result.status, display_text: result.display_text };
+  }
+
+  // POST /checkout/card — Paystack direct card charge
   router.post('/checkout/card', authenticateOptional, async (req, res) => {
-    const flw       = require('../services/flutterwave');
+    const paystack = require('../services/paystack');
     const userId    = req.user?.id;
     const sessionId = req.body.session_id || req.headers['x-session-id'];
     const { shipping_address, customer_email, billing, card } = req.body;
@@ -469,7 +570,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       orderItems.push({ product_id: item.products.id, quantity: item.quantity, price_at_time: price });
     });
 
-    const shipping_fee = typeof req.body.shipping_fee === 'number' ? Math.round(req.body.shipping_fee) : 5;
+    const shipping_fee = typeof req.body.shipping_fee === 'number' ? Math.round(req.body.shipping_fee) : 200;
     const total = subtotal + shipping_fee;
 
     const orderData = {
@@ -495,103 +596,118 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
 
     await db.from('order_items').insert(orderItems.map(i => ({ ...i, order_id: order.id })));
 
-    const { data: payment } = await db
-      .from('payments')
-      .insert({ order_id: order.id, amount: total, status: 'pending', phone: billing?.phone || null })
-      .select()
-      .single();
+    const reference = paystack.makeReference('PBC');
+
+    await db.from('payments').insert({
+      order_id:            order.id,
+      amount:              total,
+      status:              'pending',
+      phone:               billing?.phone || null,
+      checkout_request_id: reference,
+    });
 
     try {
-      const shortOrderId = `ORD-${order.order_number || order.id.slice(0, 7)}`;
-      const frontendUrl  = process.env.FRONTEND_URL || 'http://localhost:5173';
-      const customerName = `${billing?.firstName || ''} ${billing?.lastName || ''}`.trim();
-
-      // V4 Step 1: Create customer
-      const customer = await flw.createCustomer({
-        email: finalEmail,
-        name:  customerName || finalEmail,
-        phone: billing?.phone || '',
+      const result = await paystack.chargeCard({
+        email:  finalEmail,
+        amount: total,
+        reference,
+        card: {
+          number:       card.number,
+          cvv:          card.cvv,
+          expiry_month: card.expiry_month,
+          expiry_year:  card.expiry_year,
+        },
       });
 
-      // V4 Step 2: Create payment method with encrypted card
-      const paymentMethod = await flw.createPaymentMethod({
-        cardNumber:  card.number,
-        expiryMonth: card.expiry_month,
-        expiryYear:  card.expiry_year,
-        cvv:         card.cvv,
-      });
+      console.log('[Paystack] /checkout/card status:', result.status, '| ref:', reference);
 
-      // V4 Step 3: Create charge
-      const charge = await flw.createCharge({
-        customerId:      customer.id,
-        paymentMethodId: paymentMethod.id,
-        txRef:           shortOrderId,
-        amount:          total,
-        currency:        'KES',
-        redirectUrl:     `${frontendUrl}/order-success`,
-        description:     `Premier Beauty Clinic — Order ${shortOrderId}`,
-      });
-
-      // Store tx_ref + charge ID so we can verify later
-      // mpesa_receipt column reused for charge ID (card payments don't use M-Pesa receipt)
-      if (payment) {
-        await db.from('payments').update({
-          checkout_request_id: shortOrderId,
-          mpesa_receipt:       charge.id,
-        }).eq('id', payment.id);
+      if (result.status === 'success') {
+        await finalizePaystackPayment(reference, order);
+        return res.json({ success: true, reference, order_id: order.id, next_action: null });
       }
 
-      // If charge already succeeded (no auth needed)
-      if (charge.status === 'succeeded' || charge.status === 'successful') {
-        return res.json({
-          success:     true,
-          charge_id:   charge.id,
-          tx_ref:      shortOrderId,
-          order_id:    order.id,
-          next_action: null,
-        });
+      if (result.status === 'failed') {
+        await db.from('payments').update({ status: 'failed', failure_reason: result.display_text }).eq('checkout_request_id', reference);
+        await db.from('orders').update({ status: 'cancelled' }).eq('id', order.id);
+        return res.status(402).json({ error: result.display_text || 'Card payment was declined. Please try a different card.' });
       }
 
-      return res.json({
-        success:     true,
-        charge_id:   charge.id,
-        tx_ref:      shortOrderId,
-        order_id:    order.id,
-        next_action: charge.next_action || null,
-      });
+      // send_pin | send_otp | open_url — more steps required
+      return res.json({ success: true, reference, order_id: order.id, next_action: buildCardNextAction(result) });
 
     } catch (err) {
-      console.error('Flutterwave checkout error:', err.response?.data || err.message);
-      if (payment) await db.from('payments').update({ status: 'failed' }).eq('id', payment.id);
+      console.error('Paystack checkout error:', err.message);
+      await db.from('payments').update({ status: 'failed' }).eq('checkout_request_id', reference);
       await db.from('orders').update({ status: 'cancelled' }).eq('id', order.id);
-      return res.status(502).json({ error: err.response?.data?.error?.message || 'Failed to initiate card payment. Please try again.' });
+      return res.status(502).json({ error: err.message || 'Failed to initiate card payment. Please try again.' });
     }
   });
 
-  // Card payment authorization — called after frontend receives a next_action (PIN / OTP / AVS)
-  router.post('/checkout/card/authorize', authenticateOptional, async (req, res) => {
-    const flw = require('../services/flutterwave');
-    const { charge_id, authorization } = req.body;
+  // POST /checkout/card/submit_pin — submit card PIN (called after send_pin)
+  router.post('/checkout/card/submit_pin', authenticateOptional, async (req, res) => {
+    const paystack = require('../services/paystack');
+    const { reference, pin } = req.body;
 
-    if (!charge_id || !authorization?.type) {
-      return res.status(400).json({ error: 'charge_id and authorization are required' });
-    }
+    if (!reference || !pin) return res.status(400).json({ error: 'reference and pin are required' });
 
     try {
-      const charge = await flw.updateCharge(charge_id, authorization);
+      const result = await paystack.submitPin(reference, pin);
+      console.log('[Paystack] submitPin status:', result.status, '| ref:', reference);
 
-      if (charge.status === 'succeeded' || charge.status === 'successful') {
-        return res.json({ success: true, charge_id, next_action: null });
+      if (result.status === 'success') {
+        const { data: pmt } = await db.from('payments').select('order_id').eq('checkout_request_id', reference).maybeSingle();
+        if (pmt) {
+          const { data: order } = await db.from('orders').select('*').eq('id', pmt.order_id).single();
+          if (order) await finalizePaystackPayment(reference, order);
+        }
+        return res.json({ success: true, reference, next_action: null });
       }
 
-      return res.json({
-        success:     true,
-        charge_id,
-        next_action: charge.next_action || null,
-      });
+      if (result.status === 'failed') {
+        await db.from('payments').update({ status: 'failed', failure_reason: result.display_text }).eq('checkout_request_id', reference);
+        const { data: pmt } = await db.from('payments').select('order_id').eq('checkout_request_id', reference).maybeSingle();
+        if (pmt) await db.from('orders').update({ status: 'cancelled' }).eq('id', pmt.order_id);
+        return res.status(402).json({ error: result.display_text || 'Card payment was declined.' });
+      }
+
+      return res.json({ success: true, reference, next_action: buildCardNextAction(result) });
     } catch (err) {
-      console.error('Flutterwave authorize error:', err.response?.data || err.message);
-      return res.status(502).json({ error: err.response?.data?.error?.message || 'Authorization failed. Please try again.' });
+      console.error('Paystack submitPin error:', err.message);
+      return res.status(502).json({ error: err.message || 'PIN authorization failed. Please try again.' });
+    }
+  });
+
+  // POST /checkout/card/submit_otp — submit OTP (called after send_otp)
+  router.post('/checkout/card/submit_otp', authenticateOptional, async (req, res) => {
+    const paystack = require('../services/paystack');
+    const { reference, otp } = req.body;
+
+    if (!reference || !otp) return res.status(400).json({ error: 'reference and otp are required' });
+
+    try {
+      const result = await paystack.submitOtp(reference, otp);
+      console.log('[Paystack] submitOtp status:', result.status, '| ref:', reference);
+
+      if (result.status === 'success') {
+        const { data: pmt } = await db.from('payments').select('order_id').eq('checkout_request_id', reference).maybeSingle();
+        if (pmt) {
+          const { data: order } = await db.from('orders').select('*').eq('id', pmt.order_id).single();
+          if (order) await finalizePaystackPayment(reference, order);
+        }
+        return res.json({ success: true, reference, next_action: null });
+      }
+
+      if (result.status === 'failed') {
+        await db.from('payments').update({ status: 'failed', failure_reason: result.display_text }).eq('checkout_request_id', reference);
+        const { data: pmt } = await db.from('payments').select('order_id').eq('checkout_request_id', reference).maybeSingle();
+        if (pmt) await db.from('orders').update({ status: 'cancelled' }).eq('id', pmt.order_id);
+        return res.status(402).json({ error: result.display_text || 'OTP verification failed.' });
+      }
+
+      return res.json({ success: true, reference, next_action: buildCardNextAction(result) });
+    } catch (err) {
+      console.error('Paystack submitOtp error:', err.message);
+      return res.status(502).json({ error: err.message || 'OTP authorization failed. Please try again.' });
     }
   });
 

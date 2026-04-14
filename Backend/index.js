@@ -40,7 +40,10 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json());
+// Save raw body buffer for Paystack webhook HMAC-SHA512 signature verification
+app.use(express.json({
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet({
   contentSecurityPolicy: {
@@ -51,7 +54,7 @@ app.use(helmet({
       fontSrc:     ["'self'", "https://fonts.gstatic.com"],
       imgSrc:      ["'self'", "data:", "https:", "blob:"],
       connectSrc:  ["'self'", process.env.BACKEND_URL, process.env.VITE_SUPABASE_URL, "https://maps.googleapis.com"],
-      frameSrc:    ["'self'", "https://checkout.flutterwave.com"],
+      frameSrc:    ["'self'", "https://standard.paystack.co"],
       objectSrc:   ["'none'"],
       upgradeInsecureRequests: [],
     },
@@ -84,9 +87,11 @@ app.use('/auth/signup',           authLimiter);
 app.use('/auth/forgot-password',  authLimiter);
 app.use('/employee/login',        authLimiter);
 app.use('/developer/',            authLimiter);
-app.use('/checkout/mpesa',        paymentLimiter);
-app.use('/checkout/card',         paymentLimiter);
-app.use('/api/mpesa/initiate',    paymentLimiter);
+app.use('/checkout/mpesa',            paymentLimiter);
+app.use('/checkout/card',             paymentLimiter);
+app.use('/checkout/card/submit_pin',  paymentLimiter);
+app.use('/checkout/card/submit_otp',  paymentLimiter);
+app.use('/api/mpesa/initiate',        paymentLimiter);
 
 // ── Build shared middlewares ──────────────────────────────────────────────────
 const { authenticate, authenticateOptional, requireEmployeePermission } = createAuthMiddleware(supabase, createServiceClient());

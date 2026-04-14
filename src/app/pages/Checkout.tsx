@@ -26,11 +26,10 @@ export function Checkout() {
 
   // Card form data
   const [cardData, setCardData] = useState({ number: '', expiryMonth: '', expiryYear: '', cvv: '' });
-  // V4 auth flow state
+  // Paystack auth flow state
   type CardStage = 'form' | 'pin' | 'otp' | 'processing';
-  const [cardStage, setCardStage]       = useState<CardStage>('form');
-  const [pendingChargeId, setPendingChargeId] = useState('');
-  const [pendingTxRef, setPendingTxRef]       = useState('');
+  const [cardStage, setCardStage]           = useState<CardStage>('form');
+  const [pendingReference, setPendingReference] = useState('');
   const [pinInput, setPinInput] = useState('');
   const [otpInput, setOtpInput] = useState('');
 
@@ -189,6 +188,12 @@ export function Checkout() {
     }
   };
 
+  const handleCardSuccess = () => {
+    clearCart();
+    showFeedback('success', 'Payment Confirmed!', `Your order is placed. A confirmation email will be sent to ${formData.email}.`);
+    setTimeout(() => navigate('/shop'), 2500);
+  };
+
   const handleCardPayment = async () => {
     const rawNumber = cardData.number.replace(/\s/g, '');
     if (!rawNumber || rawNumber.length < 13) {
@@ -207,10 +212,10 @@ export function Checkout() {
         method: 'POST',
         body: JSON.stringify({
           shipping_address: {
-            street:        formData.streetAddress,
-            building:      formData.building,
-            city:          formData.city,
-            county:        formData.county,
+            street:         formData.streetAddress,
+            building:       formData.building,
+            city:           formData.city,
+            county:         formData.county,
             additionalInfo: formData.additionalInfo,
           },
           shipping_fee:   shipping,
@@ -230,21 +235,25 @@ export function Checkout() {
         }),
       }, token, sessionId);
 
-      setPendingChargeId(data.charge_id);
-      setPendingTxRef(data.tx_ref);
+      setPendingReference(data.reference);
 
       const action = data.next_action;
       if (!action) {
-        // No auth needed — done
-        navigate(`/order-success?status=successful&reference=${encodeURIComponent(data.tx_ref)}`);
-      } else if (action.type === 'redirect_url') {
-        // 3DS — redirect customer to bank auth page
-        window.location.href = action.redirect_url.url;
-      } else if (action.type === 'requires_pin') {
+        // Charged immediately — no auth step needed
+        handleCardSuccess();
+      } else if (action.type === 'send_pin') {
         setCardStage('pin');
         setIsCardLoading(false);
+      } else if (action.type === 'send_otp') {
+        setCardStage('otp');
+        setIsCardLoading(false);
+      } else if (action.type === 'open_url') {
+        // 3DS — open Paystack's auth page in a new tab
+        window.open(action.url, '_blank', 'noopener');
+        showFeedback('info', '3D Secure Required', 'A verification page has opened in a new tab. Complete it there — you will receive a confirmation email once payment is done.');
+        setIsCardLoading(false);
       } else {
-        showFeedback('error', 'Auth Required', `Unsupported auth type: ${action.type}. Please try a different card.`);
+        showFeedback('error', 'Auth Required', `Unsupported auth step: ${action.type}. Please try a different card.`);
         setIsCardLoading(false);
       }
     } catch (err: any) {
@@ -259,23 +268,22 @@ export function Checkout() {
     }
     setIsCardLoading(true);
     try {
-      const data = await apiFetch('/checkout/card/authorize', {
+      const data = await apiFetch('/checkout/card/submit_pin', {
         method: 'POST',
-        body: JSON.stringify({
-          charge_id:     pendingChargeId,
-          authorization: { type: 'pin', pin: { rawPin: pinInput } },
-        }),
+        body: JSON.stringify({ reference: pendingReference, pin: pinInput }),
       }, token, sessionId);
 
       setPinInput('');
       const action = data.next_action;
       if (!action) {
-        navigate(`/order-success?status=successful&reference=${encodeURIComponent(pendingTxRef)}`);
-      } else if (action.type === 'requires_otp' || action.type === 'otp') {
+        handleCardSuccess();
+      } else if (action.type === 'send_otp') {
         setCardStage('otp');
         setIsCardLoading(false);
-      } else if (action.type === 'redirect_url') {
-        window.location.href = action.redirect_url.url;
+      } else if (action.type === 'open_url') {
+        window.open(action.url, '_blank', 'noopener');
+        showFeedback('info', '3D Secure Required', 'Complete the verification in the new tab. You will receive a confirmation email once payment is done.');
+        setIsCardLoading(false);
       } else {
         showFeedback('error', 'Auth Failed', 'Could not complete PIN authorization. Please try again.');
         setIsCardLoading(false);
@@ -292,17 +300,14 @@ export function Checkout() {
     }
     setIsCardLoading(true);
     try {
-      const data = await apiFetch('/checkout/card/authorize', {
+      const data = await apiFetch('/checkout/card/submit_otp', {
         method: 'POST',
-        body: JSON.stringify({
-          charge_id:     pendingChargeId,
-          authorization: { type: 'otp', otp: { code: otpInput } },
-        }),
+        body: JSON.stringify({ reference: pendingReference, otp: otpInput }),
       }, token, sessionId);
 
       setOtpInput('');
       if (!data.next_action) {
-        navigate(`/order-success?status=successful&reference=${encodeURIComponent(pendingTxRef)}`);
+        handleCardSuccess();
       } else {
         showFeedback('error', 'OTP Failed', 'Payment could not be completed. Please try again.');
         setCardStage('form');
@@ -759,7 +764,7 @@ export function Checkout() {
                               <circle cx="28" cy="16" r="8" fill="#F79E1B" />
                             </svg>
                             <span className="text-[15px] md:text-[16px] font-bold">
-                              {cardStage === 'form' ? 'Card via Flutterwave' : cardStage === 'pin' ? 'Enter Card PIN' : 'Enter OTP'}
+                              {cardStage === 'form' ? 'Card via Paystack' : cardStage === 'pin' ? 'Enter Card PIN' : 'Enter OTP'}
                             </span>
                           </div>
 
