@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Calendar, Clock, User, CheckCircle2, Sparkles, ShieldCheck, Smartphone, Edit2, Check } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Calendar, Clock, User, CheckCircle2, Sparkles, ShieldCheck, Smartphone, Edit2, Check, Home, CalendarCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import mpesaLogo from '../../assets/mpesa.png';
@@ -111,6 +111,8 @@ export function Book() {
   const [paymentMethod, setPaymentMethod]           = useState('mpesa');
   const [mpesaPhone, setMpesaPhone]                 = useState(user?.phone || '');
   const [isEditingMpesaPhone, setIsEditingMpesaPhone] = useState(false);
+  const [showConfirmation, setShowConfirmation]     = useState(false);
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Pre-fill contact details from logged-in user
   const [formData, setFormData] = useState(() => ({
@@ -227,8 +229,8 @@ export function Book() {
 
       // ── No-deposit: confirmed immediately, no M-Pesa needed ──
       if (data.free) {
-        toast.success('Appointment confirmed! Check your email for details.');
-        setTimeout(() => navigate('/account'), 2500);
+        setShowConfirmation(true);
+        redirectTimerRef.current = setTimeout(() => navigate('/'), 6000);
         return;
       }
 
@@ -240,8 +242,9 @@ export function Book() {
       const result = await pollPaymentStatus(checkout_request_id);
 
       if (result === 'paid') {
-        toast.success('Appointment confirmed! Check your email for details.');
-        setTimeout(() => navigate('/account'), 2500);
+        setAwaitingPayment(false);
+        setShowConfirmation(true);
+        redirectTimerRef.current = setTimeout(() => navigate('/'), 6000);
         return;
       }
 
@@ -674,6 +677,87 @@ export function Book() {
         </AnimatePresence>
         </div>
       </div>
+
+      {/* ── Booking Confirmation Popup ── */}
+      <AnimatePresence>
+        {showConfirmation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 260 }}
+              className="bg-white rounded-[32px] p-8 md:p-12 max-w-md w-full text-center shadow-2xl"
+            >
+              {/* Animated checkmark circle */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.15, type: 'spring', damping: 15, stiffness: 300 }}
+                className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"
+              >
+                <CalendarCheck className="w-10 h-10 text-green-600" />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <h2 className="text-[26px] md:text-[30px] font-serif italic mb-3">
+                  Booking Confirmed!
+                </h2>
+                <p className="text-gray-500 text-[14px] md:text-[15px] leading-relaxed mb-2">
+                  Your appointment for <span className="font-bold text-[#1A1A1A]">{selectedService?.name}</span> has been successfully booked.
+                </p>
+                {selectedDate && selectedTime && (
+                  <div className="flex items-center justify-center space-x-4 my-5 bg-[#F2F1F8] rounded-2xl p-4">
+                    <div className="flex items-center space-x-2 text-[13px] font-medium">
+                      <Calendar className="w-4 h-4 text-[#6D4C91]" />
+                      <span>{formatDateLabel(selectedDate)}</span>
+                    </div>
+                    <div className="w-px h-4 bg-gray-300" />
+                    <div className="flex items-center space-x-2 text-[13px] font-medium">
+                      <Clock className="w-4 h-4 text-[#6D4C91]" />
+                      <span>{selectedTime}</span>
+                    </div>
+                  </div>
+                )}
+                <p className="text-gray-400 text-[12px] mb-8">
+                  A confirmation email has been sent to you. You will be redirected to the home page shortly.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+                      navigate('/account');
+                    }}
+                    className="flex-1 py-3.5 rounded-full border-2 border-[#6D4C91] text-[#6D4C91] text-[13px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] hover:text-white transition-all"
+                  >
+                    My Appointments
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+                      navigate('/');
+                    }}
+                    className="flex-1 py-3.5 rounded-full bg-[#1A1A1A] text-white text-[13px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] transition-all flex items-center justify-center space-x-2"
+                  >
+                    <Home className="w-4 h-4" />
+                    <span>Go Home</span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
