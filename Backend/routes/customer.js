@@ -722,6 +722,64 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     }
   });
 
+  // POST /checkout/card/submit_phone — submit phone number (called after send_phone)
+  router.post('/checkout/card/submit_phone', authenticateOptional, async (req, res) => {
+    const paystack = require('../services/paystack');
+    const { reference, phone } = req.body;
+    if (!reference || !phone) return res.status(400).json({ error: 'reference and phone are required' });
+    try {
+      const result = await paystack.submitPhone(reference, phone);
+      console.log('[Paystack] submitPhone status:', result.status, '| ref:', reference);
+      if (result.status === 'success') {
+        const { data: pmt } = await db.from('payments').select('order_id').eq('checkout_request_id', reference).maybeSingle();
+        if (pmt) {
+          const { data: order } = await db.from('orders').select('*').eq('id', pmt.order_id).single();
+          if (order) await finalizePaystackPayment(reference, order);
+        }
+        return res.json({ success: true, reference, next_action: null });
+      }
+      if (result.status === 'failed') {
+        await db.from('payments').update({ status: 'failed', failure_reason: result.display_text }).eq('checkout_request_id', reference);
+        const { data: pmt } = await db.from('payments').select('order_id').eq('checkout_request_id', reference).maybeSingle();
+        if (pmt) await db.from('orders').update({ status: 'cancelled' }).eq('id', pmt.order_id);
+        return res.status(402).json({ error: result.display_text || 'Phone verification failed.' });
+      }
+      return res.json({ success: true, reference, next_action: buildCardNextAction(result) });
+    } catch (err) {
+      console.error('Paystack submitPhone error:', err.message);
+      return res.status(502).json({ error: err.message || 'Phone verification failed. Please try again.' });
+    }
+  });
+
+  // POST /checkout/card/submit_birthday — submit birthday (called after send_birthday)
+  router.post('/checkout/card/submit_birthday', authenticateOptional, async (req, res) => {
+    const paystack = require('../services/paystack');
+    const { reference, birthday } = req.body; // birthday: YYYY-MM-DD
+    if (!reference || !birthday) return res.status(400).json({ error: 'reference and birthday are required' });
+    try {
+      const result = await paystack.submitBirthday(reference, birthday);
+      console.log('[Paystack] submitBirthday status:', result.status, '| ref:', reference);
+      if (result.status === 'success') {
+        const { data: pmt } = await db.from('payments').select('order_id').eq('checkout_request_id', reference).maybeSingle();
+        if (pmt) {
+          const { data: order } = await db.from('orders').select('*').eq('id', pmt.order_id).single();
+          if (order) await finalizePaystackPayment(reference, order);
+        }
+        return res.json({ success: true, reference, next_action: null });
+      }
+      if (result.status === 'failed') {
+        await db.from('payments').update({ status: 'failed', failure_reason: result.display_text }).eq('checkout_request_id', reference);
+        const { data: pmt } = await db.from('payments').select('order_id').eq('checkout_request_id', reference).maybeSingle();
+        if (pmt) await db.from('orders').update({ status: 'cancelled' }).eq('id', pmt.order_id);
+        return res.status(402).json({ error: result.display_text || 'Birthday verification failed.' });
+      }
+      return res.json({ success: true, reference, next_action: buildCardNextAction(result) });
+    } catch (err) {
+      console.error('Paystack submitBirthday error:', err.message);
+      return res.status(502).json({ error: err.message || 'Birthday verification failed. Please try again.' });
+    }
+  });
+
   // Payment status polling — frontend calls this every few seconds after sending STK push.
   // Returns the payment status ('pending', 'paid', 'failed') and the order_id once paid.
   // No auth needed — the checkout_request_id is a unique secret only the payer knows.

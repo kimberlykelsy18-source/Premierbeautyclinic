@@ -27,11 +27,13 @@ export function Checkout() {
   // Card form data
   const [cardData, setCardData] = useState({ number: '', expiryMonth: '', expiryYear: '', cvv: '' });
   // Paystack auth flow state
-  type CardStage = 'form' | 'pin' | 'otp' | 'processing';
+  type CardStage = 'form' | 'pin' | 'otp' | 'phone' | 'birthday' | 'processing';
   const [cardStage, setCardStage]           = useState<CardStage>('form');
   const [pendingReference, setPendingReference] = useState('');
-  const [pinInput, setPinInput] = useState('');
-  const [otpInput, setOtpInput] = useState('');
+  const [pinInput, setPinInput]         = useState('');
+  const [otpInput, setOtpInput]         = useState('');
+  const [phoneInput, setPhoneInput]     = useState('');
+  const [birthdayInput, setBirthdayInput] = useState('');
 
   function formatCardNumber(val: string) {
     return val.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
@@ -169,8 +171,8 @@ export function Checkout() {
           }, token, sessionId).catch(() => {});
         }
         clearCart();
+        navigate('/shop');
         showFeedback('success', 'Payment Confirmed!', `Your order is placed. A confirmation email will be sent to ${formData.email}.`);
-        setTimeout(() => navigate('/shop'), 2500);
 
       } else if (result === 'failed') {
         showFeedback('error', 'Payment Failed', 'The M-Pesa payment was declined or cancelled. Please try again.');
@@ -190,8 +192,8 @@ export function Checkout() {
 
   const handleCardSuccess = () => {
     clearCart();
+    navigate('/shop');
     showFeedback('success', 'Payment Confirmed!', `Your order is placed. A confirmation email will be sent to ${formData.email}.`);
-    setTimeout(() => navigate('/shop'), 2500);
   };
 
   const handleCardPayment = async () => {
@@ -239,7 +241,6 @@ export function Checkout() {
 
       const action = data.next_action;
       if (!action) {
-        // Charged immediately — no auth step needed
         handleCardSuccess();
       } else if (action.type === 'send_pin') {
         setCardStage('pin');
@@ -247,13 +248,33 @@ export function Checkout() {
       } else if (action.type === 'send_otp') {
         setCardStage('otp');
         setIsCardLoading(false);
+      } else if (action.type === 'send_phone') {
+        setPhoneInput(formData.phone || '');
+        setCardStage('phone');
+        setIsCardLoading(false);
+      } else if (action.type === 'send_birthday') {
+        setCardStage('birthday');
+        setIsCardLoading(false);
+      } else if (action.type === 'pending') {
+        // Paystack is processing async — poll payment/status until confirmed
+        setCardStage('processing');
+        setIsCardLoading(false);
+        const result = await pollPaymentStatus(data.reference);
+        if (result === 'paid') {
+          handleCardSuccess();
+        } else if (result === 'failed') {
+          showFeedback('error', 'Payment Failed', 'Card payment was declined. Please try a different card.');
+          setCardStage('form');
+        } else {
+          showFeedback('error', 'Payment Timeout', "We didn't receive payment confirmation. If charged, contact us with your receipt.");
+          setCardStage('form');
+        }
       } else if (action.type === 'open_url') {
-        // 3DS — open Paystack's auth page in a new tab
         window.open(action.url, '_blank', 'noopener');
-        showFeedback('info', '3D Secure Required', 'A verification page has opened in a new tab. Complete it there — you will receive a confirmation email once payment is done.');
+        showFeedback('info', '3D Secure Required', 'A verification page has opened in a new tab. Complete it there to confirm your payment.');
         setIsCardLoading(false);
       } else {
-        showFeedback('error', 'Auth Required', `Unsupported auth step: ${action.type}. Please try a different card.`);
+        showFeedback('error', 'Verification Required', action.display_text || 'Additional verification needed. Please try a different card.');
         setIsCardLoading(false);
       }
     } catch (err: any) {
@@ -279,6 +300,13 @@ export function Checkout() {
         handleCardSuccess();
       } else if (action.type === 'send_otp') {
         setCardStage('otp');
+        setIsCardLoading(false);
+      } else if (action.type === 'send_phone') {
+        setPhoneInput(formData.phone || '');
+        setCardStage('phone');
+        setIsCardLoading(false);
+      } else if (action.type === 'send_birthday') {
+        setCardStage('birthday');
         setIsCardLoading(false);
       } else if (action.type === 'open_url') {
         window.open(action.url, '_blank', 'noopener');
@@ -306,8 +334,19 @@ export function Checkout() {
       }, token, sessionId);
 
       setOtpInput('');
-      if (!data.next_action) {
+      const otpAction = data.next_action;
+      if (!otpAction) {
         handleCardSuccess();
+      } else if (otpAction.type === 'send_pin') {
+        setCardStage('pin');
+        setIsCardLoading(false);
+      } else if (otpAction.type === 'send_phone') {
+        setPhoneInput(formData.phone || '');
+        setCardStage('phone');
+        setIsCardLoading(false);
+      } else if (otpAction.type === 'send_birthday') {
+        setCardStage('birthday');
+        setIsCardLoading(false);
       } else {
         showFeedback('error', 'OTP Failed', 'Payment could not be completed. Please try again.');
         setCardStage('form');
@@ -315,6 +354,66 @@ export function Checkout() {
       }
     } catch (err: any) {
       showFeedback('error', 'OTP Failed', err.message || 'Invalid OTP. Please try again.');
+      setIsCardLoading(false);
+    }
+  };
+
+  const handleSubmitPhone = async () => {
+    if (!phoneInput || phoneInput.replace(/\D/g, '').length < 9) {
+      showFeedback('error', 'Invalid Phone', 'Please enter a valid phone number.'); return;
+    }
+    setIsCardLoading(true);
+    try {
+      const data = await apiFetch('/checkout/card/submit_phone', {
+        method: 'POST',
+        body: JSON.stringify({ reference: pendingReference, phone: phoneInput }),
+      }, token, sessionId);
+      setPhoneInput('');
+      const action = data.next_action;
+      if (!action) {
+        handleCardSuccess();
+      } else if (action.type === 'send_otp') {
+        setCardStage('otp');
+        setIsCardLoading(false);
+      } else if (action.type === 'send_pin') {
+        setCardStage('pin');
+        setIsCardLoading(false);
+      } else {
+        showFeedback('error', 'Verification Failed', 'Could not complete phone verification. Please try again.');
+        setIsCardLoading(false);
+      }
+    } catch (err: any) {
+      showFeedback('error', 'Phone Failed', err.message || 'Phone verification failed. Please try again.');
+      setIsCardLoading(false);
+    }
+  };
+
+  const handleSubmitBirthday = async () => {
+    if (!birthdayInput || !/^\d{4}-\d{2}-\d{2}$/.test(birthdayInput)) {
+      showFeedback('error', 'Invalid Date', 'Please enter your date of birth in YYYY-MM-DD format.'); return;
+    }
+    setIsCardLoading(true);
+    try {
+      const data = await apiFetch('/checkout/card/submit_birthday', {
+        method: 'POST',
+        body: JSON.stringify({ reference: pendingReference, birthday: birthdayInput }),
+      }, token, sessionId);
+      setBirthdayInput('');
+      const action = data.next_action;
+      if (!action) {
+        handleCardSuccess();
+      } else if (action.type === 'send_otp') {
+        setCardStage('otp');
+        setIsCardLoading(false);
+      } else if (action.type === 'send_pin') {
+        setCardStage('pin');
+        setIsCardLoading(false);
+      } else {
+        showFeedback('error', 'Verification Failed', 'Could not complete birthday verification. Please try again.');
+        setIsCardLoading(false);
+      }
+    } catch (err: any) {
+      showFeedback('error', 'Birthday Failed', err.message || 'Birthday verification failed. Please try again.');
       setIsCardLoading(false);
     }
   };
@@ -765,7 +864,12 @@ export function Checkout() {
                               <circle cx="28" cy="16" r="8" fill="#F79E1B" />
                             </svg>
                             <span className="text-[15px] md:text-[16px] font-bold">
-                              {cardStage === 'form' ? 'Card via Paystack' : cardStage === 'pin' ? 'Enter Card PIN' : 'Enter OTP'}
+                              {cardStage === 'form'       ? 'Card via Paystack'
+                              : cardStage === 'pin'       ? 'Enter Card PIN'
+                              : cardStage === 'otp'       ? 'Enter OTP'
+                              : cardStage === 'phone'     ? 'Phone Verification'
+                              : cardStage === 'birthday'  ? 'Birthday Verification'
+                              : 'Processing Payment'}
                             </span>
                           </div>
 
@@ -815,6 +919,61 @@ export function Checkout() {
                             </div>
                           )}
 
+                          {/* Phone verification stage */}
+                          {cardStage === 'phone' && (
+                            <div className="space-y-4">
+                              <p className="text-[13px] text-gray-600">Your bank requires phone verification. Enter the phone number linked to your card.</p>
+                              <input
+                                type="tel"
+                                inputMode="numeric"
+                                placeholder="07XX XXX XXX"
+                                value={phoneInput}
+                                onChange={e => setPhoneInput(e.target.value)}
+                                className="w-full px-5 py-4 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[16px] text-center tracking-widest"
+                              />
+                              <ButtonWithLoading
+                                isLoading={isCardLoading}
+                                onClick={handleSubmitPhone}
+                                className="w-full bg-[#6D4C91] text-white py-4 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all"
+                              >
+                                Verify Phone
+                              </ButtonWithLoading>
+                            </div>
+                          )}
+
+                          {/* Birthday verification stage */}
+                          {cardStage === 'birthday' && (
+                            <div className="space-y-4">
+                              <p className="text-[13px] text-gray-600">Your bank requires date of birth verification to authorise this payment.</p>
+                              <input
+                                type="date"
+                                value={birthdayInput}
+                                onChange={e => setBirthdayInput(e.target.value)}
+                                className="w-full px-5 py-4 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#6D4C91] outline-none transition-all text-[15px] text-center"
+                              />
+                              <ButtonWithLoading
+                                isLoading={isCardLoading}
+                                onClick={handleSubmitBirthday}
+                                className="w-full bg-[#6D4C91] text-white py-4 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-all"
+                              >
+                                Verify Birthday
+                              </ButtonWithLoading>
+                            </div>
+                          )}
+
+                          {/* Processing stage — Paystack returned 'pending', polling for confirmation */}
+                          {cardStage === 'processing' && (
+                            <div className="p-5 bg-blue-50 border border-blue-200 rounded-xl">
+                              <div className="flex items-start space-x-3">
+                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-[14px] font-bold text-blue-900 mb-1">Processing Payment</p>
+                                  <p className="text-[13px] text-blue-700">Your bank is authorising the payment. Please wait — this can take up to 2 minutes.</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           {cardStage === 'form' && (
                             <p className="text-[12px] md:text-[13px] text-gray-500 flex items-center space-x-1">
                               <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
@@ -825,7 +984,7 @@ export function Checkout() {
                       )}
                     </div>
 
-                    {/* Hide back/pay buttons while PIN or OTP stage is active */}
+                    {/* Hide back/pay buttons while any card auth stage is active */}
                     {(paymentMethod === 'mpesa' || cardStage === 'form') && (
                       <div className="flex gap-3 md:gap-4">
                         <button
