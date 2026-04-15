@@ -946,12 +946,39 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     }
   });
 
-  // Delete account — permanently removes the auth user (cascades to profile via Supabase FK)
+  // Delete account — cleans up dependent rows first to avoid FK constraint errors,
+  // then removes the auth user (which cascades to the profiles row).
   router.delete('/account', authenticate, async (req, res) => {
     const adminClient = createServiceClient();
-    const { error } = await adminClient.auth.admin.deleteUser(req.user.id);
-    if (error) return res.status(400).json({ error: error.message });
-    res.json({ success: true });
+    const userId = req.user.id;
+
+    try {
+      // 1. Delete cart items then the cart itself
+      const { data: cart } = await adminClient
+        .from('carts').select('id').eq('user_id', userId).maybeSingle();
+      if (cart) {
+        await adminClient.from('cart_items').delete().eq('cart_id', cart.id);
+        await adminClient.from('carts').delete().eq('id', cart.id);
+      }
+
+      // 2. Nullify user_id on orders & order_items so business records are kept
+      await adminClient.from('orders').update({ user_id: null }).eq('user_id', userId);
+
+      // 3. Nullify user_id on appointments so booking history is kept
+      await adminClient.from('appointments').update({ user_id: null }).eq('user_id', userId);
+
+      // 4. Delete the profile row (FK to auth.users — must go before deleteUser)
+      await adminClient.from('profiles').delete().eq('id', userId);
+
+      // 5. Finally delete the auth user
+      const { error } = await adminClient.auth.admin.deleteUser(userId);
+      if (error) return res.status(400).json({ error: error.message });
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[Delete account] error:', err.message);
+      res.status(500).json({ error: 'Database error deleting user' });
+    }
   });
 
   // History
