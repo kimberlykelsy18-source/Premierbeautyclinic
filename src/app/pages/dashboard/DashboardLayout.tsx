@@ -1,18 +1,89 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
-import { LayoutDashboard, ShoppingCart, CalendarDays, Box, Users, Settings, LogOut, Bell, Search, Menu, X, Lock, Eye, EyeOff, ShieldCheck, Truck } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, CalendarDays, Box, Users, Settings, LogOut, Bell, Search, Menu, X, Lock, Eye, EyeOff, ShieldCheck, Truck, ShoppingBag, Calendar, AlertTriangle, CheckCheck } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { apiFetch } from '../../lib/api';
 import logo from '../../../assets/logo.png';
 
+// ── Notification types ───────────────────────────────────────────────────────
+interface Notification {
+  id: string;
+  type: 'order' | 'appointment' | 'low_stock';
+  title: string;
+  detail: string;
+  time: string | null;
+  link: string;
+}
+
+const LAST_SEEN_KEY = 'pbcNotifLastSeen';
+
+function timeAgoShort(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)   return 'just now';
+  if (m < 60)  return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24)  return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
 export function DashboardLayout() {
   const { user, token, sessionId, authLoading, logout, updateUser } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen]           = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen]             = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // ── Notifications ────────────────────────────────────────────────────────
+  const [notifOpen, setNotifOpen]           = useState(false);
+  const [notifications, setNotifications]   = useState<Notification[]>([]);
+  const [notifLoading, setNotifLoading]     = useState(false);
+  const [lastSeen, setLastSeen]             = useState<number>(() => {
+    const v = localStorage.getItem(LAST_SEEN_KEY);
+    return v ? parseInt(v, 10) : 0;
+  });
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = notifications.filter(n => n.time && new Date(n.time).getTime() > lastSeen).length;
+
+  const fetchNotifications = () => {
+    setNotifLoading(true);
+    apiFetch('/admin/notifications', {}, token, sessionId)
+      .then((data: Notification[]) => setNotifications(data))
+      .catch(() => {})
+      .finally(() => setNotifLoading(false));
+  };
+
+  useEffect(() => {
+    if (user) fetchNotifications();
+    // Refresh every 2 minutes
+    const interval = setInterval(() => { if (user) fetchNotifications(); }, 120000);
+    return () => clearInterval(interval);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close panel on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    };
+    if (notifOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [notifOpen]);
+
+  const handleMarkAllRead = () => {
+    const now = Date.now();
+    localStorage.setItem(LAST_SEEN_KEY, String(now));
+    setLastSeen(now);
+  };
+
+  const handleOpenNotif = () => {
+    setNotifOpen(prev => !prev);
+    if (!notifOpen) fetchNotifications();
+  };
 
   // ── Auth protection ──────────────────────────────────────────────────────
   // Wait for authLoading to finish before checking — prevents a false redirect
@@ -305,10 +376,132 @@ export function DashboardLayout() {
 
           {/* Right side */}
           <div className="flex items-center gap-2 md:gap-3 ml-auto">
-            <button className="relative w-9 h-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/8 rounded-xl transition-all">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
-            </button>
+
+            {/* ── Notification Bell ───────────────────────────────────────── */}
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={handleOpenNotif}
+                className={`relative w-9 h-9 flex items-center justify-center rounded-xl transition-all ${notifOpen ? 'text-white bg-white/12' : 'text-white/50 hover:text-white hover:bg-white/8'}`}
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {notifOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-12 w-[340px] bg-white rounded-[24px] shadow-2xl border border-gray-100 z-[150] overflow-hidden"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                      <div>
+                        <h3 className="text-[14px] font-bold">Notifications</h3>
+                        {unreadCount > 0 && (
+                          <p className="text-[11px] text-[#6D4C91] font-semibold mt-0.5">{unreadCount} unread</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={handleMarkAllRead}
+                            className="flex items-center gap-1 text-[11px] font-bold text-gray-400 hover:text-[#6D4C91] transition-colors"
+                          >
+                            <CheckCheck className="w-3.5 h-3.5" />
+                            Mark read
+                          </button>
+                        )}
+                        <button onClick={() => setNotifOpen(false)} className="p-1 text-gray-300 hover:text-gray-500 transition-colors">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Body */}
+                    <div className="max-h-[400px] overflow-y-auto">
+                      {notifLoading ? (
+                        <div className="p-6 space-y-4">
+                          {[1, 2, 3].map(i => (
+                            <div key={i} className="flex gap-3 animate-pulse">
+                              <div className="w-9 h-9 rounded-xl bg-gray-100 shrink-0" />
+                              <div className="flex-grow space-y-2 pt-1">
+                                <div className="h-3 bg-gray-100 rounded w-2/3" />
+                                <div className="h-2.5 bg-gray-100 rounded w-1/2" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : notifications.length === 0 ? (
+                        <div className="py-12 flex flex-col items-center text-gray-300">
+                          <Bell className="w-8 h-8 mb-3 opacity-40" />
+                          <p className="text-[12px] font-bold uppercase tracking-widest">All caught up</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-gray-50">
+                          {notifications.map(notif => {
+                            const isUnread = notif.time && new Date(notif.time).getTime() > lastSeen;
+                            const Icon = notif.type === 'order'
+                              ? ShoppingBag
+                              : notif.type === 'appointment'
+                                ? Calendar
+                                : AlertTriangle;
+                            const iconBg = notif.type === 'order'
+                              ? 'bg-blue-50 text-blue-500'
+                              : notif.type === 'appointment'
+                                ? 'bg-[#6D4C91]/10 text-[#6D4C91]'
+                                : 'bg-amber-50 text-amber-500';
+                            return (
+                              <Link
+                                key={notif.id}
+                                to={notif.link}
+                                onClick={() => setNotifOpen(false)}
+                                className={`flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors ${isUnread ? 'bg-[#F8F5FF]' : ''}`}
+                              >
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
+                                  <Icon className="w-4 h-4" />
+                                </div>
+                                <div className="flex-grow min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className={`text-[13px] leading-snug ${isUnread ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>
+                                      {notif.title}
+                                    </p>
+                                    {isUnread && <span className="w-2 h-2 rounded-full bg-[#6D4C91] shrink-0 mt-1.5" />}
+                                  </div>
+                                  <p className="text-[11px] text-gray-400 mt-0.5 truncate">{notif.detail}</p>
+                                  {notif.time && (
+                                    <p className="text-[10px] text-gray-300 mt-1 font-medium">{timeAgoShort(notif.time)}</p>
+                                  )}
+                                </div>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    {notifications.length > 0 && (
+                      <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
+                        <button
+                          onClick={() => { fetchNotifications(); }}
+                          className="w-full text-[11px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          Refresh
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <div className="h-6 w-px bg-white/10 hidden md:block" />
             <div className="flex items-center gap-2.5 pl-1">
               <div className="text-right hidden sm:block">

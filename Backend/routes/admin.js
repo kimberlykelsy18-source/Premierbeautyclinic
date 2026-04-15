@@ -538,6 +538,81 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     });
   });
 
+  // Notification feed — recent orders, appointments, and low-stock alerts
+  router.get('/admin/notifications', authenticate, requireEmployeePermission('view_orders'), async (req, res) => {
+    const [ordersRes, apptsRes, productsRes] = await Promise.all([
+      adminDb
+        .from('orders')
+        .select('id, order_number, total, created_at, status, profiles(full_name)')
+        .order('created_at', { ascending: false })
+        .limit(6),
+      adminDb
+        .from('appointments')
+        .select('id, created_at, appointment_date, profiles(full_name), services(name)')
+        .order('created_at', { ascending: false })
+        .limit(6),
+      adminDb
+        .from('products')
+        .select('id, name, stock, low_stock_threshold')
+        .eq('is_active', true),
+    ]);
+
+    const toShortOrder = n => {
+      if (!n) return 'ORD-???';
+      const letterIndex = Math.floor((n - 1) / 999);
+      const numPart     = ((n - 1) % 999) + 1;
+      return `ORD-${String.fromCharCode(65 + letterIndex)}${String(numPart).padStart(3, '0')}`;
+    };
+
+    const notifications = [];
+
+    for (const o of (ordersRes.data || [])) {
+      notifications.push({
+        id:     `order-${o.id}`,
+        type:   'order',
+        title:  `New order ${toShortOrder(o.order_number)}`,
+        detail: `${o.profiles?.full_name || 'Guest'} · KES ${(o.total || 0).toLocaleString()}`,
+        time:   o.created_at,
+        link:   '/staff/orders',
+      });
+    }
+
+    for (const a of (apptsRes.data || [])) {
+      notifications.push({
+        id:     `appt-${a.id}`,
+        type:   'appointment',
+        title:  `Appointment booked`,
+        detail: `${a.profiles?.full_name || 'Client'} · ${a.services?.name || 'Service'}`,
+        time:   a.created_at,
+        link:   '/staff/appointments',
+      });
+    }
+
+    for (const p of (productsRes.data || [])) {
+      const threshold = p.low_stock_threshold ?? 5;
+      if (p.stock <= threshold) {
+        notifications.push({
+          id:     `stock-${p.id}`,
+          type:   'low_stock',
+          title:  'Low stock alert',
+          detail: `${p.name} · ${p.stock} unit${p.stock === 1 ? '' : 's'} left`,
+          time:   null,
+          link:   '/staff/inventory',
+        });
+      }
+    }
+
+    // Sort: timed items by recency, low-stock at end
+    notifications.sort((a, b) => {
+      if (!a.time && !b.time) return 0;
+      if (!a.time) return 1;
+      if (!b.time) return -1;
+      return new Date(b.time) - new Date(a.time);
+    });
+
+    res.json(notifications.slice(0, 15));
+  });
+
   // Clinic settings (single row, id = 1)
   router.get('/admin/settings', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
     const { data } = await adminDb
