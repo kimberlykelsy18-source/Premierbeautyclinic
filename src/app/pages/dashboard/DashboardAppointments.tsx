@@ -99,7 +99,7 @@ function printAptReceipt(apt: ApiAppointment, logoSrc: string) {
   win.document.write(`<!DOCTYPE html><html><head><title>Receipt — ${shortId}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,sans-serif;background:#fff;color:#1a1a1a;max-width:480px;margin:32px auto;padding:0 20px}
-    .hdr{background:#6D4C91;color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center}
+    .hdr{background:#000000;color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center}
     .hdr img{height:44px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto}
     .body{border:1px solid #eee;border-top:none;padding:28px;border-radius:0 0 12px 12px}
     table{width:100%;border-collapse:collapse;margin-top:16px}
@@ -153,7 +153,7 @@ function printWalkInReceipt(wk: WalkIn, logoSrc: string) {
   win.document.write(`<!DOCTYPE html><html><head><title>Walk-in Receipt</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,sans-serif;background:#fff;color:#1a1a1a;max-width:480px;margin:32px auto;padding:0 20px}
-    .hdr{background:#0f766e;color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center}
+    .hdr{background:#000000;color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center}
     .hdr img{height:44px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto}
     .body{border:1px solid #eee;border-top:none;padding:28px;border-radius:0 0 12px 12px}
     table{width:100%;border-collapse:collapse;margin-top:16px}
