@@ -111,10 +111,27 @@ app.get('/', (req, res) => {
   res.json({ message: 'Backend Stable ✅' });
 });
 
+// ── Critical env-var guard (runs before server starts) ───────────────────────
+// If any of these are missing the deployment is broken — crash immediately so
+// Railway marks the deploy as failed instead of silently serving broken APIs.
+const REQUIRED_VARS = [
+  'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
+  'PAYSTACK_SECRET_KEY', 'PAYSTACK_PUBLIC_KEY',
+  'MPESA_CONSUMER_KEY', 'MPESA_SHORTCODE',
+  'SMTP_HOST', 'SMTP_USER',
+  'FRONTEND_URL', 'BACKEND_URL',
+];
+const missing = REQUIRED_VARS.filter(k => !process.env[k]?.trim());
+if (missing.length) {
+  console.error(`[startup] ❌ MISSING required env vars: ${missing.join(', ')}`);
+  console.error('[startup] Refusing to start — fix env vars in Railway dashboard then redeploy.');
+  process.exit(1);
+}
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 
-  // Startup env-var check — confirms which keys Railway loaded
+  // Startup env-var check — trims values to catch whitespace-only entries
   const envCheck = [
     'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
     'MPESA_CONSUMER_KEY', 'MPESA_SHORTCODE',
@@ -123,7 +140,7 @@ app.listen(PORT, () => {
     'FRONTEND_URL', 'BACKEND_URL',
   ];
   envCheck.forEach(k => {
-    const val = process.env[k];
+    const val = process.env[k]?.trim();
     console.log(`[env] ${k}: ${val ? '✅ set (' + val.slice(0, 6) + '...)' : '❌ MISSING'}`);
   });
 
