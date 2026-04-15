@@ -21,6 +21,14 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     next();
   };
 
+  // Rejects requests where req.params.id is not a positive integer (for products table)
+  const validateIntId = (req, res, next) => {
+    if (!/^\d+$/.test(req.params.id) || Number(req.params.id) < 1) {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
+    next();
+  };
+
   // Strip HTML/script tags from a string to prevent stored XSS
   const sanitize = str => (typeof str === 'string' ? str.replace(/<[^>]*>/g, '').trim() : str);
 
@@ -515,7 +523,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
   });
 
   // Edit product (price, name, threshold, active, brand, category)
-  router.patch('/admin/products/:id', authenticate, requireEmployeePermission('edit_stock'), validateId, async (req, res) => {
+  router.patch('/admin/products/:id', authenticate, requireEmployeePermission('edit_stock'), validateIntId, async (req, res) => {
     const ALLOWED = ['name', 'price', 'low_stock_threshold', 'is_active', 'brand', 'description', 'category_id', 'images'];
     const updates = {};
     for (const key of ALLOWED) {

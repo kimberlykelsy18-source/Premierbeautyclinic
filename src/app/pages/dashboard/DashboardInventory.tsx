@@ -769,6 +769,7 @@ export function DashboardInventory() {
                               alt=""
                               onClick={() => { setPreviewProduct(item); setPreviewIndex(0); }}
                               className="w-10 h-10 rounded-xl object-cover flex-shrink-0 border border-gray-100 cursor-pointer hover:ring-2 hover:ring-[#6D4C91]/50 transition-all"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                             />
                           ) : (
                             <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
@@ -1031,7 +1032,12 @@ export function DashboardInventory() {
                     <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                       {editExistingImages.map((url, i) => (
                         <div key={i} className="relative aspect-square">
-                          <img src={url} alt="" className="w-full h-full object-cover rounded-xl border border-gray-100" />
+                          <img
+                            src={url}
+                            alt=""
+                            className="w-full h-full object-cover rounded-xl border border-gray-100"
+                            onError={() => handleRemoveExistingImage(url)}
+                          />
                           <button
                             type="button"
                             onClick={() => handleRemoveExistingImage(url)}

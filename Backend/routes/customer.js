@@ -139,12 +139,21 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
 
   // Get profile — returns the current user's profile row including marketing_consent and saved address.
   router.get('/profile', authenticate, async (req, res) => {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('profiles')
       .select('id, full_name, email, phone, marketing_consent, shipping_address')
       .eq('id', req.user.id)
       .single();
-    if (error || !data) return res.status(404).json({ error: 'Profile not found' });
+    if (error || !data) {
+      // Profile row missing (trigger didn't fire) — create it on-the-fly
+      const { data: created, error: insertErr } = await db
+        .from('profiles')
+        .insert({ id: req.user.id, email: req.user.email || '' })
+        .select('id, full_name, email, phone, marketing_consent, shipping_address')
+        .single();
+      if (insertErr || !created) return res.status(404).json({ error: 'Profile not found' });
+      return res.json(created);
+    }
     res.json(data);
   });
 
@@ -162,7 +171,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       return res.status(400).json({ error: 'Nothing to update' });
     }
 
-    const { error } = await supabase
+    const { error } = await db
       .from('profiles')
       .update(updates)
       .eq('id', req.user.id);
