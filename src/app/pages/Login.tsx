@@ -239,23 +239,23 @@ export function Login() {
                 exit={{ opacity: 0, x: -24 }}
                 transition={{ duration: 0.3 }}
                 onSubmit={handleSignup}
-                className="space-y-4"
+                className="space-y-3"
               >
-                <div className="mb-6">
-                  <h1 className="text-[28px] md:text-[32px] font-bold text-gray-900 leading-tight">Create Account</h1>
+                <div className="mb-3">
+                  <h1 className="text-[22px] md:text-[26px] font-bold text-gray-900 leading-tight">Create Account</h1>
                   <p className="text-[13px] text-gray-400 mt-1">Join Premier Beauty Clinic today.</p>
                 </div>
 
                 {/* Full Name */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Full Name</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Full Name</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
+                      className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="John Doe"
                     />
                   </div>
@@ -263,14 +263,14 @@ export function Login() {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Email Address</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Email Address</label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
+                      className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="you@example.com"
                     />
                   </div>
@@ -278,14 +278,14 @@ export function Login() {
 
                 {/* Phone */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Phone Number</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Phone Number</label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
+                      className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="07XX XXX XXX"
                     />
                   </div>
@@ -293,14 +293,14 @@ export function Login() {
 
                 {/* Password */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Password</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Password</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
+                      className="w-full pl-11 pr-11 py-2.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="••••••••"
                     />
                     <button
@@ -315,14 +315,14 @@ export function Login() {
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Confirm Password</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Confirm Password</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
+                      className="w-full pl-11 pr-11 py-2.5 rounded-xl bg-white border border-gray-200 focus:border-[#6D4C91] focus:ring-2 focus:ring-[#6D4C91]/10 outline-none transition-all text-[14px] text-gray-900 placeholder:text-gray-400"
                       placeholder="••••••••"
                     />
                     <button
@@ -338,7 +338,7 @@ export function Login() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#6D4C91] text-white py-3.5 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full bg-[#6D4C91] text-white py-2.5 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-1 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isLoading
                     ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -346,7 +346,7 @@ export function Login() {
                   }
                 </button>
 
-                <p className="text-center text-[13px] text-gray-400 pt-2">
+                <p className="text-center text-[13px] text-gray-400 pt-1">
                   Already have an account?{' '}
                   <button
                     type="button"
