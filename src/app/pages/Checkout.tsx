@@ -385,6 +385,7 @@ export function Checkout() {
               <span className={`text-[11px] md:text-[12px] font-bold uppercase tracking-widest whitespace-nowrap ${step >= 3 ? 'text-[#6D4C91]' : 'text-gray-300'}`}>03 Confirm</span>
             </div>
 
+            <div className="overflow-hidden">
             <AnimatePresence mode="wait">
               {step === 1 && (
                 <motion.div key="shipping" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
@@ -851,6 +852,7 @@ export function Checkout() {
                 </motion.div>
               )}
             </AnimatePresence>
+            </div>
           </div>
 
           {/* Order Summary Sidebar */}

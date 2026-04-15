@@ -382,7 +382,7 @@ export function Account() {
           </aside>
 
           {/* ── Content Area ── */}
-          <main className="flex-grow bg-white rounded-2xl md:rounded-[32px] p-6 md:p-12 shadow-sm border border-gray-100">
+          <main className="flex-grow bg-white rounded-2xl md:rounded-[32px] p-6 md:p-12 shadow-sm border border-gray-100 overflow-hidden">
             <AnimatePresence mode="wait">
 
               {/* ───────────── Profile Tab ───────────── */}

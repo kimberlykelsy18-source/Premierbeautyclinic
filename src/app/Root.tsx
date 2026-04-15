@@ -31,9 +31,9 @@ export function Root() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] flex flex-col font-sans text-[#1A1A1A]">
+    <div className="min-h-screen bg-[#FDFBF7] flex flex-col font-sans text-[#1A1A1A] overflow-x-hidden">
       {!isBareRoute && <Navbar />}
-      <main className="flex-grow">
+      <main className="flex-grow overflow-x-hidden w-full">
         <Outlet />
       </main>
       {!isBareRoute && <Footer />}

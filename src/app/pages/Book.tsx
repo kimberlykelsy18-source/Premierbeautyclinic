@@ -276,6 +276,7 @@ export function Book() {
           ))}
         </div>
 
+        <div className="overflow-hidden">
         <AnimatePresence mode="wait">
           {/* ── Step 1: Service Selection ── */}
           {step === 1 && (
@@ -671,6 +672,7 @@ export function Book() {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </div>
     </div>
   );

@@ -189,11 +189,11 @@ export function Home() {
       <section className="py-12 md:py-24 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center">
-            <div className="relative">
+            <div className="relative pb-4 pr-4 md:pb-8 md:pr-8">
               <div className="aspect-[3/4] rounded-2xl md:rounded-[40px] overflow-hidden">
                 <img src={SERVICE_IMG} alt="Service" className="w-full h-full object-cover" />
               </div>
-              <div className="absolute -bottom-4 -right-4 md:-bottom-8 md:-right-8 bg-[#6D4C91] p-6 md:p-10 rounded-xl md:rounded-2xl text-white hidden sm:block">
+              <div className="absolute bottom-0 right-0 bg-[#6D4C91] p-6 md:p-10 rounded-xl md:rounded-2xl text-white hidden sm:block">
                 <p className="text-[18px] md:text-[24px] font-serif italic mb-1 md:mb-2">98% Success Rate</p>
                 <p className="text-[12px] md:text-[14px] text-white/80">In clinical skin analysis treatments.</p>
               </div>
