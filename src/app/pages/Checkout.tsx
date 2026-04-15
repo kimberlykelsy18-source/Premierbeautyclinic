@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { ArrowLeft, CheckCircle2, Truck, ShieldCheck, MapPin, CreditCard, Smartphone, Edit2, Check, Lock } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Truck, ShieldCheck, MapPin, CreditCard, Smartphone, Edit2, Check, Lock, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
@@ -32,6 +32,10 @@ export function Checkout() {
   const [pendingReference, setPendingReference] = useState('');
   const [pinInput, setPinInput] = useState('');
   const [otpInput, setOtpInput] = useState('');
+
+  // Payment success overlay
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successEmail, setSuccessEmail] = useState('');
 
   function formatCardNumber(val: string) {
     return val.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
@@ -190,8 +194,8 @@ export function Checkout() {
 
   const handleCardSuccess = () => {
     clearCart();
-    showFeedback('success', 'Payment Confirmed!', `Your order is placed. A confirmation email will be sent to ${formData.email}.`);
-    setTimeout(() => navigate('/shop'), 2500);
+    setSuccessEmail(formData.email);
+    setShowSuccess(true);
   };
 
   const handleCardPayment = async () => {
