@@ -2,34 +2,29 @@ import { useEffect, useState, lazy, Suspense } from 'react';
 
 // Lazy-load SalesChart so recharts (~250 KB) is only fetched when an admin opens the overview
 const SalesChart = lazy(() => import('./SalesChart'));
+import type { ChartPoint } from './SalesChart';
 import { ShoppingBag, Calendar, Users, ArrowUpRight, ArrowDownRight, DollarSign, Download, Lock } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { apiFetch } from '../../lib/api';
 import { timeAgo } from '../../lib/dateFormatters';
-import { StatCard } from '../../components/StatCard';
+
+type ChartPeriod = 'daily' | 'monthly' | 'yearly';
 
 // Fallback chart data shown to non-admins (chart is blurred/locked anyway)
-const MOCK_DATA = [
-  { name: 'Mon', sales: 4000, appointments: 2400 },
-  { name: 'Tue', sales: 3000, appointments: 1398 },
-  { name: 'Wed', sales: 2000, appointments: 9800 },
-  { name: 'Thu', sales: 2780, appointments: 3908 },
-  { name: 'Fri', sales: 1890, appointments: 4800 },
-  { name: 'Sat', sales: 2390, appointments: 3800 },
+const MOCK_DATA: ChartPoint[] = [
+  { label: 'Mon', revenue: 42000, orders: 8,  appointments: 5 },
+  { label: 'Tue', revenue: 31500, orders: 6,  appointments: 3 },
+  { label: 'Wed', revenue: 58000, orders: 11, appointments: 7 },
+  { label: 'Thu', revenue: 27000, orders: 5,  appointments: 4 },
+  { label: 'Fri', revenue: 68500, orders: 14, appointments: 9 },
+  { label: 'Sat', revenue: 79000, orders: 17, appointments: 11 },
 ];
 
-interface SalesSummaryRow {
-  period?: string;
-  day?: string;
-  week?: string;
-  date?: string;
-  name?: string;
-  sales?: number;
-  total_sales?: number;
-  total_revenue?: number;
-  appointments?: number;
-  appointment_count?: number;
-  order_count?: number;
+interface RawSalesRow {
+  period: string;   // YYYY-MM-DD | YYYY-MM | YYYY
+  revenue: number;
+  orders: number;
+  appointments: number;
 }
 
 interface RecentOrder {
@@ -64,18 +59,24 @@ interface ActivityItem {
   time: string;
 }
 
-function formatPeriod(period: string): string {
-  // period is "YYYY-MM-DD" from the RPC
-  const d = new Date(period + 'T12:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+function formatPeriodLabel(period: string, type: ChartPeriod): string {
+  if (type === 'daily') {
+    const d = new Date(period + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  if (type === 'monthly') {
+    const d = new Date(period + '-01T12:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  }
+  return period; // yearly — just the year
 }
 
-function transformSalesData(raw: SalesSummaryRow[]): { name: string; sales: number; appointments: number }[] {
-  // Reverse so the chart reads oldest → newest (left → right)
-  return [...raw].reverse().map(row => ({
-    name:         row.period ? formatPeriod(row.period) : (row.name || row.day || row.week || row.date || '—'),
-    sales:        row.sales ?? row.total_sales ?? row.total_revenue ?? 0,
-    appointments: row.appointments ?? row.appointment_count ?? 0,
+function transformSalesData(raw: RawSalesRow[], type: ChartPeriod): ChartPoint[] {
+  return raw.map(row => ({
+    label:        formatPeriodLabel(row.period, type),
+    revenue:      row.revenue      ?? 0,
+    orders:       row.orders       ?? 0,
+    appointments: row.appointments ?? 0,
   }));
 }
 
@@ -83,28 +84,47 @@ export function DashboardOverview() {
   const { user, token, sessionId, formatPrice } = useStore();
   const isAdmin = user?.role === 'admin';
 
-  const [allChartData, setAllChartData]          = useState<{ name: string; sales: number; appointments: number }[]>([]);
-  const [chartRange, setChartRange]              = useState<7 | 30>(7);
-  const [totalRevenue, setTotalRevenue]          = useState<number | null>(null);
-  const [totalOrders, setTotalOrders]            = useState<number | null>(null);
-  const [totalAppointments, setTotalAppointments] = useState<number | null>(null);
+  const [chartData, setChartData]                = useState<ChartPoint[]>([]);
+  const [chartPeriod, setChartPeriod]            = useState<ChartPeriod>('daily');
+  const [chartLoading, setChartLoading]          = useState(false);
   const [recentActivity, setRecentActivity]      = useState<ActivityItem[]>([]);
-  const [newCustomersCount, setNewCustomersCount] = useState<number | null>(null);
   const [activityLoading, setActivityLoading]    = useState(true);
 
+  // Stat card values — sourced from /admin/stats
+  interface StatValues {
+    revenue:      { current: number; change: number; total: number };
+    orders:       { current: number; change: number };
+    appointments: { current: number; change: number };
+    newCustomers: { current: number; change: number };
+  }
+  const [stats, setStats] = useState<StatValues | null>(null);
+
+  // Refetch chart when period changes (admin only)
+  // Fetch stat card KPIs (admin only — includes revenue which is restricted)
   useEffect(() => {
-    // Sales chart + revenue — admin only
-    if (isAdmin) {
-      apiFetch('/admin/sales', {}, token, sessionId)
-        .then((data: SalesSummaryRow[]) => {
-          if (Array.isArray(data) && data.length > 0) {
-            setAllChartData(transformSalesData(data));
-            const rev = data.reduce((s, r) => s + (r.sales ?? r.total_sales ?? r.total_revenue ?? 0), 0);
-            if (rev > 0) setTotalRevenue(rev);
-          }
-        })
-        .catch(() => {/* fall back to mock chart */});
-    }
+    if (!isAdmin) return;
+    apiFetch('/admin/stats', {}, token, sessionId)
+      .then((data: StatValues) => setStats(data))
+      .catch(() => {/* silently ignore */});
+  }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Refetch chart when period changes (admin only)
+  useEffect(() => {
+    if (!isAdmin) return;
+    setChartLoading(true);
+    apiFetch(`/admin/sales?period=${chartPeriod}`, {}, token, sessionId)
+      .then((raw: RawSalesRow[]) => {
+        if (Array.isArray(raw) && raw.length > 0) {
+          setChartData(transformSalesData(raw, chartPeriod));
+        } else {
+          setChartData([]);
+        }
+      })
+      .catch(() => setChartData([]))
+      .finally(() => setChartLoading(false));
+  }, [isAdmin, chartPeriod]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
 
     // Recent activity + counts — all roles
     apiFetch('/admin/recent-activity', {}, token, sessionId)
@@ -141,50 +161,50 @@ export function DashboardOverview() {
           .map(({ _ts, ...rest }): ActivityItem => rest);
 
         setRecentActivity(combined);
-        setNewCustomersCount(data.newCustomersCount        ?? 0);
-        setTotalOrders(data.totalOrdersCount               ?? 0);
-        setTotalAppointments(data.totalAppointmentsCount   ?? 0);
       })
       .catch(() => {/* silently ignore */})
       .finally(() => setActivityLoading(false));
   }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Slice to the selected range; fall back to MOCK_DATA while loading
-  const chartData = allChartData.length > 0 ? allChartData.slice(-chartRange) : MOCK_DATA;
+  // While loading show mock data (blurred anyway for non-admins)
+  const displayChartData = chartData.length > 0 ? chartData : MOCK_DATA;
 
-  const stats = [
+  // Format a change value like +12.5% or -2.4%
+  const fmtChange = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
+
+  const statCards = [
     {
-      label: 'Total Revenue',
-      value: totalRevenue != null ? `KES ${(totalRevenue / 1000).toFixed(0)}K` : 'KES —',
-      change: '+12.5%',
-      icon: DollarSign,
-      color: 'text-green-600',
-      bg: 'bg-green-50',
+      label:      'Total Revenue',
+      value:      stats ? formatPrice(stats.revenue.total) : 'KES —',
+      change:     stats ? fmtChange(stats.revenue.change) : null,
+      icon:       DollarSign,
+      color:      'text-green-600',
+      bg:         'bg-green-50',
       restricted: true,
     },
     {
-      label: 'Total Orders',
-      value: totalOrders != null ? String(totalOrders) : '—',
-      change: '+8.2%',
-      icon: ShoppingBag,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
+      label:  'Total Orders',
+      value:  stats ? String(stats.orders.current) : '—',
+      change: stats ? fmtChange(stats.orders.change) : null,
+      icon:   ShoppingBag,
+      color:  'text-blue-600',
+      bg:     'bg-blue-50',
     },
     {
-      label: 'Appointments',
-      value: totalAppointments != null ? String(totalAppointments) : '—',
-      change: '-2.4%',
-      icon: Calendar,
-      color: 'text-[#6D4C91]',
-      bg: 'bg-[#6D4C91]/5',
+      label:  'Appointments',
+      value:  stats ? String(stats.appointments.current) : '—',
+      change: stats ? fmtChange(stats.appointments.change) : null,
+      icon:   Calendar,
+      color:  'text-[#6D4C91]',
+      bg:     'bg-[#6D4C91]/5',
     },
     {
-      label: 'New Customers',
-      value: newCustomersCount != null ? String(newCustomersCount) : '—',
-      change: '+18.1%',
-      icon: Users,
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
+      label:  'New Customers',
+      value:  stats ? String(stats.newCustomers.current) : '—',
+      change: stats ? fmtChange(stats.newCustomers.change) : null,
+      icon:   Users,
+      color:  'text-amber-600',
+      bg:     'bg-amber-50',
     },
   ];
 
@@ -205,8 +225,10 @@ export function DashboardOverview() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => {
-          const isLocked = stat.restricted && !isAdmin;
+        {statCards.map((stat, i) => {
+          const isLocked   = stat.restricted && !isAdmin;
+          const isPositive = stat.change ? stat.change.startsWith('+') : true;
+          const isZero     = stat.change === '+0.0%' || stat.change === '-0.0%';
           return (
             <div key={i} className={`bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden ${isLocked ? 'grayscale opacity-80' : ''}`}>
               {isLocked && (
@@ -219,16 +241,27 @@ export function DashboardOverview() {
                 <div className={`p-4 rounded-2xl ${stat.bg} ${stat.color}`}>
                   <stat.icon className="w-6 h-6" />
                 </div>
-                {!isLocked && (
-                  <div className={`flex items-center text-[12px] font-bold px-2 py-1 rounded-full ${stat.change.startsWith('+') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                    {stat.change.startsWith('+') ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
+                {!isLocked && stat.change && (
+                  <div className={`flex items-center text-[12px] font-bold px-2 py-1 rounded-full ${
+                    isZero ? 'bg-gray-50 text-gray-400' :
+                    isPositive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                  }`}>
+                    {!isZero && (isPositive
+                      ? <ArrowUpRight className="w-3 h-3 mr-1" />
+                      : <ArrowDownRight className="w-3 h-3 mr-1" />)}
                     {stat.change}
                   </div>
+                )}
+                {!isLocked && !stat.change && (
+                  <div className="w-16 h-6 bg-gray-100 rounded-full animate-pulse" />
                 )}
               </div>
               <div>
                 <p className="text-[13px] text-gray-400 font-bold uppercase tracking-widest mb-1">{stat.label}</p>
                 <h3 className="text-[28px] font-bold">{isLocked ? '••••••' : stat.value}</h3>
+                {!isLocked && stat.change && (
+                  <p className="text-[11px] text-gray-400 mt-1">vs previous 30 days</p>
+                )}
               </div>
             </div>
           );
@@ -237,37 +270,89 @@ export function DashboardOverview() {
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className={`lg:col-span-2 bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm relative overflow-hidden ${!isAdmin ? 'min-h-[300px]' : ''}`}>
+        <div className={`lg:col-span-2 bg-white p-6 md:p-8 rounded-[40px] border border-gray-100 shadow-sm relative overflow-hidden ${!isAdmin ? 'min-h-[300px]' : ''}`}>
           {!isAdmin && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-md z-10 flex flex-col items-center justify-center text-center p-12">
               <div className="bg-red-50 p-6 rounded-full mb-6">
                 <Lock className="w-10 h-10 text-red-600" />
               </div>
               <h4 className="text-[20px] font-bold mb-2">Financial Analytics Restricted</h4>
-              <p className="text-gray-500 max-w-sm mx-auto">Access to Sales vs Appointments comparisons and revenue charts is restricted to administrators only.</p>
+              <p className="text-gray-500 max-w-sm mx-auto">Access to sales and revenue charts is restricted to administrators only.</p>
             </div>
           )}
 
-          <div className="flex justify-between items-center mb-10">
-            <h3 className="text-[18px] font-bold">Sales vs Appointments</h3>
+          {/* Header row */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+              <h3 className="text-[18px] font-bold">Revenue & Activity</h3>
+              <p className="text-[12px] text-gray-400 mt-0.5">Sales revenue, orders placed, and appointments booked</p>
+            </div>
+
+            {/* Period tabs */}
             {isAdmin && (
-              <select
-                value={chartRange}
-                onChange={e => setChartRange(Number(e.target.value) as 7 | 30)}
-                className="bg-[#F8F9FA] border-none text-[12px] font-bold uppercase tracking-widest px-4 py-2 rounded-lg outline-none"
-              >
-                <option value={7}>Last 7 Days</option>
-                <option value={30}>Last 30 Days</option>
-              </select>
+              <div className="flex items-center bg-[#F8F5FF] rounded-2xl p-1 self-start sm:self-auto">
+                {(['daily', 'monthly', 'yearly'] as ChartPeriod[]).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setChartPeriod(p)}
+                    className={`px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${
+                      chartPeriod === p
+                        ? 'bg-[#6D4C91] text-white shadow-sm'
+                        : 'text-gray-400 hover:text-gray-700'
+                    }`}
+                  >
+                    {p === 'daily' ? 'Daily' : p === 'monthly' ? 'Monthly' : 'Yearly'}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
-          <div className="h-[220px] md:h-[400px]">
-            {isAdmin && (
-              <Suspense fallback={<div className="h-full flex items-center justify-center text-gray-300 text-[12px]">Loading chart…</div>}>
-                <SalesChart data={chartData} />
+          {/* KPI summary strip */}
+          {isAdmin && (
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              {[
+                {
+                  label: 'Total Revenue',
+                  value: formatPrice(displayChartData.reduce((s, d) => s + d.revenue, 0)),
+                  color: 'text-[#6D4C91]',
+                  bg: 'bg-[#F8F5FF]',
+                },
+                {
+                  label: 'Appointments',
+                  value: String(displayChartData.reduce((s, d) => s + d.appointments, 0)),
+                  color: 'text-[#0EA5E9]',
+                  bg: 'bg-[#F0F9FF]',
+                },
+                {
+                  label: 'Orders',
+                  value: String(displayChartData.reduce((s, d) => s + d.orders, 0)),
+                  color: 'text-[#10B981]',
+                  bg: 'bg-[#F0FDF4]',
+                },
+              ].map(kpi => (
+                <div key={kpi.label} className={`${kpi.bg} rounded-2xl px-4 py-3`}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{kpi.label}</p>
+                  <p className={`text-[16px] font-bold ${kpi.color}`}>{kpi.value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Chart */}
+          <div className="h-[220px] md:h-[320px]">
+            {chartLoading ? (
+              <div className="h-full flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3 text-gray-300">
+                  <div className="w-8 h-8 border-2 border-[#6D4C91]/30 border-t-[#6D4C91] rounded-full animate-spin" />
+                  <p className="text-[11px] font-bold uppercase tracking-widest">Loading chart…</p>
+                </div>
+              </div>
+            ) : isAdmin ? (
+              <Suspense fallback={<div className="h-full flex items-center justify-center text-gray-300 text-[12px]">Loading…</div>}>
+                <SalesChart data={displayChartData} period={chartPeriod} formatPrice={formatPrice} />
               </Suspense>
-            )}
+            ) : null}
           </div>
         </div>
 

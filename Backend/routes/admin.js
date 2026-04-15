@@ -424,11 +424,79 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     res.json(data || []);
   });
 
-  // Sales + Graphs
+  // Sales + Graphs — supports ?period=daily|monthly|yearly
   router.get('/admin/sales', authenticate, requireEmployeePermission('view_sales'), async (req, res) => {
-    const { data, error } = await adminDb.rpc('get_sales_summary');
-    if (error) console.error('[Admin Sales] RPC error:', error.message);
-    res.json(data || []);
+    const period = ['daily', 'monthly', 'yearly'].includes(req.query.period) ? req.query.period : 'daily';
+
+    const now = new Date();
+    let fromDate = new Date(now);
+    if (period === 'daily')        fromDate.setDate(now.getDate() - 30);
+    else if (period === 'monthly') fromDate.setFullYear(now.getFullYear() - 1);
+    else                           fromDate.setFullYear(now.getFullYear() - 5);
+
+    const [ordersRes, apptsRes] = await Promise.all([
+      adminDb.from('orders')
+        .select('total, created_at, status')
+        .gte('created_at', fromDate.toISOString())
+        .neq('status', 'cancelled'),
+      adminDb.from('appointments')
+        .select('created_at')
+        .gte('created_at', fromDate.toISOString()),
+    ]);
+
+    const buckets = {};
+    const bucketKey = (isoStr) => {
+      const d = new Date(isoStr);
+      if (period === 'daily')   return d.toISOString().slice(0, 10); // YYYY-MM-DD
+      if (period === 'monthly') return d.toISOString().slice(0, 7);  // YYYY-MM
+      return String(d.getFullYear());                                  // YYYY
+    };
+
+    for (const order of (ordersRes.data || [])) {
+      const k = bucketKey(order.created_at);
+      if (!buckets[k]) buckets[k] = { period: k, revenue: 0, orders: 0, appointments: 0 };
+      buckets[k].revenue += (order.total || 0);
+      buckets[k].orders  += 1;
+    }
+    for (const appt of (apptsRes.data || [])) {
+      const k = bucketKey(appt.created_at);
+      if (!buckets[k]) buckets[k] = { period: k, revenue: 0, orders: 0, appointments: 0 };
+      buckets[k].appointments += 1;
+    }
+
+    const result = Object.values(buckets).sort((a, b) => a.period.localeCompare(b.period));
+    res.json(result);
+  });
+
+  // Overview stat cards — returns current vs previous 30-day values + % change for all 4 KPIs
+  router.get('/admin/stats', authenticate, requireEmployeePermission('view_orders'), async (req, res) => {
+    const now = new Date();
+    const d30  = new Date(now); d30.setDate(now.getDate() - 30);
+    const d60  = new Date(now); d60.setDate(now.getDate() - 60);
+
+    const pct = (curr, prev) =>
+      prev === 0 ? (curr > 0 ? 100 : 0) : +((curr - prev) / prev * 100).toFixed(1);
+
+    const [ordCurr, ordPrev, aptCurr, aptPrev, custCurr, custPrev, allOrders] = await Promise.all([
+      adminDb.from('orders').select('total').gte('created_at', d30.toISOString()).neq('status', 'cancelled'),
+      adminDb.from('orders').select('total').gte('created_at', d60.toISOString()).lt('created_at', d30.toISOString()).neq('status', 'cancelled'),
+      adminDb.from('appointments').select('id').gte('created_at', d30.toISOString()),
+      adminDb.from('appointments').select('id').gte('created_at', d60.toISOString()).lt('created_at', d30.toISOString()),
+      adminDb.from('profiles').select('id').gte('created_at', d30.toISOString()),
+      adminDb.from('profiles').select('id').gte('created_at', d60.toISOString()).lt('created_at', d30.toISOString()),
+      adminDb.from('orders').select('total').neq('status', 'cancelled'),
+    ]);
+
+    const revCurr  = (ordCurr.data  || []).reduce((s, o) => s + (o.total || 0), 0);
+    const revPrev  = (ordPrev.data  || []).reduce((s, o) => s + (o.total || 0), 0);
+    const revTotal = (allOrders.data || []).reduce((s, o) => s + (o.total || 0), 0);
+
+    res.json({
+      revenue:      { current: revCurr,                        previous: revPrev,                  change: pct(revCurr, revPrev),   total: revTotal },
+      orders:       { current: ordCurr.data?.length  || 0,     previous: ordPrev.data?.length || 0, change: pct(ordCurr.data?.length || 0, ordPrev.data?.length || 0) },
+      appointments: { current: aptCurr.data?.length  || 0,     previous: aptPrev.data?.length || 0, change: pct(aptCurr.data?.length || 0, aptPrev.data?.length || 0) },
+      newCustomers: { current: custCurr.data?.length || 0,     previous: custPrev.data?.length || 0, change: pct(custCurr.data?.length || 0, custPrev.data?.length || 0) },
+    });
   });
 
   // Recent activity feed (last 5 orders + last 5 appointments, merged) + counts for Overview cards
