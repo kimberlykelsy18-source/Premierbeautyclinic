@@ -33,10 +33,6 @@ export function Checkout() {
   const [pinInput, setPinInput] = useState('');
   const [otpInput, setOtpInput] = useState('');
 
-  // Payment success overlay
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successEmail, setSuccessEmail] = useState('');
-
   function formatCardNumber(val: string) {
     return val.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
   }
@@ -194,8 +190,8 @@ export function Checkout() {
 
   const handleCardSuccess = () => {
     clearCart();
-    setSuccessEmail(formData.email);
-    setShowSuccess(true);
+    showFeedback('success', 'Payment Confirmed!', `Your order is placed. A confirmation email will be sent to ${formData.email}.`);
+    setTimeout(() => navigate('/shop'), 2500);
   };
 
   const handleCardPayment = async () => {
