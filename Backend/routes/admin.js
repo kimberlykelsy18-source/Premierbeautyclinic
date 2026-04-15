@@ -328,14 +328,17 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     }
 
     // ── 4. Slot conflict check — per practitioner + across walk-ins ──────────
-    if (appointment_time) {
+    // Only run conflict check for future-date appointments (not same-day walk-ins).
+    // Same-day walk-ins are immediate — the client is already present — so past
+    // time slots are valid (the appointment happened earlier today).
+    if (appointment_time && !isAppointmentToday) {
       const durationMs  = (svc.duration_minutes || 60) * 60000;
       const newStart    = new Date(appointment_time).getTime();
       const newEnd      = newStart + durationMs;
       const windowStart = new Date(newStart - 4 * 3600000).toISOString();
       const windowEnd   = new Date(newEnd + 3600000).toISOString();
 
-      // Past-time guard
+      // Past-time guard (future appointments only — can't book a future date that's already passed)
       if (newStart <= Date.now()) {
         return res.status(409).json({ error: 'That time is in the past. Please choose a future time slot.' });
       }
