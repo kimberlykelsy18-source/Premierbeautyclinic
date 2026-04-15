@@ -194,6 +194,97 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     return digits;
   }
 
+  // Availability — returns 30-min time slots for a given date + service duration.
+  // Rules per slot:
+  //   past (date=today, time already elapsed) → { available: false, reason: 'past' }
+  //   practitioner has an overlapping booking  → that practitioner marked busy for that slot
+  // Query: ?date=YYYY-MM-DD&service_id=3&practitioner=Dr. X (practitioner optional)
+  router.get('/admin/availability', authenticate, requireEmployeePermission('create_walkin'), async (req, res) => {
+    const { date, service_id, practitioner } = req.query;
+    if (!date || !service_id) return res.status(400).json({ error: 'date and service_id are required' });
+
+    // Fetch service duration
+    const { data: svc } = await adminDb.from('services')
+      .select('duration_minutes')
+      .eq('id', Number(service_id))
+      .single();
+    const durationMins = (svc?.duration_minutes || 60);
+
+    // Fetch all bookings on that date from both appointments and walk_ins
+    const dayStart = `${date}T00:00:00.000Z`;
+    const dayEnd   = `${date}T23:59:59.999Z`;
+
+    const [aptsRes, walkInsRes] = await Promise.all([
+      adminDb.from('appointments')
+        .select('appointment_time, practitioner, services(duration_minutes)')
+        .gte('appointment_time', dayStart)
+        .lte('appointment_time', dayEnd)
+        .in('status', ['pending', 'confirmed']),
+      adminDb.from('walk_ins')
+        .select('appointment_time, practitioner, services(duration_minutes)')
+        .gte('appointment_time', dayStart)
+        .lte('appointment_time', dayEnd)
+        .in('status', ['pending', 'paid', 'confirmed']),
+    ]);
+
+    const bookings = [
+      ...(aptsRes.data || []).map(b => ({
+        start:       new Date(b.appointment_time).getTime(),
+        duration:    (b.services?.duration_minutes || 60),
+        practitioner: b.practitioner || null,
+      })),
+      ...(walkInsRes.data || [])
+        .filter(b => b.appointment_time)
+        .map(b => ({
+          start:       new Date(b.appointment_time).getTime(),
+          duration:    (b.services?.duration_minutes || 60),
+          practitioner: b.practitioner || null,
+        })),
+    ];
+
+    // Generate 30-min slots from 08:00 to 18:30 (last start = 17:30 for a 60-min service)
+    const nowMs   = Date.now();
+    const isToday = new Date().toISOString().slice(0, 10) === date;
+    const slots   = [];
+
+    for (let h = 8; h < 19; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        const slotLabel = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        const slotMs    = new Date(`${date}T${slotLabel}:00`).getTime();
+        const slotEndMs = slotMs + durationMins * 60000;
+
+        // Skip slots that would end after 19:00
+        if (slotEndMs > new Date(`${date}T19:00:00`).getTime()) continue;
+
+        const isPast = isToday && slotMs <= nowMs;
+
+        // Find which practitioners are busy during this slot
+        const busyPractitioners = new Set();
+        for (const b of bookings) {
+          const bEnd = b.start + b.duration * 60000;
+          const overlaps = slotMs < bEnd && slotEndMs > b.start;
+          if (overlaps && b.practitioner) {
+            busyPractitioners.add(b.practitioner);
+          }
+        }
+
+        // If a specific practitioner is requested, check their availability
+        const practitionerBusy = practitioner
+          ? busyPractitioners.has(practitioner)
+          : false;
+
+        slots.push({
+          time:               slotLabel,
+          available:          !isPast && !practitionerBusy,
+          past:               isPast,
+          busyPractitioners:  [...busyPractitioners],
+        });
+      }
+    }
+
+    res.json({ slots, durationMins });
+  });
+
   // Walk-ins — create with smart payment logic
   // Rules:
   //   appointment is TODAY (or no date set = immediate walk-in) → charge full price
@@ -236,29 +327,49 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
       paymentType   = 'deposit';
     }
 
-    // ── 4. Slot conflict check (only for scheduled future appointments) ───────
-    if (appointment_time && service_id && !isAppointmentToday) {
+    // ── 4. Slot conflict check — per practitioner + across walk-ins ──────────
+    if (appointment_time) {
       const durationMs  = (svc.duration_minutes || 60) * 60000;
       const newStart    = new Date(appointment_time).getTime();
       const newEnd      = newStart + durationMs;
       const windowStart = new Date(newStart - 4 * 3600000).toISOString();
-      const windowEnd   = new Date(newEnd).toISOString();
+      const windowEnd   = new Date(newEnd + 3600000).toISOString();
 
-      const { data: nearby } = await adminDb
-        .from('appointments')
-        .select('id, appointment_time, services(duration_minutes)')
-        .in('status', ['pending', 'confirmed'])
-        .gte('appointment_time', windowStart)
-        .lte('appointment_time', windowEnd);
+      // Past-time guard
+      if (newStart <= Date.now()) {
+        return res.status(409).json({ error: 'That time is in the past. Please choose a future time slot.' });
+      }
 
-      const hasConflict = (nearby || []).some(apt => {
-        const existStart = new Date(apt.appointment_time).getTime();
-        const existEnd   = existStart + (apt.services?.duration_minutes || 60) * 60000;
-        return newStart < existEnd && newEnd > existStart;
-      });
+      if (practitioner) {
+        // Check appointments for this practitioner
+        const { data: aptNearby } = await adminDb
+          .from('appointments')
+          .select('id, appointment_time, services(duration_minutes)')
+          .eq('practitioner', practitioner)
+          .in('status', ['pending', 'confirmed'])
+          .gte('appointment_time', windowStart)
+          .lte('appointment_time', windowEnd);
 
-      if (hasConflict) {
-        return res.status(409).json({ error: 'That time slot already has a booking. Please choose a different time.' });
+        // Check walk-ins for this practitioner
+        const { data: wkNearby } = await adminDb
+          .from('walk_ins')
+          .select('id, appointment_time, services(duration_minutes)')
+          .eq('practitioner', practitioner)
+          .in('status', ['pending', 'paid', 'confirmed'])
+          .gte('appointment_time', windowStart)
+          .lte('appointment_time', windowEnd);
+
+        const allNearby = [...(aptNearby || []), ...(wkNearby || [])];
+        const hasConflict = allNearby.some(b => {
+          if (!b.appointment_time) return false;
+          const existStart = new Date(b.appointment_time).getTime();
+          const existEnd   = existStart + (b.services?.duration_minutes || 60) * 60000;
+          return newStart < existEnd && newEnd > existStart;
+        });
+
+        if (hasConflict) {
+          return res.status(409).json({ error: `${practitioner} is already booked at that time. Please choose a different time or practitioner.` });
+        }
       }
     }
 
