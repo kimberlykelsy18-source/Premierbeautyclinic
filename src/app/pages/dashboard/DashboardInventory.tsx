@@ -121,6 +121,7 @@ export function DashboardInventory() {
   // ── Image upload (Edit Product) ───────────────────────────────────────────
   const [editPendingImages, setEditPendingImages]   = useState<File[]>([]);
   const [editExistingImages, setEditExistingImages] = useState<string[]>([]);
+  const [stagedImageDeletes, setStagedImageDeletes] = useState<string[]>([]); // deleted only after save succeeds
   const [uploadingEditImages, setUploadingEditImages] = useState(false);
   const editImageInputRef = useRef<HTMLInputElement>(null);
 
@@ -328,6 +329,7 @@ export function DashboardInventory() {
     setEditProduct(product);
     setEditExistingImages(product.images || []);
     setEditPendingImages([]);
+    setStagedImageDeletes([]);
     setEditForm({
       name:                product.name,
       brand:               product.brand || '',
@@ -374,6 +376,12 @@ export function DashboardInventory() {
         return getStockStatus(updated) !== 'In Stock' ? [...rest, updated] : rest;
       });
       toast.success(`"${updated.name}" updated`);
+
+      // Only delete from storage AFTER the save succeeds — prevents broken image URLs
+      const toDelete = stagedImageDeletes;
+      setStagedImageDeletes([]);
+      toDelete.forEach(url => deleteProductImage(token!, url).catch(() => {}));
+
       setEditProduct(null);
       setEditPendingImages([]);
       setEditExistingImages([]);
@@ -385,10 +393,19 @@ export function DashboardInventory() {
     }
   };
 
-  // Remove an existing image (from edit modal) — deletes from storage too
-  const handleRemoveExistingImage = async (url: string) => {
+  // Close edit modal without saving — discard staged deletions so no files are lost
+  const closeEditModal = () => {
+    setEditProduct(null);
+    setEditPendingImages([]);
+    setEditExistingImages([]);
+    setStagedImageDeletes([]);
+  };
+
+  // Remove an existing image (from edit modal).
+  // Stages the URL for storage deletion — file is only deleted after Save succeeds.
+  const handleRemoveExistingImage = (url: string) => {
     setEditExistingImages(prev => prev.filter(u => u !== url));
-    try { await deleteProductImage(token!, url); } catch { /* ignore storage errors */ }
+    setStagedImageDeletes(prev => [...prev, url]);
   };
 
   // ── Deactivate (hide from store) ──────────────────────────────────────────
@@ -944,7 +961,7 @@ export function DashboardInventory() {
       <AnimatePresence>
         {editProduct && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { if (!updatingProduct) setEditProduct(null); }} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { if (!updatingProduct) closeEditModal(); }} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative bg-white w-full max-w-xl rounded-[32px] overflow-hidden shadow-2xl">
 
               <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-[#FDFBF7]">
@@ -952,7 +969,7 @@ export function DashboardInventory() {
                   <h2 className="text-[22px] font-serif mb-1">Edit Product</h2>
                   <p className="text-gray-400 text-[12px] font-bold uppercase tracking-widest truncate max-w-xs">{editProduct.name}</p>
                 </div>
-                <button onClick={() => setEditProduct(null)} className="p-2 bg-white rounded-full border border-gray-100 hover:bg-gray-50 active:scale-90 transition-all"><X className="w-5 h-5" /></button>
+                <button onClick={closeEditModal} className="p-2 bg-white rounded-full border border-gray-100 hover:bg-gray-50 active:scale-90 transition-all"><X className="w-5 h-5" /></button>
               </div>
 
               <div className="p-8 space-y-5 max-h-[65vh] overflow-y-auto">
@@ -1097,7 +1114,7 @@ export function DashboardInventory() {
                     ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />{uploadingEditImages ? 'Uploading…' : 'Saving…'}</>
                     : 'Save Changes'}
                 </button>
-                <button onClick={() => setEditProduct(null)} className="px-6 py-4 border border-gray-200 rounded-full font-bold uppercase tracking-widest text-[12px] hover:bg-gray-100 transition-all">Cancel</button>
+                <button onClick={closeEditModal} className="px-6 py-4 border border-gray-200 rounded-full font-bold uppercase tracking-widest text-[12px] hover:bg-gray-100 transition-all">Cancel</button>
               </div>
             </motion.div>
           </div>
