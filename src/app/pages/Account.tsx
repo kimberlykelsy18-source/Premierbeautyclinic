@@ -241,26 +241,30 @@ export function Account() {
     }
   };
 
-  // Address save is also local-only — address is used at checkout as a pre-fill
   const handleSaveAddress = async () => {
     if (!addressData.county || !addressData.city || !addressData.streetAddress) {
       showFeedback('error', 'Missing Information', 'Please fill in all required address fields.');
       return;
     }
     setIsLoading(true);
+    const shipping_address = {
+      county:         addressData.county,
+      city:           addressData.city,
+      streetAddress:  addressData.streetAddress,
+      building:       addressData.building,
+      postalCode:     addressData.postalCode,
+      additionalInfo: addressData.additionalInfo,
+    };
     try {
-      updateUser({
-        savedAddress: {
-          county:         addressData.county,
-          city:           addressData.city,
-          streetAddress:  addressData.streetAddress,
-          building:       addressData.building,
-          postalCode:     addressData.postalCode,
-          additionalInfo: addressData.additionalInfo,
-        }
-      });
+      await apiFetch('/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ shipping_address }),
+      }, token, sessionId);
+      updateUser({ savedAddress: shipping_address });
       setIsEditingAddress(false);
       showFeedback('success', 'Address Saved', 'Your delivery address will be pre-filled at checkout.');
+    } catch (err: any) {
+      showFeedback('error', 'Save Failed', err.message || 'Could not save address.');
     } finally {
       setIsLoading(false);
     }

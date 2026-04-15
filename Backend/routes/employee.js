@@ -1,10 +1,8 @@
 const express = require('express');
 const path    = require('path');
-const { Resend } = require('resend');
 const { createServiceClient } = require('../config/supabase');
 
 const serviceSupabase = createServiceClient();
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Employee and admin-only flows
 module.exports = ({ supabase, authenticate, requireEmployeePermission, transporter }) => {
@@ -135,10 +133,9 @@ module.exports = ({ supabase, authenticate, requireEmployeePermission, transport
       is_temporary_password: true,
     });
 
-    // Send the single onboarding email with credentials via Resend (HTTP-based — works on Railway)
     const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/staff/login`;
-    await resend.emails.send({
-      from: `Premier Beauty Clinic <onboarding@resend.dev>`,
+    await transporter.sendMail({
+      from: `"Premier Beauty Clinic" <${process.env.SMTP_USER}>`,
       to: email,
       subject: 'Welcome to Premier Beauty Clinic — Your Login Details',
       html: `
@@ -261,12 +258,11 @@ module.exports = ({ supabase, authenticate, requireEmployeePermission, transport
 
     if (dbError) return res.status(500).json({ error: dbError.message });
 
-    // ── Send welcome email via Resend (HTTP-based — works on Railway) ───────────
     const dashboardUrl = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/login`;
 
     try {
-      await resend.emails.send({
-        from: 'Premier Beauty Clinic <onboarding@resend.dev>',
+      await transporter.sendMail({
+        from: `"Premier Beauty Clinic" <${process.env.SMTP_USER}>`,
         to: email.trim(),
         subject: 'Premier Beauty Clinic — Your Admin Account is Ready',
         html: `

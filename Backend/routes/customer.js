@@ -201,6 +201,17 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     res.json(data);
   });
 
+  // Public FAQ list — no auth required
+  router.get('/faqs', async (req, res) => {
+    const { data, error } = await supabase
+      .from('faqs')
+      .select('id, category, question, answer, order_num')
+      .order('category')
+      .order('order_num');
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data || []);
+  });
+
   // Single product by ID — used by the ProductDetail page.
   // Ratings are computed manually from product_ratings since the
   // product_avg_ratings view is not joinable via PostgREST foreign key.
@@ -479,7 +490,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     if (order.customer_email) {
       const shortId = toShortId('ORD', order.order_number);
       transporter.sendMail({
-        from:        `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+        from:        `"Premier Beauty Clinic" <${process.env.SMTP_USER}>`,
         to:          order.customer_email,
         subject:     `Order Confirmed — ${shortId} · Premier Beauty Clinic`,
         attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],
@@ -516,7 +527,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
             </div>
             <div style="background:#FDFBF7;padding:20px 32px;text-align:center;border-top:1px solid #eee">
               <p style="color:#aaa;font-size:12px;margin:0">© ${new Date().getFullYear()} Premier Beauty Clinic · Nairobi, Kenya</p>
-              <p style="color:#aaa;font-size:12px;margin:6px 0 0">Questions? Email us at ${process.env.SUPPORT_EMAIL || 'support@premierbeauty.com'}</p>
+              <p style="color:#aaa;font-size:12px;margin:6px 0 0">Questions? Email us at ${process.env.SUPPORT_EMAIL || 'customersupport@premierbeautyclinic.com'}</p>
             </div>
           </div>`,
       }).catch(e => console.error('[Paystack] Card confirmation email failed:', e.message));
@@ -869,7 +880,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
           const aptTime    = new Date(appointment_time).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' });
 
           transporter.sendMail({
-            from:        `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+            from:        `"Premier Beauty Clinic" <${process.env.SMTP_USER}>`,
             to:          profileEmail,
             subject:     `Appointment Confirmed — ${service.name} · Premier Beauty Clinic`,
             attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],

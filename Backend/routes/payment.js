@@ -208,7 +208,7 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
       if (order?.customer_email) {
         const shortId = toShortOrderId(order.order_number);
         await transporter.sendMail({
-          from: `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+          from: `"Premier Beauty Clinic" <${process.env.SMTP_USER}>`,
           to: order.customer_email,
           subject: `Order Confirmed — ${shortId} · Premier Beauty Clinic`,
           attachments: [{
@@ -262,7 +262,7 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
               <!-- Footer -->
               <div style="background:#FDFBF7;padding:20px 32px;text-align:center;border-top:1px solid #eee">
                 <p style="color:#aaa;font-size:12px;margin:0">© ${new Date().getFullYear()} Premier Beauty Clinic · Nairobi, Kenya</p>
-                <p style="color:#aaa;font-size:12px;margin:6px 0 0">Questions? Email us at ${process.env.SUPPORT_EMAIL || 'support@premierbeauty.com'}</p>
+                <p style="color:#aaa;font-size:12px;margin:6px 0 0">Questions? Email us at ${process.env.SUPPORT_EMAIL || 'customersupport@premierbeautyclinic.com'}</p>
               </div>
             </div>
           `,
@@ -303,7 +303,7 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
         if (isBalancePayment) {
           // ── Fully Paid email (balance collected at clinic) ──
           await transporter.sendMail({
-            from: `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+            from: `"Premier Beauty Clinic" <${process.env.SMTP_USER}>`,
             to: profileEmail,
             subject: `Payment Complete — ${appointment.services?.name} · Premier Beauty Clinic`,
             attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],
@@ -342,7 +342,7 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
           // ── Deposit / initial booking confirmation email ──
           const remaining = (appointment.total_amount || 0) - (amount || 0);
           await transporter.sendMail({
-            from: `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+            from: `"Premier Beauty Clinic" <${process.env.SMTP_USER}>`,
             to: profileEmail,
             subject: `Appointment Confirmed — ${appointment.services?.name} · Premier Beauty Clinic`,
             attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],
@@ -412,7 +412,7 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
         const balance    = Math.max(0, basePrice - paid);
 
         transporter.sendMail({
-          from: `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+          from: `"Premier Beauty Clinic" <${process.env.SMTP_USER}>`,
           to: walkinData.email,
           subject: `Walk-in Booking Confirmed — ${walkinData.services?.name || 'Your Service'} · Premier Beauty Clinic`,
           attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],
@@ -561,7 +561,7 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
     if (order?.customer_email) {
       const shortId = toShortOrderId(order.order_number);
       transporter.sendMail({
-        from:        `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+        from:        `"Premier Beauty Clinic" <${process.env.SMTP_USER}>`,
         to:          order.customer_email,
         subject:     `Order Confirmed — ${shortId} · Premier Beauty Clinic`,
         attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],
@@ -597,8 +597,8 @@ module.exports = ({ supabase, initiateSTKPush, transporter }) => {
               </div>
             </div>
             <div style="background:#FDFBF7;padding:20px 32px;text-align:center;border-top:1px solid #eee">
-              <p style="color:#aaa;font-size:12px;margin:0">2025 Premier Beauty Clinic - Nairobi, Kenya</p>
-              <p style="color:#aaa;font-size:12px;margin:6px 0 0">Questions? Email us at support@premierbeauty.com</p>
+              <p style="color:#aaa;font-size:12px;margin:0">© ${new Date().getFullYear()} Premier Beauty Clinic · Nairobi, Kenya</p>
+              <p style="color:#aaa;font-size:12px;margin:6px 0 0">Questions? Email us at ${process.env.SUPPORT_EMAIL || 'customersupport@premierbeautyclinic.com'}</p>
             </div>
           </div>`,
       }).catch(err => console.error('[Paystack Webhook email]', err.message));

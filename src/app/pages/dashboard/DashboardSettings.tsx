@@ -55,7 +55,7 @@ interface Feature {
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_SETTINGS: ClinicSettings = {
   clinic_name: 'Premier Beauty Clinic',
-  support_email: 'support@premierbeauty.com',
+  support_email: 'customersupport@premierbeautyclinic.com',
   currency: 'KES',
   timezone: 'Africa/Nairobi',
   default_deposit_percentage: 20,

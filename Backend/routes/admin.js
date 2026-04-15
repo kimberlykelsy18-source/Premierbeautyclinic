@@ -306,7 +306,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
         : 'Today';
 
       transporter.sendMail({
-        from: `"Premier Beauty Clinic" <${process.env.GMAIL_EMAIL}>`,
+        from: `"Premier Beauty Clinic" <${process.env.SMTP_USER}>`,
         to: email,
         subject: `Booking Received — ${svc.name} · Premier Beauty Clinic`,
         attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],
@@ -473,7 +473,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     // Return defaults if the row doesn't exist yet
     res.json(data || {
       clinic_name: 'Premier Beauty Clinic',
-      support_email: 'support@premierbeauty.com',
+      support_email: 'customersupport@premierbeautyclinic.com',
       currency: 'KES',
       timezone: 'Africa/Nairobi',
       default_deposit_percentage: 20,

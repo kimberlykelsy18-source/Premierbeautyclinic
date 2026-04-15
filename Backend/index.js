@@ -24,6 +24,8 @@ app.set('trust proxy', 1); // trust first proxy so req.ip is the real client IP
 const allowedOrigins = [
   process.env.FRONTEND_URL,                          // production frontend URL
   process.env.DASHBOARD_URL,                         // production dashboard URL (if separate)
+  'https://premierbeautyclinic.com',                 // custom domain
+  'https://www.premierbeautyclinic.com',             // www variant
   'http://localhost:5173',                            // local dev (store)
   'http://localhost:5174',                            // local dev (dashboard)
 ].filter(Boolean);
@@ -61,7 +63,9 @@ app.use(helmet({
   },
   crossOriginEmbedderPolicy: false,
 }));
-app.use(morgan('dev'));
+app.use(morgan('combined', {
+  stream: { write: msg => process.stdout.write(msg) },
+}));
 
 // ── Rate limiters ────────────────────────────────────────────────────────────
 // Auth endpoints: max 10 attempts per 15 minutes per IP
@@ -109,5 +113,19 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+
+  // Startup env-var check — confirms which keys Railway loaded
+  const envCheck = [
+    'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
+    'MPESA_CONSUMER_KEY', 'MPESA_SHORTCODE',
+    'PAYSTACK_SECRET_KEY', 'PAYSTACK_PUBLIC_KEY',
+    'SMTP_HOST', 'SMTP_USER',
+    'FRONTEND_URL', 'BACKEND_URL',
+  ];
+  envCheck.forEach(k => {
+    const val = process.env[k];
+    console.log(`[env] ${k}: ${val ? '✅ set (' + val.slice(0, 6) + '...)' : '❌ MISSING'}`);
+  });
+
   startPaymentCleanup();
 });

@@ -100,7 +100,10 @@ export function Footer() {
               </li>
               <li className="flex items-start space-x-3">
                 <Mail className="w-4 h-4 md:w-5 md:h-5 text-[#6D4C91] flex-shrink-0 mt-0.5" />
-                <span className="text-white/60 text-[13px] md:text-[14px]">admin@premierbeautyclinic.com</span>
+                <div className="flex flex-col space-y-1">
+                  <a href="mailto:info@premierbeautyclinic.com" className="text-white/60 hover:text-white text-[13px] md:text-[14px] transition-colors">info@premierbeautyclinic.com</a>
+                  <a href="mailto:customersupport@premierbeautyclinic.com" className="text-white/60 hover:text-white text-[13px] md:text-[14px] transition-colors">customersupport@premierbeautyclinic.com</a>
+                </div>
               </li>
             </ul>
           </div>

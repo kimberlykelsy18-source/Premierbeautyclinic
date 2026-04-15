@@ -1,66 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
-// Mock FAQ data - In production, this will be fetched from the backend
-const mockFAQs = [
-  {
-    id: 1,
-    category: 'Products',
-    question: 'Are your products suitable for sensitive skin?',
-    answer: 'Yes, all our products are dermatologist-tested and suitable for sensitive skin. We carefully select ingredients that are gentle yet effective. If you have specific concerns, please consult with our skin care specialists during a consultation.'
-  },
-  {
-    id: 2,
-    category: 'Shipping',
-    question: 'How long does delivery take?',
-    answer: 'Delivery typically takes 2-5 business days within Nairobi and 3-7 business days for other regions in Kenya. We provide tracking information once your order ships.'
-  },
-  {
-    id: 3,
-    category: 'Services',
-    question: 'Do I need to pay the full amount when booking a service?',
-    answer: 'No, you only need to pay a deposit via M-Pesa when booking. The remaining balance can be paid at the clinic after your service.'
-  },
-  {
-    id: 4,
-    category: 'Returns',
-    question: 'What is your return policy?',
-    answer: 'We accept returns within 14 days of purchase for unopened products. Please contact our customer service team to initiate a return. Opened products can only be returned if defective.'
-  },
-  {
-    id: 5,
-    category: 'Services',
-    question: 'Can I reschedule my appointment?',
-    answer: 'Yes, you can reschedule your appointment up to 24 hours before the scheduled time through your account dashboard or by contacting us directly.'
-  },
-  {
-    id: 6,
-    category: 'Products',
-    question: 'Do you offer product samples?',
-    answer: 'Yes, we offer samples for select products. Please visit our clinic or contact us to request samples of products you\'re interested in trying.'
-  },
-  {
-    id: 7,
-    category: 'Payment',
-    question: 'What payment methods do you accept?',
-    answer: 'We accept M-Pesa, Visa, and Debit Cards for both online purchases and service bookings. All transactions are securely processed with 256-bit SSL encryption.'
-  },
-  {
-    id: 8,
-    category: 'Shipping',
-    question: 'Do you ship outside Kenya?',
-    answer: 'Currently, we only ship within Kenya. We are working on expanding our shipping to other East African countries soon.'
-  }
-];
+interface FaqItem {
+  id: number;
+  category: string;
+  question: string;
+  answer: string;
+  order_num: number;
+}
 
 export function FAQ() {
+  const [faqs, setFaqs] = useState<FaqItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-  const categories = ['All', ...Array.from(new Set(mockFAQs.map(faq => faq.category)))];
+  useEffect(() => {
+    apiFetch('/faqs')
+      .then((data: FaqItem[]) => setFaqs(data || []))
+      .catch(() => setFaqs([]))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const filteredFAQs = mockFAQs.filter(faq => {
+  const categories = ['All', ...Array.from(new Set(faqs.map(faq => faq.category)))];
+
+  const filteredFAQs = faqs.filter(faq => {
     const matchesSearch = faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || faq.category === selectedCategory;
@@ -110,7 +76,16 @@ export function FAQ() {
         </div>
 
         {/* FAQ List */}
-        {filteredFAQs.length === 0 ? (
+        {loading ? (
+          <div className="space-y-3 md:space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="bg-white border border-gray-200 rounded-xl md:rounded-2xl p-5 md:p-6 animate-pulse">
+                <div className="h-3 bg-gray-200 rounded w-1/5 mb-3" />
+                <div className="h-5 bg-gray-200 rounded w-3/4" />
+              </div>
+            ))}
+          </div>
+        ) : filteredFAQs.length === 0 ? (
           <div className="text-center py-16 md:py-20">
             <p className="text-gray-400 text-[14px] md:text-[15px]">No FAQs found matching your search.</p>
           </div>
@@ -154,7 +129,7 @@ export function FAQ() {
             Can't find the answer you're looking for? Our customer support team is here to help.
           </p>
           <a
-            href="mailto:admin@premierbeautyclinic.com"
+            href="mailto:customersupport@premierbeautyclinic.com"
             className="inline-block bg-[#1A1A1A] text-white px-6 md:px-8 py-3 md:py-4 rounded-full text-[13px] md:text-[14px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] transition-all active:scale-95"
           >
             Contact Support
