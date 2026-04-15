@@ -1,14 +1,17 @@
 import { defineConfig } from 'vite'
 import path, { resolve } from 'path'
+import fs from 'fs'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // In production, assets are served from /staff/ so links resolve correctly.
+  // In dev (localhost:5174), base stays at / so the dev server works normally.
+  base: command === 'build' ? '/staff/' : '/',
   plugins: [
     react(),
     tailwindcss(),
     // Dev server: rewrite all SPA routes to dashboard.html
-    // Without this, Vite defaults to serving index.html (the store app) for every route.
     {
       name: 'dashboard-dev-entry',
       configureServer(server) {
@@ -26,6 +29,15 @@ export default defineConfig({
         });
       },
     },
+    // After build: rename dashboard.html → index.html so Vercel's rewrite can find it
+    {
+      name: 'rename-dashboard-html',
+      closeBundle() {
+        const src  = resolve(__dirname, 'dist/staff/dashboard.html');
+        const dest = resolve(__dirname, 'dist/staff/index.html');
+        if (fs.existsSync(src)) fs.renameSync(src, dest);
+      },
+    },
   ],
   resolve: {
     alias: {
@@ -34,7 +46,7 @@ export default defineConfig({
   },
   assetsInclude: ['**/*.svg', '**/*.csv'],
   build: {
-    outDir: 'dist/dashboard',
+    outDir: 'dist/staff',
     sourcemap: false,
     minify: 'terser',
     terserOptions: {
@@ -50,4 +62,4 @@ export default defineConfig({
   server: {
     port: 5174,
   },
-})
+}))

@@ -12,11 +12,11 @@ import { NotFound } from "./pages/NotFound";
 
 export const dashboardRouter = createBrowserRouter([
   {
-    path: "/login",
+    path: "/staff/login",
     Component: DashboardLogin,
   },
   {
-    path: "/",
+    path: "/staff",
     Component: DashboardLayout,
     children: [
       { index: true,               Component: DashboardOverview     },

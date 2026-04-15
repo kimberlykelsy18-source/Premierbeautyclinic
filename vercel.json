@@ -1,5 +1,10 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist/store",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "buildCommand": "npm run build:all",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/staff/login", "destination": "/staff/index.html" },
+    { "source": "/staff/(.*)", "destination": "/staff/index.html" },
+    { "source": "/staff",      "destination": "/staff/index.html" },
+    { "source": "/(.*)",       "destination": "/index.html" }
+  ]
 }
