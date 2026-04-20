@@ -278,12 +278,13 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
 
     // Fetch approved ratings for all services in one query
     const serviceIds = data.map(s => s.id);
-    const { data: ratings } = await supabase
-      .from('reviews')
-      .select('service_id, rating')
-      .in('service_id', serviceIds)
-      .eq('status', 'approved')
-      .catch(() => ({ data: [] }));
+    const { data: ratings } = await Promise.resolve(
+      supabase
+        .from('reviews')
+        .select('service_id, rating')
+        .in('service_id', serviceIds)
+        .eq('status', 'approved')
+    ).catch(() => ({ data: [] }));
 
     // Build a ratings map keyed by service_id
     const ratingsMap = {};
@@ -324,34 +325,21 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     if (baseErr || !serviceBase) return res.status(404).json({ error: 'Service not found' });
 
     // Fetch optional extended fields — these may not exist if migrations are pending
-    const { data: extended } = await supabase
-      .from('services')
-      .select('benefits, results_stat')
-      .eq('id', serviceBase.id)
-      .single()
-      .catch(() => ({ data: null }));
+    const { data: extended } = await Promise.resolve(
+      supabase.from('services').select('benefits, results_stat').eq('id', serviceBase.id).single()
+    ).catch(() => ({ data: null }));
 
     // Fetch ratings, related products, reviews — each wrapped so missing tables don't crash
     const [ratingsRes, productsRes, reviewsRes] = await Promise.all([
-      supabase
-        .from('service_avg_ratings')
-        .select('average_rating, rating_count')
-        .eq('service_id', serviceBase.id)
-        .single()
-        .catch(() => ({ data: null })),
-      supabase
-        .from('service_products')
-        .select('product_id, products(id, name, price, images, slug, categories(name))')
-        .eq('service_id', serviceBase.id)
-        .catch(() => ({ data: [] })),
-      supabase
-        .from('reviews')
-        .select('id, reviewer_name, rating, title, body, is_verified_purchase, created_at')
-        .eq('service_id', serviceBase.id)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false })
-        .limit(20)
-        .catch(() => ({ data: [] })),
+      Promise.resolve(
+        supabase.from('service_avg_ratings').select('average_rating, rating_count').eq('service_id', serviceBase.id).single()
+      ).catch(() => ({ data: null })),
+      Promise.resolve(
+        supabase.from('service_products').select('product_id, products(id, name, price, images, slug, categories(name))').eq('service_id', serviceBase.id)
+      ).catch(() => ({ data: [] })),
+      Promise.resolve(
+        supabase.from('reviews').select('id, reviewer_name, rating, title, body, is_verified_purchase, created_at').eq('service_id', serviceBase.id).eq('status', 'approved').order('created_at', { ascending: false }).limit(20)
+      ).catch(() => ({ data: [] })),
     ]);
 
     res.json({
