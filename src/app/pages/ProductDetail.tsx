@@ -86,34 +86,36 @@ export function ProductDetail() {
   const [submitting, setSubmitting]   = useState(false);
   const [submitted, setSubmitted]     = useState(false);
 
-  // Pre-fill review form from logged-in user
+  // Pre-fill review form from logged-in user once auth loads
   useEffect(() => {
-    if (user) {
-      if (user.name && !reviewName) setReviewName(user.name);
-      if ((user as any).email && !reviewEmail) setReviewEmail((user as any).email);
-    }
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!user) return;
+    if (user.name && !reviewName) setReviewName(user.name);
+    if (user.email && !reviewEmail) setReviewEmail(user.email);
+  }, [user]); // reviewName/reviewEmail intentionally excluded — only pre-fill once
 
   // ── Fetch single product by ID ──
   useEffect(() => {
     if (!id) return;
+    const controller = new AbortController();
+
     setLoading(true);
     setRelated([]);
     setReviews([]);
     setSubmitted(false);
-    // Fetch approved reviews in parallel
     setReviewsLoading(true);
+
     apiFetch(`/reviews?product_id=${id}`)
-      .then((data: Review[]) => setReviews(data || []))
+      .then((data: Review[]) => { if (!controller.signal.aborted) setReviews(data || []); })
       .catch(() => {})
-      .finally(() => setReviewsLoading(false));
+      .finally(() => { if (!controller.signal.aborted) setReviewsLoading(false); });
 
     apiFetch(`/products/${id}`)
       .then((data: ApiProduct) => {
+        if (controller.signal.aborted) return;
         setProduct(data);
-        // Fetch related products — same category or overlapping skin_concerns
         apiFetch('/products')
           .then((all: ApiProduct[]) => {
+            if (controller.signal.aborted) return;
             const others = (all || []).filter(p => p.id !== data.id);
             const scored = others.map(p => {
               let score = 0;
@@ -128,21 +130,18 @@ export function ProductDetail() {
               .sort((a, b) => b.score - a.score)
               .slice(0, 4)
               .map(x => x.p);
-            // If not enough scored matches, pad with same-category products
-            if (top.length < 4) {
-              const extras = others
-                .filter(p => !top.find(t => t.id === p.id) && p.categories?.slug === data.categories?.slug)
-                .slice(0, 4 - top.length);
-              setRelated([...top, ...extras]);
-            } else {
-              setRelated(top);
-            }
+            const extras = top.length < 4
+              ? others.filter(p => !top.find(t => t.id === p.id) && p.categories?.slug === data.categories?.slug).slice(0, 4 - top.length)
+              : [];
+            setRelated([...top, ...extras]);
           })
           .catch(() => {});
       })
-      .catch(() => navigate('/shop'))
-      .finally(() => setLoading(false));
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+      .catch(() => { if (!controller.signal.aborted) navigate('/shop'); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+
+    return () => controller.abort();
+  }, [id, navigate]);
 
   const handleSubmitReview = async () => {
     if (!reviewName.trim()) { toast.error('Please enter your name'); return; }

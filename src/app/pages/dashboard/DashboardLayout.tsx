@@ -146,7 +146,7 @@ export function DashboardLayout() {
     if (!item.permission) return false;
     if (user?.role === 'admin') return false;
     if (item.permission === 'admin') return true;
-    return !((user as any)?.permissions ?? []).includes(item.permission);
+    return !(user?.permissions ?? []).includes(item.permission);
   };
 
   // ── Loading screen while auth restores ───────────────────────────────────

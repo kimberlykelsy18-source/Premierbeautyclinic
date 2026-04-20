@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { Clock, Tag, ChevronRight, CheckCircle, ArrowLeft, MessageCircle, FileText, Sparkle, Star, ShoppingBag, X, ArrowRight } from 'lucide-react';
+import { StarRating } from '../components/ui/StarRating';
 import { apiFetch } from '../lib/api';
 import { useStore } from '../context/StoreContext';
 import { toast } from 'sonner';
@@ -79,18 +80,6 @@ const FADE_UP = {
   transition:  { duration: 0.4 },
 } as const;
 
-function StarRating({ rating, size = 4 }: { rating: number; size?: number }) {
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map(i => (
-        <Star
-          key={i}
-          className={`w-${size} h-${size} ${i <= Math.round(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-        />
-      ))}
-    </div>
-  );
-}
 
 function ImagePlaceholder({ category }: { category: string | null }) {
   return (
@@ -133,10 +122,20 @@ function ReviewForm({ serviceId, serviceName, onClose }: { serviceId: number; se
   const { user } = useStore();
   const [rating, setRating]           = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
-  const [form, setForm]               = useState({ name: user?.name || '', email: user?.email || '', title: '', body: '' });
+  const [form, setForm]               = useState({ name: '', email: '', title: '', body: '' });
   const [submitting, setSubmitting]   = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Pre-fill once user is available (may load after mount)
+  useEffect(() => {
+    if (!user) return;
+    setForm(prev => ({
+      ...prev,
+      name:  prev.name  || user.name  || '',
+      email: prev.email || user.email || '',
+    }));
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (rating === 0)       { toast.error('Please select a rating'); return; }
     if (!form.name.trim())  { toast.error('Your name is required'); return; }
@@ -249,23 +248,24 @@ export function TreatmentDetail() {
   const [showReviewForm, setShowReviewForm] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
     setNotFound(false);
     setService(null);
 
-    // Fetch detail independently from the services list so a list failure
-    // doesn't kill the whole page (related services are non-critical)
     apiFetch(`/services/${slug}`)
-      .then(detail => {
+      .then((detail: Service) => {
+        if (controller.signal.aborted) return;
         setService(detail);
         setImgIndex(0);
-        // Fetch related services in the background — failure is silent
         apiFetch('/services')
-          .then((all: ServiceListItem[]) => setAllServices(all || []))
+          .then((all: ServiceListItem[]) => { if (!controller.signal.aborted) setAllServices(all || []); })
           .catch(() => {});
       })
-      .catch(() => setNotFound(true))
-      .finally(() => setLoading(false));
+      .catch(() => { if (!controller.signal.aborted) setNotFound(true); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+
+    return () => controller.abort();
   }, [slug]);
 
   if (loading) return <SkeletonDetail />;

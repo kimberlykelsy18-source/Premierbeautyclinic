@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Star, Check, Clock, Shield, ChevronRight as ChevronRightIcon, ChevronLeft } from 'lucide-react';
+import { StarRating } from '../components/ui/StarRating';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { apiFetch } from '../lib/api';
@@ -58,18 +59,6 @@ function ServiceSkeleton() {
   );
 }
 
-function StarRating({ rating, size = 4 }: { rating: number; size?: number }) {
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map(i => (
-        <Star
-          key={i}
-          className={`w-${size} h-${size} ${i <= Math.round(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-        />
-      ))}
-    </div>
-  );
-}
 
 function ServiceCard({ service }: { service: Service }) {
   const { formatPrice } = useStore();

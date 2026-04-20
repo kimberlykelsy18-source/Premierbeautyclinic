@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, ChevronRight, ShoppingBag, Star } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useStore } from '../context/StoreContext';
 import { apiFetch } from '../lib/api';
 
 interface PromoSlide {
@@ -57,9 +56,6 @@ const FALLBACK_SLIDE: PromoSlide = {
 };
 
 export function Home() {
-  const { formatPrice } = useStore();
-  void formatPrice;
-
   const [slides, setSlides]                     = useState<PromoSlide[]>([]);
   const [activeSlide, setActiveSlide]           = useState(0);
   const [loadingSlides, setLoadingSlides]       = useState(true);
