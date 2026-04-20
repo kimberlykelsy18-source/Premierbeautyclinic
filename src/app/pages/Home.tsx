@@ -123,7 +123,7 @@ export function Home() {
                 >
                   <img
                     src={slide.image_url}
-                    alt={slide.title}
+                    alt=""
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/45 to-black/60 flex items-center justify-center">

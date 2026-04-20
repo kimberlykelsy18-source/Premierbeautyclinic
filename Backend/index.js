@@ -45,8 +45,9 @@ app.use(cors({
 // Save raw body buffer for Paystack webhook HMAC-SHA512 signature verification
 app.use(express.json({
   verify: (req, _res, buf) => { req.rawBody = buf; },
+  limit: '20mb',
 }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
