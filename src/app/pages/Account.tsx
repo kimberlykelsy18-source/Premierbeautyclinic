@@ -344,7 +344,7 @@ export function Account() {
                 {user.name.charAt(0).toUpperCase()}
               </div>
               <h1 className="text-[20px] md:text-[24px] font-serif mb-1">{user.name}</h1>
-              <p className="text-gray-400 text-[12px] md:text-[14px] uppercase tracking-widest font-bold">{user.role}</p>
+              <p className="text-gray-400 text-xs md:text-sm uppercase tracking-widest font-bold">{user.role}</p>
             </div>
 
             <nav className="space-y-1">
@@ -352,7 +352,7 @@ export function Account() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center space-x-3 px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl text-[13px] md:text-[14px] font-bold uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-white text-[#6D4C91] shadow-sm' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                  className={`w-full flex items-center space-x-3 px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl text-sm font-bold uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-white text-[#6D4C91] shadow-sm' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
                 >
                   <tab.icon className="w-4 h-4 md:w-5 md:h-5" />
                   <span className="hidden sm:inline">{tab.label}</span>
@@ -364,7 +364,7 @@ export function Account() {
             <div className="pt-6 md:pt-8 space-y-1">
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center space-x-3 px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl text-[13px] md:text-[14px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 transition-all"
+                className="w-full flex items-center space-x-3 px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl text-sm font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 transition-all"
               >
                 <LogOut className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="hidden sm:inline">Sign Out</span>
@@ -372,7 +372,7 @@ export function Account() {
               </button>
               <button
                 onClick={handleDeleteAccount}
-                className="w-full flex items-center space-x-3 px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl text-[11px] md:text-[12px] font-bold uppercase tracking-widest text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                className="w-full flex items-center space-x-3 px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl text-xs font-bold uppercase tracking-widest text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
               >
                 <Trash2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Delete Account</span>
@@ -399,7 +399,7 @@ export function Account() {
                     {!isEditing && (
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="text-[11px] md:text-[12px] font-bold uppercase tracking-widest text-[#6D4C91] hover:underline underline-offset-4"
+                        className="text-xs font-bold uppercase tracking-widest text-[#6D4C91] hover:underline underline-offset-4"
                       >
                         Edit Profile
                       </button>
@@ -408,33 +408,33 @@ export function Account() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                     <div className="space-y-2">
-                      <label className="text-[11px] md:text-[12px] font-bold uppercase tracking-widest text-gray-400">Full Name *</label>
+                      <label className="text-xs font-bold uppercase tracking-widest text-gray-400">Full Name *</label>
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-300" />
                         <input
                           disabled={!isEditing}
                           value={formData.name}
                           onChange={(e) => setFormData({...formData, name: e.target.value})}
-                          className="w-full pl-11 md:pl-12 pr-4 py-3 md:py-4 bg-gray-50 border-none rounded-xl md:rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] md:text-[15px] disabled:opacity-70"
+                          className="w-full pl-11 md:pl-12 pr-4 py-3 md:py-4 bg-gray-50 border-none rounded-xl md:rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-sm md:text-base disabled:opacity-70"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] md:text-[12px] font-bold uppercase tracking-widest text-gray-400">Email Address *</label>
+                      <label className="text-xs font-bold uppercase tracking-widest text-gray-400">Email Address *</label>
                       <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-300" />
                         <input
                           disabled={!isEditing}
                           value={formData.email}
                           onChange={(e) => setFormData({...formData, email: e.target.value})}
-                          className="w-full pl-11 md:pl-12 pr-4 py-3 md:py-4 bg-gray-50 border-none rounded-xl md:rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] md:text-[15px] disabled:opacity-70"
+                          className="w-full pl-11 md:pl-12 pr-4 py-3 md:py-4 bg-gray-50 border-none rounded-xl md:rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-sm md:text-base disabled:opacity-70"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] md:text-[12px] font-bold uppercase tracking-widest text-gray-400">Phone Number</label>
+                      <label className="text-xs font-bold uppercase tracking-widest text-gray-400">Phone Number</label>
                       <div className="relative">
                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-300" />
                         <input
@@ -442,20 +442,20 @@ export function Account() {
                           value={formData.phone}
                           onChange={(e) => setFormData({...formData, phone: e.target.value})}
                           placeholder="07XX XXX XXX"
-                          className="w-full pl-11 md:pl-12 pr-4 py-3 md:py-4 bg-gray-50 border-none rounded-xl md:rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] md:text-[15px] disabled:opacity-70"
+                          className="w-full pl-11 md:pl-12 pr-4 py-3 md:py-4 bg-gray-50 border-none rounded-xl md:rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-sm md:text-base disabled:opacity-70"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] md:text-[12px] font-bold uppercase tracking-widest text-gray-400">Location (County)</label>
+                      <label className="text-xs font-bold uppercase tracking-widest text-gray-400">Location (County)</label>
                       <div className="relative">
                         <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-300" />
                         {isEditing ? (
                           <select
                             value={formData.county}
                             onChange={(e) => setFormData({...formData, county: e.target.value})}
-                            className="w-full pl-11 md:pl-12 pr-4 py-3 md:py-4 bg-gray-50 border-none rounded-xl md:rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] md:text-[15px]"
+                            className="w-full pl-11 md:pl-12 pr-4 py-3 md:py-4 bg-gray-50 border-none rounded-xl md:rounded-2xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-sm md:text-base"
                           >
                             <option value="">Select county</option>
                             {shippingRegions.map(region => (
@@ -466,7 +466,7 @@ export function Account() {
                           <input
                             disabled
                             value={formData.county || 'Not set'}
-                            className="w-full pl-11 md:pl-12 pr-4 py-3 md:py-4 bg-gray-50 border-none rounded-xl md:rounded-2xl outline-none text-[14px] md:text-[15px] disabled:opacity-70"
+                            className="w-full pl-11 md:pl-12 pr-4 py-3 md:py-4 bg-gray-50 border-none rounded-xl md:rounded-2xl outline-none text-sm md:text-base disabled:opacity-70"
                           />
                         )}
                       </div>
@@ -485,14 +485,14 @@ export function Account() {
                             county: user.savedAddress?.county || '',
                           });
                         }}
-                        className="px-6 md:px-8 py-3 md:py-4 border border-gray-200 rounded-full font-bold uppercase tracking-widest text-[11px] md:text-[12px] hover:bg-gray-50 transition-all"
+                        className="px-6 md:px-8 py-3 md:py-4 border border-gray-200 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-gray-50 transition-all"
                       >
                         Cancel
                       </button>
                       <ButtonWithLoading
                         isLoading={isLoading}
                         onClick={handleSaveProfile}
-                        className="flex-1 flex items-center justify-center space-x-2 bg-[#6D4C91] text-white px-6 md:px-8 py-3 md:py-4 rounded-full font-bold uppercase tracking-widest text-[11px] md:text-[12px] hover:bg-[#5a3e79] transition-all"
+                        className="flex-1 flex items-center justify-center space-x-2 bg-[#6D4C91] text-white px-6 md:px-8 py-3 md:py-4 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-[#5a3e79] transition-all"
                       >
                         <Save className="w-4 h-4" />
                         <span>Save Changes</span>
@@ -507,7 +507,7 @@ export function Account() {
                       {!isEditingAddress && (
                         <button
                           onClick={() => setIsEditingAddress(true)}
-                          className="text-[11px] md:text-[12px] font-bold uppercase tracking-widest text-[#6D4C91] hover:underline underline-offset-4"
+                          className="text-xs font-bold uppercase tracking-widest text-[#6D4C91] hover:underline underline-offset-4"
                         >
                           {user.savedAddress ? 'Edit Address' : 'Add Address'}
                         </button>
@@ -516,47 +516,47 @@ export function Account() {
 
                     {!isEditingAddress ? (
                       user.savedAddress ? (
-                        <div className="p-5 md:p-6 bg-gray-50 rounded-xl md:rounded-2xl space-y-1 text-[14px] md:text-[15px] text-gray-600">
+                        <div className="p-5 md:p-6 bg-gray-50 rounded-xl md:rounded-2xl space-y-1 text-sm md:text-base text-gray-600">
                           <p className="font-bold text-gray-900">{user.savedAddress.streetAddress}</p>
                           {user.savedAddress.building && <p>{user.savedAddress.building}</p>}
                           <p>{user.savedAddress.city}, {user.savedAddress.county}{user.savedAddress.postalCode && ` ${user.savedAddress.postalCode}`}</p>
-                          {user.savedAddress.additionalInfo && <p className="italic text-[13px]">{user.savedAddress.additionalInfo}</p>}
+                          {user.savedAddress.additionalInfo && <p className="italic text-sm">{user.savedAddress.additionalInfo}</p>}
                         </div>
                       ) : (
-                        <p className="text-gray-400 text-[14px]">No saved address. Add one to speed up checkout.</p>
+                        <p className="text-gray-400 text-sm">No saved address. Add one to speed up checkout.</p>
                       )
                     ) : (
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">County *</label>
+                          <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">County *</label>
                           <select
                             value={addressData.county}
                             onChange={e => setAddressData({...addressData, county: e.target.value})}
-                            className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-[14px] md:text-[15px]"
+                            className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-sm md:text-base"
                           >
                             <option value="">Select county</option>
                             {shippingRegions.map(r => <option key={r.id} value={r.county}>{r.county}</option>)}
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">City/Town *</label>
-                          <input value={addressData.city} onChange={e => setAddressData({...addressData, city: e.target.value})} className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-[14px] md:text-[15px]" />
+                          <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">City/Town *</label>
+                          <input value={addressData.city} onChange={e => setAddressData({...addressData, city: e.target.value})} className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-sm md:text-base" />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Street Address *</label>
-                          <input value={addressData.streetAddress} onChange={e => setAddressData({...addressData, streetAddress: e.target.value})} placeholder="e.g. Kimathi Street" className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-[14px] md:text-[15px]" />
+                          <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Street Address *</label>
+                          <input value={addressData.streetAddress} onChange={e => setAddressData({...addressData, streetAddress: e.target.value})} placeholder="e.g. Kimathi Street" className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-sm md:text-base" />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Building / Apt</label>
-                          <input value={addressData.building} onChange={e => setAddressData({...addressData, building: e.target.value})} placeholder="e.g. Apt 5B" className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-[14px] md:text-[15px]" />
+                          <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Building / Apt</label>
+                          <input value={addressData.building} onChange={e => setAddressData({...addressData, building: e.target.value})} placeholder="e.g. Apt 5B" className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-sm md:text-base" />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Postal Code</label>
-                          <input value={addressData.postalCode} onChange={e => setAddressData({...addressData, postalCode: e.target.value})} placeholder="e.g. 00100" className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-[14px] md:text-[15px]" />
+                          <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Postal Code</label>
+                          <input value={addressData.postalCode} onChange={e => setAddressData({...addressData, postalCode: e.target.value})} placeholder="e.g. 00100" className="w-full px-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-gray-50 border-transparent focus:border-[#6D4C91] outline-none transition-all text-sm md:text-base" />
                         </div>
                         <div className="flex gap-3">
-                          <button onClick={() => setIsEditingAddress(false)} className="px-6 py-3 border border-gray-200 rounded-full font-bold uppercase tracking-widest text-[11px] hover:bg-gray-50 transition-all">Cancel</button>
-                          <ButtonWithLoading isLoading={isLoading} onClick={handleSaveAddress} className="flex-1 bg-[#6D4C91] text-white px-6 py-3 rounded-full font-bold uppercase tracking-widest text-[11px] hover:bg-[#5a3e79] transition-all">
+                          <button onClick={() => setIsEditingAddress(false)} className="px-6 py-3 border border-gray-200 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-gray-50 transition-all">Cancel</button>
+                          <ButtonWithLoading isLoading={isLoading} onClick={handleSaveAddress} className="flex-1 bg-[#6D4C91] text-white px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-[#5a3e79] transition-all">
                             Save Address
                           </ButtonWithLoading>
                         </div>
@@ -582,8 +582,8 @@ export function Account() {
                   ) : orders.length === 0 ? (
                     <div className="text-center py-16">
                       <ShoppingBag className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                      <p className="text-gray-400 text-[15px] mb-6">You haven't placed any orders yet.</p>
-                      <Link to="/shop" className="inline-block bg-[#6D4C91] text-white px-8 py-3 rounded-full font-bold uppercase tracking-widest text-[12px] hover:bg-[#5a3e79] transition-all">
+                      <p className="text-gray-400 text-base mb-6">You haven't placed any orders yet.</p>
+                      <Link to="/shop" className="inline-block bg-[#6D4C91] text-white px-8 py-3 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-[#5a3e79] transition-all">
                         Start Shopping
                       </Link>
                     </div>
@@ -594,16 +594,16 @@ export function Account() {
                           {/* Order Header */}
                           <div className="p-5 md:p-6 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div>
-                              <p className="text-[11px] md:text-[12px] font-bold uppercase tracking-widest text-gray-400 mb-1">{toShortOrderId(order.order_number)}</p>
-                              <p className="text-[14px] md:text-[15px] font-medium">{formatDate(order.created_at)}</p>
+                              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{toShortOrderId(order.order_number)}</p>
+                              <p className="text-sm md:text-base font-medium">{formatDate(order.created_at)}</p>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className={`px-3 py-1.5 rounded-full text-[10px] md:text-[11px] font-bold uppercase tracking-widest ${getStatusColor(order.status)}`}>
+                              <span className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest ${getStatusColor(order.status)}`}>
                                 {formatStatus(order.status)}
                               </span>
                               <button
                                 onClick={() => setSelectedOrder(selectedOrder === order.id ? null : order.id)}
-                                className="text-[11px] md:text-[12px] font-bold uppercase tracking-widest text-[#6D4C91] hover:underline"
+                                className="text-xs font-bold uppercase tracking-widest text-[#6D4C91] hover:underline"
                               >
                                 {selectedOrder === order.id ? 'Hide' : 'View'} Details
                               </button>
@@ -634,12 +634,12 @@ export function Account() {
                                           <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl bg-gray-100 flex-shrink-0" />
                                         )}
                                         <div className="flex-1 min-w-0">
-                                          <p className="text-[13px] md:text-[14px] font-bold truncate">
+                                          <p className="text-sm font-bold truncate">
                                             {item.products?.name ?? `Product #${item.product_id}`}
                                           </p>
-                                          <p className="text-[12px] md:text-[13px] text-gray-400">Qty: {item.quantity}</p>
+                                          <p className="text-xs md:text-sm text-gray-400">Qty: {item.quantity}</p>
                                         </div>
-                                        <p className="text-[14px] md:text-[15px] font-bold flex-shrink-0">
+                                        <p className="text-sm md:text-base font-bold flex-shrink-0">
                                           {formatPrice(item.price_at_time)}
                                         </p>
                                       </div>
@@ -648,15 +648,15 @@ export function Account() {
 
                                   {/* Summary */}
                                   <div className="pt-4 border-t border-gray-100 space-y-2">
-                                    <div className="flex justify-between text-[13px] md:text-[14px]">
+                                    <div className="flex justify-between text-sm">
                                       <span className="text-gray-500">Shipping to:</span>
                                       <span className="font-medium text-right max-w-[60%]">{formatAddress(order.shipping_address)}</span>
                                     </div>
-                                    <div className="flex justify-between text-[13px] md:text-[14px]">
+                                    <div className="flex justify-between text-sm">
                                       <span className="text-gray-500">Shipping fee:</span>
                                       <span className="font-medium">{formatPrice(order.shipping_fee)}</span>
                                     </div>
-                                    <div className="flex justify-between text-[15px] md:text-[16px] font-bold">
+                                    <div className="flex justify-between text-base font-bold">
                                       <span>Total:</span>
                                       <span className="text-[#6D4C91]">{formatPrice(order.total)}</span>
                                     </div>
@@ -666,7 +666,7 @@ export function Account() {
                                   <ButtonWithLoading
                                     isLoading={isLoading}
                                     onClick={() => handleReorder(order)}
-                                    className="w-full flex items-center justify-center space-x-2 py-3 md:py-4 bg-[#6D4C91] text-white rounded-xl md:rounded-2xl font-bold uppercase tracking-widest text-[11px] md:text-[12px] hover:bg-[#5a3e79] transition-all"
+                                    className="w-full flex items-center justify-center space-x-2 py-3 md:py-4 bg-[#6D4C91] text-white rounded-xl md:rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-[#5a3e79] transition-all"
                                   >
                                     <RefreshCw className="w-4 h-4" />
                                     <span>Reorder</span>
@@ -693,7 +693,7 @@ export function Account() {
                 >
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <h2 className="text-[24px] md:text-[32px] font-serif text-[#1A1A1A]">Bookings</h2>
-                    <Link to="/book" className="w-full sm:w-auto text-center bg-[#6D4C91] text-white px-5 md:px-6 py-3 rounded-full font-bold uppercase tracking-widest text-[11px] md:text-[12px] hover:bg-[#5a3e79] transition-all">
+                    <Link to="/book" className="w-full sm:w-auto text-center bg-[#6D4C91] text-white px-5 md:px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-[#5a3e79] transition-all">
                       New Booking
                     </Link>
                   </div>
@@ -703,8 +703,8 @@ export function Account() {
                   ) : appointments.length === 0 ? (
                     <div className="text-center py-16">
                       <Calendar className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                      <p className="text-gray-400 text-[15px] mb-6">No appointments booked yet.</p>
-                      <Link to="/book" className="inline-block bg-[#6D4C91] text-white px-8 py-3 rounded-full font-bold uppercase tracking-widest text-[12px] hover:bg-[#5a3e79] transition-all">
+                      <p className="text-gray-400 text-base mb-6">No appointments booked yet.</p>
+                      <Link to="/book" className="inline-block bg-[#6D4C91] text-white px-8 py-3 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-[#5a3e79] transition-all">
                         Book Now
                       </Link>
                     </div>
@@ -723,50 +723,50 @@ export function Account() {
                                   <Calendar className={`w-6 h-6 md:w-8 md:h-8 ${isFailed ? 'text-red-400' : 'text-[#6D4C91]'}`} />
                                 </div>
                                 <div>
-                                  <p className="text-[11px] md:text-[12px] font-bold uppercase tracking-widest text-gray-400 mb-1">Appointment</p>
-                                  <h3 className="text-[16px] md:text-[20px] font-serif">{appt.services?.name ?? 'Service'}</h3>
-                                  <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">Booking Ref: {toShortAptId(appt.appointment_number)}</p>
+                                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Appointment</p>
+                                  <h3 className="text-base md:text-xl font-serif">{appt.services?.name ?? 'Service'}</h3>
+                                  <p className="text-xs md:text-sm text-gray-400 mt-1">Booking Ref: {toShortAptId(appt.appointment_number)}</p>
                                 </div>
                               </div>
                               <div className="flex flex-col items-end gap-2">
-                                <span className={`px-3 md:px-4 py-1.5 rounded-full text-[11px] md:text-[12px] font-bold whitespace-nowrap ${getStatusColor(appt.status)}`}>
+                                <span className={`px-3 md:px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap ${getStatusColor(appt.status)}`}>
                                   {isFailed ? 'Payment Failed' : formatStatus(appt.status)}
                                 </span>
                                 {payment?.mpesa_receipt && (
-                                  <span className="text-[11px] font-mono text-[#6D4C91]">{payment.mpesa_receipt}</span>
+                                  <span className="text-xs font-mono text-[#6D4C91]">{payment.mpesa_receipt}</span>
                                 )}
                               </div>
                             </div>
 
                             {isFailed && failReason && (
-                              <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-[12px] text-red-600">
-                                ⚠ {failReason}
+                              <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600">
+                                {failReason}
                               </div>
                             )}
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8 py-5 md:py-6 border-y border-gray-50 mb-6">
                               <div>
-                                <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Date & Time</p>
-                                <p className="text-[14px] md:text-[15px]">
+                                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Date & Time</p>
+                                <p className="text-sm md:text-base">
                                   {formatDate(appt.appointment_time)} · {formatTime(appt.appointment_time)}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Fee</p>
-                                <p className="text-[14px] md:text-[15px]">{formatPrice(appt.total_amount)}</p>
+                                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Total Fee</p>
+                                <p className="text-sm md:text-base">{formatPrice(appt.total_amount)}</p>
                               </div>
                               <div>
-                                <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Deposit Paid</p>
-                                <p className={`text-[14px] md:text-[15px] font-bold ${isFailed ? 'text-red-400' : 'text-[#6D4C91]'}`}>{formatPrice(appt.deposit_amount)}</p>
+                                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Deposit Paid</p>
+                                <p className={`text-sm md:text-base font-bold ${isFailed ? 'text-red-400' : 'text-[#6D4C91]'}`}>{formatPrice(appt.deposit_amount)}</p>
                               </div>
                               <div>
-                                <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">{isCompleted ? 'Balance Paid' : 'Balance Due'}</p>
-                                <p className="text-[14px] md:text-[15px]">{isCompleted ? <span className="text-green-600 font-bold">Fully Settled</span> : formatPrice(appt.total_amount - appt.deposit_amount)}</p>
+                                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{isCompleted ? 'Balance Paid' : 'Balance Due'}</p>
+                                <p className="text-sm md:text-base">{isCompleted ? <span className="text-green-600 font-bold">Fully Settled</span> : formatPrice(appt.total_amount - appt.deposit_amount)}</p>
                               </div>
                             </div>
 
                             {isFailed ? (
-                              <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-[13px] text-red-700 text-center">
+                              <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700 text-center">
                                 This booking was cancelled due to a failed payment. Please try booking again.
                               </div>
                             ) : !isCompleted && (
@@ -774,14 +774,14 @@ export function Account() {
                                 <ButtonWithLoading
                                   isLoading={isLoading && selectedBooking === appt.id}
                                   onClick={() => { setSelectedBooking(appt.id); handleReschedule(); }}
-                                  className="flex-1 py-3 md:py-4 border border-gray-200 rounded-xl md:rounded-2xl text-[11px] md:text-[12px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all"
+                                  className="flex-1 py-3 md:py-4 border border-gray-200 rounded-xl md:rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-gray-50 transition-all"
                                 >
                                   Reschedule
                                 </ButtonWithLoading>
                                 <ButtonWithLoading
                                   isLoading={isLoading && selectedBooking === appt.id}
                                   onClick={() => { setSelectedBooking(appt.id); handleCancelBooking(); }}
-                                  className="flex-1 py-3 md:py-4 border border-red-100 text-red-500 rounded-xl md:rounded-2xl text-[11px] md:text-[12px] font-bold uppercase tracking-widest hover:bg-red-50 transition-all"
+                                  className="flex-1 py-3 md:py-4 border border-red-100 text-red-500 rounded-xl md:rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-red-50 transition-all"
                                 >
                                   Cancel & Refund
                                 </ButtonWithLoading>
@@ -808,8 +808,8 @@ export function Account() {
                   <div className="space-y-5 md:space-y-6">
                     <div className="p-5 md:p-6 bg-gray-50 rounded-xl md:rounded-2xl flex items-start sm:items-center justify-between gap-4">
                       <div className="flex-1">
-                        <p className="font-bold text-[15px] md:text-[16px] mb-1">Marketing Emails</p>
-                        <p className="text-gray-500 text-[13px] md:text-[14px] leading-relaxed">
+                        <p className="font-bold text-base mb-1">Marketing Emails</p>
+                        <p className="text-gray-500 text-sm leading-relaxed">
                           Receive promotional updates, special offers, and new arrivals.{' '}
                           {marketingEnabled ? "You're currently subscribed." : "You're currently unsubscribed."}
                         </p>
@@ -826,12 +826,12 @@ export function Account() {
 
                     <div className="p-5 md:p-6 bg-gray-50 rounded-xl md:rounded-2xl flex items-start sm:items-center justify-between gap-4">
                       <div className="flex-1">
-                        <p className="font-bold text-[15px] md:text-[16px] mb-1">Password</p>
-                        <p className="text-gray-500 text-[13px] md:text-[14px]">Use the forgot password flow to reset your password.</p>
+                        <p className="font-bold text-base mb-1">Password</p>
+                        <p className="text-gray-500 text-sm">Use the forgot password flow to reset your password.</p>
                       </div>
                       <Link
                         to="/login"
-                        className="text-[11px] md:text-[12px] font-bold uppercase tracking-widest text-[#6D4C91] hover:underline whitespace-nowrap"
+                        className="text-xs font-bold uppercase tracking-widest text-[#6D4C91] hover:underline whitespace-nowrap"
                       >
                         Change
                       </Link>

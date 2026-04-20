@@ -11,19 +11,20 @@ const TikTokIcon = () => (
 
 export function Footer() {
   const shopCollections = [
-    { name: 'New Arrivals', path: '/shop?collection=new-arrivals' },
-    { name: 'Bestsellers', path: '/shop?collection=bestsellers' },
-    { name: 'Skincare Kits', path: '/shop?collection=skincare-kits' },
-    { name: 'Hygiene Essentials', path: '/shop?collection=hygiene-essentials' },
-    { name: 'Professional Grade', path: '/shop?collection=professional-grade' },
-    { name: 'Eco-Friendly', path: '/shop?collection=eco-friendly' }
+    { name: 'All Products',  path: '/shop' },
+    { name: 'Skincare',      path: '/shop?group=Skincare' },
+    { name: 'Fragrances',    path: '/shop?group=Fragrances' },
+    { name: 'Body Care',     path: '/shop?group=Body+Care' },
+    { name: 'Wellness',      path: '/shop?group=Wellness' },
+    { name: 'Starter Kits',  path: '/shop?category=Starter+Kits' },
   ];
 
   const quickLinks = [
-    { name: 'Book a Service', path: '/book' },
+    { name: 'Our Services', path: '/services' },
+    { name: 'Book a Treatment', path: '/book' },
     { name: 'FAQs', path: '/faq' },
     { name: 'Privacy Policy', path: '/privacy' },
-    { name: 'Terms of Service', path: '/terms' }
+    { name: 'Terms of Service', path: '/terms' },
   ];
 
   return (

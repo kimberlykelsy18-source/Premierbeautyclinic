@@ -212,7 +212,7 @@ export function Login() {
               <h2 className="text-[#1a0a2e] text-[17px] md:text-[26px] font-serif font-bold leading-snug">
                 {panelCopy.heading}
               </h2>
-              <p className="mt-1 text-[#3b1f6b]/80 text-[12px] md:text-[15px] leading-relaxed hidden sm:block">
+              <p className="mt-1 text-[#3b1f6b]/80 text-xs md:text-sm leading-relaxed hidden sm:block">
                 {panelCopy.tagline}
               </p>
             </div>
@@ -243,12 +243,12 @@ export function Login() {
               >
                 <div className="mb-3">
                   <h1 className="text-[22px] md:text-[26px] font-bold text-gray-900 leading-tight">Create Account</h1>
-                  <p className="text-[13px] text-gray-400 mt-1">Join Premier Beauty Clinic today.</p>
+                  <p className="text-sm text-gray-400 mt-1">Join Premier Beauty Clinic today.</p>
                 </div>
 
                 {/* Full Name */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Full Name</label>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Full Name</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -263,7 +263,7 @@ export function Login() {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Email Address</label>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Email Address</label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -278,7 +278,7 @@ export function Login() {
 
                 {/* Phone */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Phone Number</label>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Phone Number</label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -293,7 +293,7 @@ export function Login() {
 
                 {/* Password */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Password</label>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Password</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -315,7 +315,7 @@ export function Login() {
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Confirm Password</label>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Confirm Password</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -338,7 +338,7 @@ export function Login() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#6D4C91] text-white py-2.5 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-1 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full bg-[#6D4C91] text-white py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#5a3e79] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-1 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isLoading
                     ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -346,7 +346,7 @@ export function Login() {
                   }
                 </button>
 
-                <p className="text-center text-[13px] text-gray-400 pt-1">
+                <p className="text-center text-sm text-gray-400 pt-1">
                   Already have an account?{' '}
                   <button
                     type="button"
@@ -372,12 +372,12 @@ export function Login() {
               >
                 <div className="mb-6">
                   <h1 className="text-[28px] md:text-[32px] font-bold text-gray-900 leading-tight">Welcome Back</h1>
-                  <p className="text-[13px] text-gray-400 mt-1">Sign in to your account.</p>
+                  <p className="text-sm text-gray-400 mt-1">Sign in to your account.</p>
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Email Address</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Email Address</label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -392,7 +392,7 @@ export function Login() {
 
                 {/* Password */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Password</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Password</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -416,7 +416,7 @@ export function Login() {
                   <button
                     type="button"
                     onClick={() => setViewMode('forgot-password')}
-                    className="text-[12px] text-[#6D4C91] hover:underline font-medium"
+                    className="text-xs text-[#6D4C91] hover:underline font-medium"
                   >
                     Forgot Password?
                   </button>
@@ -425,7 +425,7 @@ export function Login() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#000000] text-white py-3.5 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full bg-[#000000] text-white py-3.5 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#6D4C91] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isLoading
                     ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -433,7 +433,7 @@ export function Login() {
                   }
                 </button>
 
-                <p className="text-center text-[13px] text-gray-400 pt-2">
+                <p className="text-center text-sm text-gray-400 pt-2">
                   Don't have an account?{' '}
                   <button
                     type="button"
@@ -459,12 +459,12 @@ export function Login() {
               >
                 <div className="mb-6">
                   <h1 className="text-[28px] md:text-[32px] font-bold text-gray-900 leading-tight">Reset Password</h1>
-                  <p className="text-[13px] text-gray-400 mt-1">Enter your email and we'll send a reset link.</p>
+                  <p className="text-sm text-gray-400 mt-1">Enter your email and we'll send a reset link.</p>
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Email Address</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Email Address</label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -475,7 +475,7 @@ export function Login() {
                       placeholder="you@example.com"
                     />
                   </div>
-                  <p className="text-[12px] text-gray-400 mt-2">
+                  <p className="text-xs text-gray-400 mt-2">
                     We'll send password reset instructions to this email.
                   </p>
                 </div>
@@ -483,7 +483,7 @@ export function Login() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#6D4C91] text-white py-3.5 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full bg-[#6D4C91] text-white py-3.5 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#5a3e79] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isLoading
                     ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -495,7 +495,7 @@ export function Login() {
                   <button
                     type="button"
                     onClick={() => setViewMode('login')}
-                    className="text-[13px] text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1.5 mx-auto transition-colors"
+                    className="text-sm text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1.5 mx-auto transition-colors"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     <span>Back to Login</span>
@@ -507,7 +507,7 @@ export function Login() {
           </AnimatePresence>
 
           {/* Security badge */}
-          <div className="mt-8 flex items-center justify-center gap-2 text-[11px] text-gray-300">
+          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-gray-300">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Secure 256-bit SSL Encryption</span>
           </div>

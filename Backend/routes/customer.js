@@ -233,30 +233,135 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       .single();
     if (error || !product) return res.status(404).json({ error: 'Product not found' });
 
-    const { data: ratings } = await supabase
-      .from('product_ratings')
+    const { data: reviews } = await supabase
+      .from('reviews')
       .select('rating')
-      .eq('product_id', req.params.id);
+      .eq('product_id', req.params.id)
+      .eq('status', 'approved');
 
-    const rating_count = ratings?.length || 0;
+    const rating_count = reviews?.length || 0;
     const average_rating = rating_count > 0
-      ? (ratings.reduce((sum, r) => sum + r.rating, 0) / rating_count).toFixed(1)
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / rating_count).toFixed(1)
       : '0';
 
     product.product_avg_ratings = { average_rating, rating_count: String(rating_count) };
     res.json(product);
   });
 
-  // Services
+  // Public storefront content (marquee, hero overrides, features)
+  router.get('/storefront-content', async (req, res) => {
+    const { data } = await supabase.from('storefront_content').select('*').eq('id', 1).single();
+    res.json(data || { marquee_items: [], hero: {}, features: [] });
+  });
+
+  // Public promo carousel
+  router.get('/promo-carousel', async (req, res) => {
+    const { data, error } = await supabase
+      .from('promo_carousel')
+      .select('id, title, subtitle, image_url, cta_text, cta_link, sort_order')
+      .eq('is_active', true)
+      .order('sort_order');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  });
+
+  // Services — list with manually computed avg ratings (no PostgREST view join)
   router.get('/services', async (req, res) => {
     const { data, error } = await supabase
       .from('services')
-      .select('id, name, slug, description, base_price, deposit_percentage, duration_minutes, images, category, form_fields')
+      .select('id, name, slug, description, base_price, deposit_percentage, duration_minutes, images, category, form_fields, benefits, results_stat')
       .eq('is_active', true)
       .order('category')
       .order('name');
     if (error) return res.status(400).json(error);
-    res.json(data);
+    if (!data || data.length === 0) return res.json([]);
+
+    // Fetch approved ratings for all services in one query
+    const serviceIds = data.map(s => s.id);
+    const { data: ratings } = await supabase
+      .from('reviews')
+      .select('service_id, rating')
+      .in('service_id', serviceIds)
+      .eq('status', 'approved')
+      .catch(() => ({ data: [] }));
+
+    // Build a ratings map keyed by service_id
+    const ratingsMap = {};
+    for (const r of (ratings || [])) {
+      if (!ratingsMap[r.service_id]) ratingsMap[r.service_id] = [];
+      ratingsMap[r.service_id].push(r.rating);
+    }
+
+    const result = data.map(s => {
+      const rs = ratingsMap[s.id] || [];
+      const avg = rs.length > 0 ? (rs.reduce((a, b) => a + b, 0) / rs.length).toFixed(1) : '0';
+      return {
+        ...s,
+        service_avg_ratings: { average_rating: avg, rating_count: String(rs.length) },
+      };
+    });
+
+    res.json(result);
+  });
+
+  // Services — single service with related products + approved reviews
+  // Accepts both slug (string) and numeric ID as the :slug param
+  router.get('/services/:slug', async (req, res) => {
+    const param = req.params.slug;
+    const isId  = /^\d+$/.test(param);
+
+    // Build the base query — try by slug first, fall back to numeric ID
+    let query = supabase
+      .from('services')
+      .select('id, name, slug, description, base_price, deposit_percentage, duration_minutes, images, category, form_fields, is_active');
+
+    // Fetch benefits/results_stat separately so missing columns don't 404 the whole request
+    const { data: serviceBase, error: baseErr } = await query
+      .eq(isId ? 'id' : 'slug', isId ? Number(param) : param)
+      .eq('is_active', true)
+      .single();
+
+    if (baseErr || !serviceBase) return res.status(404).json({ error: 'Service not found' });
+
+    // Fetch optional extended fields — these may not exist if migrations are pending
+    const { data: extended } = await supabase
+      .from('services')
+      .select('benefits, results_stat')
+      .eq('id', serviceBase.id)
+      .single()
+      .catch(() => ({ data: null }));
+
+    // Fetch ratings, related products, reviews — each wrapped so missing tables don't crash
+    const [ratingsRes, productsRes, reviewsRes] = await Promise.all([
+      supabase
+        .from('service_avg_ratings')
+        .select('average_rating, rating_count')
+        .eq('service_id', serviceBase.id)
+        .single()
+        .catch(() => ({ data: null })),
+      supabase
+        .from('service_products')
+        .select('product_id, products(id, name, price, images, slug, categories(name))')
+        .eq('service_id', serviceBase.id)
+        .catch(() => ({ data: [] })),
+      supabase
+        .from('reviews')
+        .select('id, reviewer_name, rating, title, body, is_verified_purchase, created_at')
+        .eq('service_id', serviceBase.id)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .limit(20)
+        .catch(() => ({ data: [] })),
+    ]);
+
+    res.json({
+      ...serviceBase,
+      benefits:         extended?.benefits      ?? [],
+      results_stat:     extended?.results_stat  ?? null,
+      service_avg_ratings: ratingsRes.data ?? null,
+      related_products: (productsRes.data || []).map(r => r.products).filter(Boolean),
+      reviews:          reviewsRes.data || [],
+    });
   });
 
   // Cart
@@ -1079,6 +1184,69 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       .order('created_at', { ascending: false });
     if (error) console.error('[Appointments] Query error:', error.message);
     res.json(data || []);
+  });
+
+  // ── Reviews ──────────────────────────────────────────────────────────────────
+  // GET /reviews?product_id=X  → approved reviews for a product
+  // GET /reviews?service_id=X  → approved reviews for a service
+  router.get('/reviews', async (req, res) => {
+    const { product_id, service_id } = req.query;
+    if (!product_id && !service_id) {
+      return res.status(400).json({ error: 'product_id or service_id required' });
+    }
+    let query = supabase
+      .from('reviews')
+      .select('id, reviewer_name, rating, title, body, is_verified_purchase, created_at')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false });
+
+    if (product_id) query = query.eq('product_id', product_id);
+    else            query = query.eq('service_id', service_id);
+
+    const { data, error } = await query;
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  });
+
+  // POST /reviews — submit a new review (status = 'pending', awaits staff approval)
+  router.post('/reviews', authenticateOptional, async (req, res) => {
+    const { product_id, service_id, reviewer_name, reviewer_email, rating, title, body } = req.body;
+
+    if (!product_id && !service_id) return res.status(400).json({ error: 'product_id or service_id required' });
+    if (!reviewer_name?.trim()) return res.status(400).json({ error: 'reviewer_name required' });
+    if (!rating || rating < 1 || rating > 5) return res.status(400).json({ error: 'rating must be 1–5' });
+    if (!title?.trim()) return res.status(400).json({ error: 'title required' });
+    if (!body?.trim()) return res.status(400).json({ error: 'body required' });
+
+    const payload = {
+      reviewer_name: reviewer_name.trim().slice(0, 80),
+      reviewer_email: reviewer_email?.trim() || null,
+      rating: parseInt(rating, 10),
+      title: title.trim().slice(0, 120),
+      body: body.trim().slice(0, 1000),
+      status: 'pending',
+      user_id: req.user?.id || null,
+    };
+
+    if (product_id) {
+      payload.product_id = parseInt(product_id, 10);
+      // Mark as verified purchase if user has ordered this product
+      if (req.user?.id) {
+        const { data: bought } = await db
+          .from('order_items')
+          .select('id')
+          .eq('product_id', payload.product_id)
+          .limit(1);
+        if (bought?.length) payload.is_verified_purchase = true;
+      }
+    } else {
+      payload.service_id = service_id;
+    }
+
+    const { error } = await db.from('reviews').insert(payload);
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ success: true, message: 'Review submitted and awaiting approval. Thank you!' });
   });
 
   return router;

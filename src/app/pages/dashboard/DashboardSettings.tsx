@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Shield, Bell, CreditCard, Users, Link as LinkIcon, Globe, Palette, Database, UserPlus, ChevronDown, ChevronUp, Edit, Trash2, Plus, X, Save, ToggleLeft, ToggleRight, AlertCircle } from 'lucide-react';
+import { Settings, Shield, Bell, CreditCard, Users, Link as LinkIcon, Globe, Palette, Database, UserPlus, ChevronDown, ChevronUp, Edit, Trash2, Plus, X, Save, ToggleLeft, ToggleRight, AlertCircle, MonitorPlay } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { apiFetch } from '../../lib/api';
 import { toast } from 'sonner';
@@ -79,19 +79,259 @@ const ALL_PERMISSIONS: { key: string; label: string; description: string }[] = [
   { key: 'complete_appointment', label: 'Check In Clients',        description: 'Mark appointments as completed' },
   { key: 'create_walkin',        label: 'Record Walk-ins',         description: 'Add walk-in appointments' },
   { key: 'view_sales',           label: 'View Sales Reports',      description: 'See revenue charts and analytics' },
+  { key: 'manage_reviews',       label: 'Manage Reviews',          description: 'Approve, reject, and delete customer reviews' },
   { key: 'manage_staff',         label: 'Manage Staff & Settings', description: 'Invite employees and change clinic settings' },
 ];
 
-const TABS = [
-  { id: 'general',       label: 'General Settings',  icon: Globe    },
-  { id: 'payments',      label: 'M-Pesa & Billing',  icon: CreditCard },
-  { id: 'staff',         label: 'Staff Management',  icon: Users    },
-  { id: 'design',        label: 'Storefront Design', icon: Palette  },
-  { id: 'security',      label: 'Security & Access', icon: Shield   },
-  { id: 'notifications', label: 'Notifications',     icon: Bell     },
-  { id: 'integrations',  label: 'Integrations',      icon: LinkIcon },
-  { id: 'data',          label: 'Data & Privacy',    icon: Database },
+const CONCERN_DEFAULTS = [
+  'Acne', 'Hyperpigmentation', 'Ageing & Wrinkles', 'Dryness', 'Dark Circles',
+  'Sensitivity', 'Melasma', 'Oily Skin', 'Scarring', 'Dullness',
 ];
+
+const TABS = [
+  { id: 'general',       label: 'General Settings',  icon: Globe       },
+  { id: 'payments',      label: 'M-Pesa & Billing',  icon: CreditCard  },
+  { id: 'staff',         label: 'Staff Management',  icon: Users       },
+  { id: 'carousel',      label: 'Home Carousel',     icon: MonitorPlay },
+  { id: 'design',        label: 'Storefront Design', icon: Palette     },
+  { id: 'security',      label: 'Security & Access', icon: Shield      },
+  { id: 'notifications', label: 'Notifications',     icon: Bell        },
+  { id: 'integrations',  label: 'Integrations',      icon: LinkIcon    },
+  { id: 'data',          label: 'Data & Privacy',    icon: Database    },
+];
+
+// ── Carousel Slide type ───────────────────────────────────────────────────────
+interface CarouselSlide {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  image_url: string;
+  cta_text: string;
+  cta_link: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
+const EMPTY_SLIDE: Partial<CarouselSlide> = {
+  title: '', subtitle: '', image_url: '', cta_text: 'Shop Now', cta_link: '/shop', is_active: true, sort_order: 0,
+};
+
+// ── Carousel Tab component ────────────────────────────────────────────────────
+function CarouselTab({ token, sessionId }: { token: string | null; sessionId: string | null }) {
+  const [slides, setSlides]           = useState<CarouselSlide[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [editingId, setEditingId]     = useState<string | null>(null);
+  const [form, setForm]               = useState<Partial<CarouselSlide>>(EMPTY_SLIDE);
+  const [saving, setSaving]           = useState(false);
+  const [showAdd, setShowAdd]         = useState(false);
+
+  const inputCls = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#6D4C91]/25 focus:border-[#6D4C91] bg-white transition-colors';
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await apiFetch('/admin/promo-carousel', {}, token, sessionId);
+      setSlides(Array.isArray(data) ? data : []);
+    } catch {
+      setSlides([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const startEdit = (slide: CarouselSlide) => { setForm({ ...slide }); setEditingId(slide.id); setShowAdd(false); };
+  const startAdd  = () => { setForm({ ...EMPTY_SLIDE }); setEditingId(null); setShowAdd(true); };
+  const cancelEdit = () => { setEditingId(null); setShowAdd(false); setForm(EMPTY_SLIDE); };
+
+  const handleSave = async () => {
+    if (!form.title?.trim())     { toast.error('Title is required'); return; }
+    if (!form.image_url?.trim()) { toast.error('Image URL is required'); return; }
+    setSaving(true);
+    try {
+      if (editingId) {
+        const updated = await apiFetch(`/admin/promo-carousel/${editingId}`, { method: 'PATCH', body: JSON.stringify(form) }, token, sessionId);
+        setSlides(ss => ss.map(s => s.id === updated.id ? updated : s));
+        toast.success('Slide updated');
+      } else {
+        const created = await apiFetch('/admin/promo-carousel', { method: 'POST', body: JSON.stringify(form) }, token, sessionId);
+        setSlides(ss => [...ss, created]);
+        toast.success('Slide added');
+      }
+      cancelEdit();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save slide');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this carousel slide?')) return;
+    try {
+      await apiFetch(`/admin/promo-carousel/${id}`, { method: 'DELETE' }, token, sessionId);
+      setSlides(ss => ss.filter(s => s.id !== id));
+      toast.success('Slide deleted');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete slide');
+    }
+  };
+
+  const toggleActive = async (slide: CarouselSlide) => {
+    try {
+      const updated = await apiFetch(`/admin/promo-carousel/${slide.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !slide.is_active }) }, token, sessionId);
+      setSlides(ss => ss.map(s => s.id === updated.id ? updated : s));
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update slide');
+    }
+  };
+
+  const setOrder = async (slide: CarouselSlide, delta: number) => {
+    const newOrder = Math.max(0, slide.sort_order + delta);
+    try {
+      const updated = await apiFetch(`/admin/promo-carousel/${slide.id}`, { method: 'PATCH', body: JSON.stringify({ sort_order: newOrder }) }, token, sessionId);
+      setSlides(ss => ss.map(s => s.id === updated.id ? updated : s).sort((a, b) => a.sort_order - b.sort_order));
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reorder');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-[22px] font-serif mb-1">Home Page Carousel</h2>
+          <p className="text-gray-500 text-sm">Manage the rotating promotional slides shown at the top of the home page. Each slide can feature a product kit, bundle, or campaign.</p>
+        </div>
+        <button
+          onClick={startAdd}
+          className="inline-flex items-center gap-2 bg-[#6D4C91] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#5c3f80] transition-colors shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          Add Slide
+        </button>
+      </div>
+
+      {/* Add / Edit form */}
+      <AnimatePresence>
+        {(showAdd || editingId) && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="bg-[#F2F1F8] rounded-2xl p-6 space-y-4"
+          >
+            <h3 className="font-bold text-gray-800 text-sm">{editingId ? 'Edit Slide' : 'New Slide'}</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Title <span className="text-red-500">*</span></label>
+                <input value={form.title ?? ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Glow Starter Kit" className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Subtitle</label>
+                <input value={form.subtitle ?? ''} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))} placeholder="Complete 3-step routine in one bundle" className={inputCls} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Image URL <span className="text-red-500">*</span></label>
+                <input value={form.image_url ?? ''} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://..." className={inputCls} />
+                {form.image_url?.trim() && (
+                  <img src={form.image_url} alt="" className="mt-2 h-24 w-full object-cover rounded-xl bg-gray-200" onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0.3'; }} />
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Button text</label>
+                <input value={form.cta_text ?? ''} onChange={e => setForm(f => ({ ...f, cta_text: e.target.value }))} placeholder="Shop Now" className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Button link</label>
+                <input value={form.cta_link ?? ''} onChange={e => setForm(f => ({ ...f, cta_link: e.target.value }))} placeholder="/shop" className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Display order</label>
+                <input type="number" min={0} value={form.sort_order ?? 0} onChange={e => setForm(f => ({ ...f, sort_order: Number(e.target.value) }))} className={inputCls} />
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-2">
+              <button onClick={cancelEdit} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-200 transition-colors">Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-xl text-sm font-semibold bg-[#6D4C91] text-white hover:bg-[#5c3f80] transition-colors disabled:opacity-50">
+                {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add slide'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Slides list */}
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => <div key={i} className="h-20 bg-gray-100 rounded-2xl animate-pulse" />)}
+        </div>
+      ) : slides.length === 0 ? (
+        <div className="text-center py-16 bg-gray-50 rounded-2xl">
+          <MonitorPlay className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-sm text-gray-500">No carousel slides yet.</p>
+          <button onClick={startAdd} className="mt-2 text-sm text-[#6D4C91] font-semibold hover:underline">Add your first slide</button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {[...slides].sort((a, b) => a.sort_order - b.sort_order).map((slide, idx) => (
+            <div key={slide.id} className={`bg-white rounded-2xl border border-gray-100 overflow-hidden ${!slide.is_active ? 'opacity-60' : ''}`}>
+              <div className="flex items-center gap-3">
+                {/* Thumbnail */}
+                <div className="w-24 h-16 shrink-0">
+                  <img src={slide.image_url} alt="" className="w-full h-full object-cover" />
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0 py-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-bold text-gray-900 truncate">{slide.title}</p>
+                    {!slide.is_active && <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-semibold">Hidden</span>}
+                  </div>
+                  {slide.subtitle && <p className="text-xs text-gray-500 truncate mt-0.5">{slide.subtitle}</p>}
+                  <p className="text-xs text-[#6D4C91] font-semibold mt-0.5">{slide.cta_text} → {slide.cta_link}</p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 pr-3 shrink-0">
+                  <button onClick={() => setOrder(slide, -1)} disabled={idx === 0} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 disabled:opacity-30 transition-colors" title="Move up">
+                    <ChevronUp className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setOrder(slide, 1)} disabled={idx === slides.length - 1} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 disabled:opacity-30 transition-colors" title="Move down">
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => toggleActive(slide)} title={slide.is_active ? 'Hide' : 'Show'} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-[#6D4C91] hover:bg-[#F2F1F8] transition-colors">
+                    {slide.is_active ? <ToggleRight className="w-5 h-5 text-[#6D4C91]" /> : <ToggleLeft className="w-5 h-5 text-gray-300" />}
+                  </button>
+                  <button onClick={() => startEdit(slide)} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-[#F2F1F8] hover:text-[#6D4C91] transition-colors">
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(slide.id)} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="bg-[#F2F1F8] rounded-2xl p-5">
+        <p className="text-xs font-bold text-[#6D4C91] uppercase tracking-widest mb-2">Tips</p>
+        <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+          <li>Use high-quality landscape images (1080px wide or more)</li>
+          <li>Best for: product kits, seasonal bundles, treatment promotions</li>
+          <li>Slides auto-rotate every 5 seconds on the home page</li>
+          <li>Toggle visibility to hide a slide without deleting it</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export function DashboardSettings() {
@@ -252,6 +492,8 @@ export function DashboardSettings() {
   const [marqueeItems, setMarqueeItems]   = useState<MarqueeItem[]>([]);
   const [heroContent, setHeroContent]     = useState<HeroContent>(DEFAULT_HERO);
   const [features, setFeatures]           = useState<Feature[]>([]);
+  const [skinConcerns, setSkinConcerns]   = useState<{ label: string; image: string }[]>([]);
+  const [savingSkinConcerns, setSavingSkinConcerns] = useState(false);
   const [loadingContent, setLoadingContent] = useState(false);
   const [savingContent, setSavingContent] = useState(false);
   const [editingHero, setEditingHero]     = useState(false);
@@ -269,6 +511,12 @@ export function DashboardSettings() {
         setMarqueeItems(data.marquee_items || []);
         setHeroContent({ ...DEFAULT_HERO, ...(data.hero || {}) });
         setFeatures(data.features || []);
+        const saved: { label: string; image: string }[] = data.skin_concerns || [];
+        const merged = CONCERN_DEFAULTS.map(label => ({
+          label,
+          image: saved.find((s: { label: string; image: string }) => s.label === label)?.image || '',
+        }));
+        setSkinConcerns(merged);
       })
       .catch(() => toast.error('Could not load storefront content'))
       .finally(() => setLoadingContent(false));
@@ -322,6 +570,15 @@ export function DashboardSettings() {
       : [...features, { id: Date.now().toString(), ...featureForm }];
     await saveFeatures(updated);
     setFeatureModal(false);
+  };
+
+  const saveSkinConcerns = async () => {
+    setSavingSkinConcerns(true);
+    try {
+      await apiFetch('/admin/storefront-content', { method: 'PATCH', body: JSON.stringify({ skin_concerns: skinConcerns }) }, token, sessionId);
+      toast.success('Skin concern images saved');
+    } catch { toast.error('Failed to save skin concerns'); }
+    finally { setSavingSkinConcerns(false); }
   };
 
   // ── Grouped FAQs ─────────────────────────────────────────────────────────────
@@ -584,6 +841,11 @@ export function DashboardSettings() {
             </div>
           )}
 
+          {/* ── Home Carousel Tab ── */}
+          {activeTab === 'carousel' && (
+            <CarouselTab token={token} sessionId={sessionId} />
+          )}
+
           {/* ── Storefront Design Tab ── */}
           {activeTab === 'design' && (
             <div className="space-y-6">
@@ -808,6 +1070,59 @@ export function DashboardSettings() {
                           {features.length === 0 && <p className="col-span-2 text-center text-[13px] text-gray-400 py-4">No features added yet.</p>}
                         </div>
                       </div>
+
+                      {/* Skin Concerns Images */}
+                      <div className="border-t border-gray-100 pt-8">
+                        <div className="flex items-center justify-between mb-1">
+                          <div>
+                            <h3 className="text-[15px] font-bold">Skin Concern Images</h3>
+                            <p className="text-[12px] text-gray-400 mt-0.5">Images shown on the "What's Your Skin Concern?" section. Paste a direct image URL for each.</p>
+                          </div>
+                          <button
+                            onClick={saveSkinConcerns}
+                            disabled={savingSkinConcerns}
+                            className="flex items-center gap-1.5 text-[11px] font-bold bg-[#6D4C91] text-white px-4 py-2 rounded-xl hover:bg-[#5a3e79] transition-all disabled:opacity-50"
+                          >
+                            {savingSkinConcerns ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"/> : <Save className="w-3.5 h-3.5"/>}
+                            Save Images
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">
+                          Leave blank to use the built-in default image for that concern.
+                        </p>
+                        <div className="space-y-3">
+                          {skinConcerns.map((sc, i) => (
+                            <div key={sc.label} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                              {/* Preview */}
+                              <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-gray-200 border border-gray-200">
+                                {sc.image ? (
+                                  <img src={sc.image} alt={sc.label} className="w-full h-full object-cover"
+                                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400 font-bold text-center px-1 leading-tight">
+                                    Default
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-[13px] font-semibold text-gray-700 w-36 shrink-0">{sc.label}</span>
+                              <input
+                                value={sc.image}
+                                onChange={e => setSkinConcerns(prev => prev.map((x, idx) => idx === i ? { ...x, image: e.target.value } : x))}
+                                placeholder="https://... (leave blank for default)"
+                                className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-[12px] outline-none focus:ring-2 focus:ring-[#6D4C91]/20 focus:border-[#6D4C91]"
+                              />
+                              {sc.image && (
+                                <button
+                                  onClick={() => setSkinConcerns(prev => prev.map((x, idx) => idx === i ? { ...x, image: '' } : x))}
+                                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                                >
+                                  <X className="w-3.5 h-3.5"/>
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>
@@ -816,7 +1131,7 @@ export function DashboardSettings() {
           )}
 
           {/* ── Placeholder tabs ── */}
-          {activeTab !== 'general' && activeTab !== 'payments' && activeTab !== 'staff' && activeTab !== 'design' && (
+          {activeTab !== 'general' && activeTab !== 'payments' && activeTab !== 'staff' && activeTab !== 'design' && activeTab !== 'carousel' && (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
               <Settings className="w-12 h-12 text-gray-200" />
               <div>

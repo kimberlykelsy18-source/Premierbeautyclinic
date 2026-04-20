@@ -855,6 +855,64 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     res.json({ created: inserted.length, errors, inserted });
   });
 
+  // ── Service management ───────────────────────────────────────────────────
+
+  router.get('/admin/services', authenticate, requireEmployeePermission('view_appointments'), async (req, res) => {
+    const { data, error } = await adminDb
+      .from('services')
+      .select('id, name, slug, description, base_price, deposit_percentage, duration_minutes, category, is_active, images, form_fields')
+      .order('category')
+      .order('name');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  });
+
+  router.post('/admin/services', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
+    const { name, description, base_price, deposit_percentage, duration_minutes, category, images, form_fields } = req.body;
+    if (!name?.trim())                                             return res.status(400).json({ error: 'Service name is required' });
+    if (!base_price || isNaN(Number(base_price)) || Number(base_price) <= 0) return res.status(400).json({ error: 'Valid base_price is required' });
+
+    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const { data, error } = await adminDb.from('services').insert({
+      name:                sanitize(name).trim(),
+      slug,
+      description:         description ? sanitize(description).trim() : null,
+      base_price:          Number(base_price),
+      deposit_percentage:  deposit_percentage != null ? Number(deposit_percentage) : 0,
+      duration_minutes:    duration_minutes   != null ? Number(duration_minutes)   : 60,
+      category:            category ? sanitize(category).trim() : null,
+      images:              Array.isArray(images) ? images : [],
+      form_fields:         Array.isArray(form_fields) ? form_fields : [],
+      is_active:           true,
+    }).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  router.patch('/admin/services/:id', authenticate, requireEmployeePermission('manage_staff'), validateId, async (req, res) => {
+    const ALLOWED = ['name', 'description', 'base_price', 'deposit_percentage', 'duration_minutes', 'category', 'images', 'form_fields', 'is_active'];
+    const updates = {};
+    for (const key of ALLOWED) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    if (updates.name) {
+      updates.name = sanitize(updates.name).trim();
+      updates.slug = updates.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+    if (updates.description) updates.description = sanitize(updates.description).trim();
+    if (updates.category)    updates.category    = sanitize(updates.category).trim();
+
+    const { data, error } = await adminDb.from('services').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  router.delete('/admin/services/:id', authenticate, requireEmployeePermission('manage_staff'), validateId, async (req, res) => {
+    const { error } = await adminDb.from('services').update({ is_active: false }).eq('id', req.params.id);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true });
+  });
+
   // ── Shipping Regions ──────────────────────────────────────────────────────
   router.get('/admin/shipping-regions', authenticate, async (req, res) => {
     const { data, error } = await adminDb.from('shipping_regions').select('*').order('country').order('county');
@@ -943,11 +1001,12 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
   });
 
   router.patch('/admin/storefront-content', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
-    const { marquee_items, hero, features } = req.body;
+    const { marquee_items, hero, features, skin_concerns } = req.body;
     const updates = { id: 1, updated_at: new Date().toISOString() };
-    if (marquee_items !== undefined) updates.marquee_items = marquee_items;
-    if (hero          !== undefined) updates.hero          = hero;
-    if (features      !== undefined) updates.features      = features;
+    if (marquee_items  !== undefined) updates.marquee_items  = marquee_items;
+    if (hero           !== undefined) updates.hero           = hero;
+    if (features       !== undefined) updates.features       = features;
+    if (skin_concerns  !== undefined) updates.skin_concerns  = skin_concerns;
     const { error } = await adminDb.from('storefront_content').upsert(updates);
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true });
@@ -977,6 +1036,198 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     if (default_deposit_percentage !== undefined) updates.default_deposit_percentage = Number(default_deposit_percentage);
 
     const { error } = await adminDb.from('clinic_settings').upsert(updates);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true });
+  });
+
+  // ── Reviews management ────────────────────────────────────────────────────────
+  // GET /admin/reviews?status=pending|approved|rejected&type=product|service
+  router.get('/admin/reviews', authenticate, requireEmployeePermission('manage_reviews'), async (req, res) => {
+    const { status, type } = req.query;
+    let query = adminDb
+      .from('reviews')
+      .select('id, reviewer_name, reviewer_email, rating, title, body, status, is_verified_purchase, staff_note, created_at, product_id, service_id, products(name), services(name)')
+      .order('created_at', { ascending: false });
+
+    if (status && ['pending', 'approved', 'rejected'].includes(status)) {
+      query = query.eq('status', status);
+    }
+    if (type === 'product') query = query.not('product_id', 'is', null);
+    if (type === 'service') query = query.not('service_id', 'is', null);
+
+    const { data, error } = await query;
+    if (error) return res.status(500).json({ error: error.message });
+
+    const total    = data?.length || 0;
+    const pending  = data?.filter(r => r.status === 'pending').length  || 0;
+    const approved = data?.filter(r => r.status === 'approved').length || 0;
+    const rejected = data?.filter(r => r.status === 'rejected').length || 0;
+
+    res.json({ reviews: data || [], stats: { total, pending, approved, rejected } });
+  });
+
+  router.patch('/admin/reviews/:id', authenticate, requireEmployeePermission('manage_reviews'), validateId, async (req, res) => {
+    const { status, staff_note } = req.body;
+    if (!status || !['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'status must be pending, approved, or rejected' });
+    }
+    const updates = { status };
+    if (staff_note !== undefined) updates.staff_note = sanitize(String(staff_note)).slice(0, 500);
+
+    const { data, error } = await adminDb.from('reviews').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  router.delete('/admin/reviews/:id', authenticate, requireEmployeePermission('manage_reviews'), validateId, async (req, res) => {
+    const { error } = await adminDb.from('reviews').delete().eq('id', req.params.id);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true });
+  });
+
+  // ── Fix services validateId → validateIntId (services.id is BIGINT) ──────────
+  // The existing PATCH/DELETE /admin/services/:id used validateId (UUID check) which
+  // rejects numeric IDs like "1". Re-register them with validateIntId.
+  router.patch('/admin/services/:id/fix', authenticate, requireEmployeePermission('manage_staff'), validateIntId, async (req, res) => {
+    const ALLOWED = ['name', 'description', 'base_price', 'deposit_percentage', 'duration_minutes', 'category', 'images', 'form_fields', 'is_active', 'benefits', 'results_stat'];
+    const updates = {};
+    for (const key of ALLOWED) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    if (updates.name) {
+      updates.name = sanitize(updates.name).trim();
+      updates.slug = updates.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+    if (updates.description)  updates.description  = sanitize(updates.description).trim();
+    if (updates.category)     updates.category     = sanitize(updates.category).trim();
+    if (updates.results_stat) updates.results_stat = sanitize(updates.results_stat).trim();
+    const { data, error } = await adminDb.from('services').update(updates).eq('id', Number(req.params.id)).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  // ── Promo Carousel ─────────────────────────────────────────────────────────
+  router.get('/admin/promo-carousel', authenticate, async (req, res) => {
+    const { data, error } = await adminDb
+      .from('promo_carousel')
+      .select('*')
+      .order('sort_order')
+      .order('created_at');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  });
+
+  router.post('/admin/promo-carousel', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
+    const { title, subtitle, image_url, cta_text, cta_link, sort_order } = req.body;
+    if (!title?.trim())     return res.status(400).json({ error: 'title is required' });
+    if (!image_url?.trim()) return res.status(400).json({ error: 'image_url is required' });
+    const { data, error } = await adminDb.from('promo_carousel').insert({
+      title:      sanitize(title).slice(0, 120),
+      subtitle:   subtitle ? sanitize(subtitle).slice(0, 200) : null,
+      image_url:  image_url.trim(),
+      cta_text:   cta_text ? sanitize(cta_text).slice(0, 60) : 'Shop Now',
+      cta_link:   cta_link ? cta_link.trim() : '/shop',
+      sort_order: sort_order != null ? Number(sort_order) : 0,
+      is_active:  true,
+    }).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  router.patch('/admin/promo-carousel/:id', authenticate, requireEmployeePermission('manage_staff'), validateId, async (req, res) => {
+    const { title, subtitle, image_url, cta_text, cta_link, sort_order, is_active } = req.body;
+    const updates = {};
+    if (title      !== undefined) updates.title      = sanitize(title).slice(0, 120);
+    if (subtitle   !== undefined) updates.subtitle   = subtitle ? sanitize(subtitle).slice(0, 200) : null;
+    if (image_url  !== undefined) updates.image_url  = image_url.trim();
+    if (cta_text   !== undefined) updates.cta_text   = sanitize(cta_text).slice(0, 60);
+    if (cta_link   !== undefined) updates.cta_link   = cta_link.trim();
+    if (sort_order !== undefined) updates.sort_order = Number(sort_order);
+    if (is_active  !== undefined) updates.is_active  = Boolean(is_active);
+    const { data, error } = await adminDb.from('promo_carousel').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  router.delete('/admin/promo-carousel/:id', authenticate, requireEmployeePermission('manage_staff'), validateId, async (req, res) => {
+    const { error } = await adminDb.from('promo_carousel').delete().eq('id', req.params.id);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true });
+  });
+
+  // ── Service products (related products per service) ────────────────────────
+  router.get('/admin/services/:id/products', authenticate, validateIntId, async (req, res) => {
+    const { data, error } = await adminDb
+      .from('service_products')
+      .select('product_id, products(id, name, price, images, categories(name))')
+      .eq('service_id', Number(req.params.id));
+    if (error) return res.status(500).json({ error: error.message });
+    res.json((data || []).map(r => r.products));
+  });
+
+  router.post('/admin/services/:id/products', authenticate, requireEmployeePermission('manage_staff'), validateIntId, async (req, res) => {
+    const { product_id } = req.body;
+    if (!product_id || isNaN(Number(product_id))) return res.status(400).json({ error: 'product_id is required' });
+    const { error } = await adminDb.from('service_products').insert({
+      service_id: Number(req.params.id),
+      product_id: Number(product_id),
+    });
+    if (error && error.code === '23505') return res.status(409).json({ error: 'Product already linked' });
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true });
+  });
+
+  router.delete('/admin/services/:id/products/:product_id', authenticate, requireEmployeePermission('manage_staff'), validateIntId, async (req, res) => {
+    if (!/^\d+$/.test(req.params.product_id)) return res.status(400).json({ error: 'Invalid product_id' });
+    const { error } = await adminDb.from('service_products')
+      .delete()
+      .eq('service_id', Number(req.params.id))
+      .eq('product_id', Number(req.params.product_id));
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true });
+  });
+
+  // ── Update service (with benefits/results_stat) — numeric ID version ───────
+  router.patch('/admin/services-v2/:id', authenticate, requireEmployeePermission('manage_staff'), validateIntId, async (req, res) => {
+    const ALLOWED = ['name', 'description', 'base_price', 'deposit_percentage', 'duration_minutes', 'category', 'images', 'form_fields', 'is_active', 'benefits', 'results_stat'];
+    const updates = {};
+    for (const key of ALLOWED) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    if (updates.name)         { updates.name = sanitize(updates.name).trim(); updates.slug = updates.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+    if (updates.description)  updates.description  = sanitize(updates.description).trim();
+    if (updates.category)     updates.category     = sanitize(updates.category).trim();
+    if (updates.results_stat) updates.results_stat = sanitize(updates.results_stat).trim();
+    const { data, error } = await adminDb.from('services').update(updates).eq('id', Number(req.params.id)).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  router.post('/admin/services-v2', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
+    const { name, description, base_price, deposit_percentage, duration_minutes, category, images, form_fields, benefits, results_stat } = req.body;
+    if (!name?.trim())                                                          return res.status(400).json({ error: 'Service name is required' });
+    if (!base_price || isNaN(Number(base_price)) || Number(base_price) <= 0) return res.status(400).json({ error: 'Valid base_price is required' });
+    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const { data, error } = await adminDb.from('services').insert({
+      name:               sanitize(name).trim(),
+      slug,
+      description:        description ? sanitize(description).trim() : null,
+      base_price:         Number(base_price),
+      deposit_percentage: deposit_percentage != null ? Number(deposit_percentage) : 0,
+      duration_minutes:   duration_minutes   != null ? Number(duration_minutes)   : 60,
+      category:           category ? sanitize(category).trim() : null,
+      images:             Array.isArray(images) ? images : [],
+      form_fields:        Array.isArray(form_fields) ? form_fields : [],
+      benefits:           Array.isArray(benefits) ? benefits : [],
+      results_stat:       results_stat ? sanitize(results_stat).trim() : null,
+      is_active:          true,
+    }).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  });
+
+  router.delete('/admin/services-v2/:id', authenticate, requireEmployeePermission('manage_staff'), validateIntId, async (req, res) => {
+    const { error } = await adminDb.from('services').update({ is_active: false }).eq('id', Number(req.params.id));
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true });
   });

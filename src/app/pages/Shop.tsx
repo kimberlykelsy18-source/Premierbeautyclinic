@@ -43,9 +43,27 @@ const mapForCart = (p: ApiProduct) => ({
 });
 
 // Static filter options that are UI decisions, not database decisions.
-// Skin types and price ranges don't change based on products in the DB.
-const SKIN_TYPES = ['All', 'Dry', 'Oily', 'Combination', 'Sensitive', 'Mature'];
+const SKIN_TYPES = ['All', 'Normal', 'Dry', 'Oily', 'Combination', 'Sensitive', 'Mature', 'Acne-Prone'];
+const CONCERNS = [
+  { label: 'All',          value: null          },
+  { label: 'Acne',         value: 'Acne'        },
+  { label: 'Brightening',  value: 'Brightening' },
+  { label: 'Anti-Aging',   value: 'Anti-Aging'  },
+  { label: 'Hydration',    value: 'Hydration'   },
+  { label: 'Sensitive',    value: 'Sensitive'   },
+  { label: 'Dark Spots',   value: 'Dark Spots'  },
+  { label: 'Oily Skin',    value: 'Oily'        },
+];
 const PRICE_RANGES = ['Under KES 2,500', 'KES 2,500 - 5,000', 'Over KES 5,000'];
+
+// Category groups — used to show top-level tabs that group sub-categories
+const CATEGORY_GROUPS = [
+  { label: 'All',        slugs: null },
+  { label: 'Skincare',   slugs: ['serums', 'moisturisers', 'cleansers', 'toners', 'sunscreen', 'eye-care', 'face-masks', 'skincare'] },
+  { label: 'Fragrances', slugs: ['fragrances', 'mens-perfume', 'womens-perfume', 'unisex-fragrance'] },
+  { label: 'Body Care',  slugs: ['body-care', 'body-scrubs', 'body-lotion', 'body-oil', 'body-wash'] },
+  { label: 'Wellness',   slugs: ['wellness', 'health-supplements', 'vitamins-minerals'] },
+] as const;
 
 // ─── Loading Skeleton ───────────────────────────────────────────────────────
 // Shown while products are being fetched from the API.
@@ -74,6 +92,8 @@ export function Shop() {
 
   // Filter & sort state
   const [activeCategory, setActiveCategory]     = useState<string | null>(null);
+  const [activeCategoryGroup, setActiveCategoryGroup] = useState<string>('All');
+  const [activeConcern, setActiveConcern]       = useState<string | null>(null);
   const [activeSkinType, setActiveSkinType]     = useState<string | null>(null);
   const [activeBrand, setActiveBrand]           = useState<string | null>(null);
   const [activePriceRange, setActivePriceRange] = useState<string | null>(null);
@@ -101,6 +121,7 @@ export function Shop() {
     const priceRange = searchParams.get('priceRange');
     const sort       = searchParams.get('sort');
     const q          = searchParams.get('q');
+    const group      = searchParams.get('group');
 
     if (category)   setActiveCategory(category);
     if (skinType)   setActiveSkinType(skinType);
@@ -108,6 +129,11 @@ export function Shop() {
     if (priceRange) setActivePriceRange(priceRange);
     if (sort)       setSortBy(sort);
     if (q)          setSearchQuery(q);
+    // ?group=Skincare activates the top-level category group tab
+    if (group) {
+      const matched = CATEGORY_GROUPS.find(g => g.label.toLowerCase() === group.toLowerCase());
+      if (matched) setActiveCategoryGroup(matched.label);
+    }
   }, [searchParams]);
 
   // ── Derive filter options from real data ──
@@ -122,10 +148,25 @@ export function Shop() {
     [products]
   );
 
+  // ── Category group filter — narrows by category slug prefix ──
+  const activeGroupSlugs = CATEGORY_GROUPS.find(g => g.label === activeCategoryGroup)?.slugs ?? null;
+
   // ── Filter logic ──
   const filteredProducts = products.filter(p => {
+    // Category group filter (super-category tabs)
+    if (activeGroupSlugs) {
+      const catSlug = p.categories?.slug ?? '';
+      const catName = (p.categories?.name ?? '').toLowerCase();
+      const matchesGroup = activeGroupSlugs.some(s => catSlug === s || catName.includes(s.replace(/-/g, ' ')));
+      if (!matchesGroup) return false;
+    }
     if (activeCategory && p.categories?.name !== activeCategory) return false;
     if (activeBrand && p.brand !== activeBrand) return false;
+
+    if (activeConcern) {
+      const concerns = p.skin_concerns ?? [];
+      if (!concerns.some(c => c.toLowerCase().includes(activeConcern.toLowerCase()))) return false;
+    }
 
     // skin_concerns is an array — check if ANY concern mentions the selected skin type
     if (activeSkinType && activeSkinType !== 'All') {
@@ -165,21 +206,21 @@ export function Shop() {
         {/* Header */}
         <div className="mb-8 md:mb-12">
           <h1 className="text-[36px] md:text-[52px] font-serif mb-3 md:mb-4 italic">Shop Collection</h1>
-          <p className="text-gray-500 text-[14px] md:text-[16px]">Dermatologist-approved products for every skin concern.</p>
+          <p className="text-gray-500 text-sm md:text-base">Dermatologist-approved products for every skin concern.</p>
         </div>
 
         {/* Mobile Filter & Sort Buttons */}
         <div className="flex gap-3 mb-6 md:hidden">
           <button
             onClick={() => setIsFilterMobileOpen(true)}
-            className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-white border border-gray-200 rounded-full text-[13px] font-bold uppercase tracking-widest"
+            className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-white border border-gray-200 rounded-full text-sm font-bold uppercase tracking-widest"
           >
             <Filter className="w-4 h-4" />
             <span>Filter</span>
           </button>
           <button
             onClick={() => setIsSortMobileOpen(!isSortMobileOpen)}
-            className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-white border border-gray-200 rounded-full text-[13px] font-bold uppercase tracking-widest"
+            className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-white border border-gray-200 rounded-full text-sm font-bold uppercase tracking-widest"
           >
             <span>Sort</span>
             <ChevronDown className="w-4 h-4" />
@@ -194,7 +235,7 @@ export function Shop() {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search products by name, brand, or ingredient..."
-            className="w-full pl-11 pr-10 py-3 bg-white border border-gray-200 rounded-full text-[14px] focus:outline-none focus:border-[#6D4C91] transition-colors"
+            className="w-full pl-11 pr-10 py-3 bg-white border border-gray-200 rounded-full text-sm focus:outline-none focus:border-[#6D4C91] transition-colors"
           />
           {searchQuery && (
             <button
@@ -206,59 +247,93 @@ export function Shop() {
           )}
         </div>
 
+        {/* Category group tabs (Skincare / Fragrances / Body Care / Wellness) */}
+        <div className="flex gap-2 flex-wrap mb-4 mt-4">
+          {CATEGORY_GROUPS.map(g => (
+            <button
+              key={g.label}
+              onClick={() => { setActiveCategoryGroup(g.label); setActiveCategory(null); }}
+              className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${
+                activeCategoryGroup === g.label
+                  ? 'bg-[#1A1A1A] text-white shadow-sm'
+                  : 'bg-white text-gray-600 hover:bg-[#F2F1F8] border border-gray-200'
+              }`}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Concern filter tabs */}
+        <div className="flex gap-2 flex-wrap mb-6 mt-2">
+          {CONCERNS.map(c => (
+            <button
+              key={c.label}
+              onClick={() => setActiveConcern(c.value)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                activeConcern === c.value
+                  ? 'bg-[#6D4C91] text-white shadow-sm'
+                  : 'bg-white text-gray-600 hover:bg-[#F2F1F8] border border-gray-200'
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+
         {/* Toolbar */}
         <div className="flex flex-col md:flex-row justify-between items-center border-y border-gray-100 py-6 mb-12 gap-4">
           <div className="flex items-center space-x-4 w-full md:w-auto">
             <button
               onClick={() => setIsFilterMobileOpen(true)}
-              className="flex items-center space-x-2 px-6 py-3 bg-[#FDFBF7] rounded-full text-[14px] font-bold uppercase tracking-widest md:hidden w-full justify-center active:scale-95 transition-transform"
+              className="flex items-center space-x-2 px-6 py-3 bg-[#FDFBF7] rounded-full text-sm font-bold uppercase tracking-widest md:hidden w-full justify-center active:scale-95 transition-transform"
             >
               <Filter className="w-4 h-4" />
               <span>Filters</span>
             </button>
             <div className="hidden md:flex items-center space-x-4">
-              <span className="text-[14px] text-gray-400 font-medium">Active Filters:</span>
+              <span className="text-sm text-gray-400 font-medium">Active Filters:</span>
               <div className="flex flex-wrap gap-2">
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="px-3 py-1 bg-[#6D4C91]/10 text-[#6D4C91] rounded-full text-[12px] flex items-center">
+                  <button onClick={() => setSearchQuery('')} className="px-3 py-1 bg-[#6D4C91]/10 text-[#6D4C91] rounded-full text-xs flex items-center">
                     "{searchQuery}" <X className="w-3 h-3 ml-2" />
                   </button>
                 )}
                 {activeCategory && (
-                  <button onClick={() => setActiveCategory(null)} className="px-3 py-1 bg-[#6D4C91]/10 text-[#6D4C91] rounded-full text-[12px] flex items-center">
+                  <button onClick={() => setActiveCategory(null)} className="px-3 py-1 bg-[#6D4C91]/10 text-[#6D4C91] rounded-full text-xs flex items-center">
                     {activeCategory} <X className="w-3 h-3 ml-2" />
                   </button>
                 )}
                 {activeSkinType && (
-                  <button onClick={() => setActiveSkinType(null)} className="px-3 py-1 bg-[#6D4C91]/10 text-[#6D4C91] rounded-full text-[12px] flex items-center">
+                  <button onClick={() => setActiveSkinType(null)} className="px-3 py-1 bg-[#6D4C91]/10 text-[#6D4C91] rounded-full text-xs flex items-center">
                     {activeSkinType} <X className="w-3 h-3 ml-2" />
                   </button>
                 )}
                 {activeBrand && (
-                  <button onClick={() => setActiveBrand(null)} className="px-3 py-1 bg-[#6D4C91]/10 text-[#6D4C91] rounded-full text-[12px] flex items-center">
+                  <button onClick={() => setActiveBrand(null)} className="px-3 py-1 bg-[#6D4C91]/10 text-[#6D4C91] rounded-full text-xs flex items-center">
                     {activeBrand} <X className="w-3 h-3 ml-2" />
                   </button>
                 )}
                 {activePriceRange && (
-                  <button onClick={() => setActivePriceRange(null)} className="px-3 py-1 bg-[#6D4C91]/10 text-[#6D4C91] rounded-full text-[12px] flex items-center">
+                  <button onClick={() => setActivePriceRange(null)} className="px-3 py-1 bg-[#6D4C91]/10 text-[#6D4C91] rounded-full text-xs flex items-center">
                     {activePriceRange} <X className="w-3 h-3 ml-2" />
                   </button>
                 )}
                 {!searchQuery && !activeCategory && !activeSkinType && !activeBrand && !activePriceRange && (
-                  <span className="text-[14px] text-gray-500 italic">None</span>
+                  <span className="text-sm text-gray-500 italic">None</span>
                 )}
               </div>
             </div>
           </div>
 
           <div className="flex items-center space-x-6 w-full md:w-auto justify-between">
-            <span className="text-[14px] text-gray-400">
+            <span className="text-sm text-gray-400">
               {loading ? '...' : `${sortedProducts.length} Products`}
             </span>
             <div className="relative">
               <button
                 onClick={() => setIsSortMobileOpen(!isSortMobileOpen)}
-                className="flex items-center space-x-2 text-[14px] font-bold uppercase tracking-widest cursor-pointer active:text-[#6D4C91] transition-colors"
+                className="flex items-center space-x-2 text-sm font-bold uppercase tracking-widest cursor-pointer active:text-[#6D4C91] transition-colors"
               >
                 <span>Sort: {sortBy}</span>
                 <ChevronDown className="w-4 h-4" />
@@ -275,7 +350,7 @@ export function Shop() {
                       <button
                         key={s}
                         onClick={() => { setSortBy(s); setIsSortMobileOpen(false); }}
-                        className="block w-full text-left px-4 py-3 text-[13px] hover:bg-[#FDFBF7] rounded transition-colors active:bg-[#6D4C91] active:text-white"
+                        className="block w-full text-left px-4 py-3 text-sm hover:bg-[#FDFBF7] rounded transition-colors active:bg-[#6D4C91] active:text-white"
                       >
                         {s}
                       </button>
@@ -294,13 +369,13 @@ export function Shop() {
               {/* Categories — derived from real API data */}
               {categories.length > 0 && (
                 <div>
-                  <h3 className="text-[12px] font-bold uppercase tracking-[0.2em] mb-6 text-[#6D4C91]">Category</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6 text-[#6D4C91]">Category</h3>
                   <div className="space-y-3">
                     {categories.map(cat => (
                       <button
                         key={cat}
                         onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                        className={`block text-[14px] transition-colors ${activeCategory === cat ? 'text-[#6D4C91] font-bold' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
+                        className={`block text-sm transition-colors ${activeCategory === cat ? 'text-[#6D4C91] font-bold' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                       >
                         {cat}
                       </button>
@@ -311,13 +386,13 @@ export function Shop() {
 
               {/* Skin Type — static UI options */}
               <div>
-                <h3 className="text-[12px] font-bold uppercase tracking-[0.2em] mb-6 text-[#6D4C91]">Skin Type</h3>
+                <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6 text-[#6D4C91]">Skin Type</h3>
                 <div className="space-y-3">
                   {SKIN_TYPES.map(st => (
                     <button
                       key={st}
                       onClick={() => setActiveSkinType(activeSkinType === st ? null : st)}
-                      className={`block text-[14px] transition-colors ${activeSkinType === st ? 'text-[#6D4C91] font-bold' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
+                      className={`block text-sm transition-colors ${activeSkinType === st ? 'text-[#6D4C91] font-bold' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                     >
                       {st}
                     </button>
@@ -328,13 +403,13 @@ export function Shop() {
               {/* Brands — derived from real API data */}
               {brands.length > 0 && (
                 <div>
-                  <h3 className="text-[12px] font-bold uppercase tracking-[0.2em] mb-6 text-[#6D4C91]">Brand</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6 text-[#6D4C91]">Brand</h3>
                   <div className="space-y-3">
                     {brands.map(brand => (
                       <button
                         key={brand}
                         onClick={() => setActiveBrand(activeBrand === brand ? null : brand)}
-                        className={`block text-[14px] transition-colors ${activeBrand === brand ? 'text-[#6D4C91] font-bold' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
+                        className={`block text-sm transition-colors ${activeBrand === brand ? 'text-[#6D4C91] font-bold' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                       >
                         {brand}
                       </button>
@@ -345,13 +420,13 @@ export function Shop() {
 
               {/* Price Range — static UI options */}
               <div>
-                <h3 className="text-[12px] font-bold uppercase tracking-[0.2em] mb-6 text-[#6D4C91]">Price Range</h3>
+                <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6 text-[#6D4C91]">Price Range</h3>
                 <div className="space-y-3">
                   {PRICE_RANGES.map(pr => (
                     <button
                       key={pr}
                       onClick={() => setActivePriceRange(activePriceRange === pr ? null : pr)}
-                      className={`block text-[14px] transition-colors ${activePriceRange === pr ? 'text-[#6D4C91] font-bold' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
+                      className={`block text-sm transition-colors ${activePriceRange === pr ? 'text-[#6D4C91] font-bold' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                     >
                       {pr}
                     </button>
@@ -361,9 +436,9 @@ export function Shop() {
 
               <div className="pt-8 border-t border-gray-100">
                 <div className="bg-[#6D4C91] p-8 rounded-2xl text-white">
-                  <h4 className="font-serif italic text-[18px] mb-2">Expert Advice</h4>
-                  <p className="text-[12px] text-white/80 mb-4 leading-relaxed">Not sure what's right for you? Take our quiz.</p>
-                  <Link to="/book" className="text-[12px] font-bold underline underline-offset-4 uppercase tracking-widest">Start Quiz</Link>
+                  <h4 className="font-serif italic text-lg mb-2">Expert Advice</h4>
+                  <p className="text-xs text-white/80 mb-4 leading-relaxed">Not sure what's right for you? Take our quiz.</p>
+                  <Link to="/book" className="text-xs font-bold underline underline-offset-4 uppercase tracking-widest">Start Quiz</Link>
                 </div>
               </div>
             </div>
@@ -415,36 +490,36 @@ export function Shop() {
                             e.preventDefault();
                             addToCart(mapForCart(product));
                           }}
-                          className="hidden md:block absolute bottom-4 lg:bottom-6 left-4 lg:left-6 right-4 lg:right-6 bg-white py-3 lg:py-4 rounded-full text-[11px] lg:text-[12px] font-bold uppercase tracking-widest transform translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 shadow-xl active:scale-95"
+                          className="hidden md:block absolute bottom-4 lg:bottom-6 left-4 lg:left-6 right-4 lg:right-6 bg-white py-3 lg:py-4 rounded-full text-xs font-bold uppercase tracking-widest transform translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 shadow-xl active:scale-95"
                         >
                           Quick Add
                         </button>
 
                         {/* Skin concern badge */}
                         {product.skin_concerns && product.skin_concerns.length > 0 && (
-                          <span className="absolute top-2 left-2 md:top-4 md:left-4 bg-white/90 backdrop-blur px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[8px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                          <span className="absolute top-2 left-2 md:top-4 md:left-4 bg-white/90 backdrop-blur px-2 md:px-3 py-0.5 md:py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm">
                             {product.skin_concerns[0]}
                           </span>
                         )}
                       </Link>
 
                       <div className="flex flex-col px-1">
-                        <p className="font-eczar text-[9px] md:text-[11px] text-gray-400 uppercase tracking-widest mb-1 md:mb-2">
+                        <p className="font-eczar text-xs text-gray-400 uppercase tracking-widest mb-1 md:mb-2">
                           {product.categories?.name ?? 'Product'}
                         </p>
                         <Link to={`/shop/${product.id}`}>
-                          <h3 className="font-alice text-[13px] md:text-[16px] mb-1 hover:text-[#6D4C91] transition-colors line-clamp-2">
+                          <h3 className="font-alice text-sm md:text-base mb-1 hover:text-[#6D4C91] transition-colors line-clamp-2">
                             {product.name}
                           </h3>
                         </Link>
                         <div className="mb-1 md:mb-2">
                           {product.stock <= (product.low_stock_threshold ?? 5) ? (
-                            <span className="font-eczar text-[8px] md:text-[10px] text-red-500 font-bold uppercase tracking-tighter">Low Stock</span>
+                            <span className="font-eczar text-xs text-red-500 font-bold uppercase tracking-tighter">Low Stock</span>
                           ) : (
-                            <span className="font-eczar text-[8px] md:text-[10px] text-green-600 font-bold uppercase tracking-tighter">In Stock</span>
+                            <span className="font-eczar text-xs text-green-600 font-bold uppercase tracking-tighter">In Stock</span>
                           )}
                         </div>
-                        <p className="font-serif text-[14px] md:text-[15px] font-bold">{formatPrice(Number(product.price))}</p>
+                        <p className="font-serif text-sm md:text-[15px] font-bold">{formatPrice(Number(product.price))}</p>
                       </div>
                     </motion.div>
                   ))
@@ -454,10 +529,10 @@ export function Shop() {
             {/* Empty state */}
             {!loading && sortedProducts.length === 0 && (
               <div className="text-center py-24">
-                <p className="text-gray-400 text-[16px]">No products match your filters.</p>
+                <p className="text-gray-400 text-base">No products match your filters.</p>
                 <button
                   onClick={() => { setActiveCategory(null); setActiveSkinType(null); setActiveBrand(null); setActivePriceRange(null); setSearchQuery(''); }}
-                  className="mt-4 text-[#6D4C91] font-bold text-[14px] hover:underline"
+                  className="mt-4 text-[#6D4C91] font-bold text-sm hover:underline"
                 >
                   Clear all filters
                 </button>
@@ -486,7 +561,7 @@ export function Shop() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search products..."
-                  className="w-full pl-11 pr-10 py-3 bg-[#FDFBF7] border border-gray-200 rounded-full text-[14px] focus:outline-none focus:border-[#6D4C91] transition-colors"
+                  className="w-full pl-11 pr-10 py-3 bg-[#FDFBF7] border border-gray-200 rounded-full text-sm focus:outline-none focus:border-[#6D4C91] transition-colors"
                 />
                 {searchQuery && (
                   <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1">
@@ -498,50 +573,50 @@ export function Shop() {
               <div className="space-y-10 pb-12">
                 {categories.length > 0 && (
                   <div>
-                    <h3 className="text-[14px] font-bold uppercase tracking-widest mb-6 text-[#6D4C91]">Category</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-widest mb-6 text-[#6D4C91]">Category</h3>
                     <div className="flex flex-wrap gap-3">
                       {categories.map(cat => (
-                        <button key={cat} onClick={() => setActiveCategory(activeCategory === cat ? null : cat)} className={`px-4 py-2 rounded-full border text-[14px] transition-colors active:scale-95 ${activeCategory === cat ? 'bg-[#6D4C91] text-white border-[#6D4C91]' : 'border-gray-200'}`}>{cat}</button>
+                        <button key={cat} onClick={() => setActiveCategory(activeCategory === cat ? null : cat)} className={`px-4 py-2 rounded-full border text-sm transition-colors active:scale-95 ${activeCategory === cat ? 'bg-[#6D4C91] text-white border-[#6D4C91]' : 'border-gray-200'}`}>{cat}</button>
                       ))}
                     </div>
                   </div>
                 )}
                 <div>
-                  <h3 className="text-[14px] font-bold uppercase tracking-widest mb-6 text-[#6D4C91]">Skin Type</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-widest mb-6 text-[#6D4C91]">Skin Type</h3>
                   <div className="flex flex-wrap gap-3">
                     {SKIN_TYPES.map(st => (
-                      <button key={st} onClick={() => setActiveSkinType(activeSkinType === st ? null : st)} className={`px-4 py-2 rounded-full border text-[14px] transition-colors active:scale-95 ${activeSkinType === st ? 'bg-[#6D4C91] text-white border-[#6D4C91]' : 'border-gray-200'}`}>{st}</button>
+                      <button key={st} onClick={() => setActiveSkinType(activeSkinType === st ? null : st)} className={`px-4 py-2 rounded-full border text-sm transition-colors active:scale-95 ${activeSkinType === st ? 'bg-[#6D4C91] text-white border-[#6D4C91]' : 'border-gray-200'}`}>{st}</button>
                     ))}
                   </div>
                 </div>
                 {brands.length > 0 && (
                   <div>
-                    <h3 className="text-[14px] font-bold uppercase tracking-widest mb-6 text-[#6D4C91]">Brand</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-widest mb-6 text-[#6D4C91]">Brand</h3>
                     <div className="flex flex-wrap gap-3">
                       {brands.map(brand => (
-                        <button key={brand} onClick={() => setActiveBrand(activeBrand === brand ? null : brand)} className={`px-4 py-2 rounded-full border text-[14px] transition-colors active:scale-95 ${activeBrand === brand ? 'bg-[#6D4C91] text-white border-[#6D4C91]' : 'border-gray-200'}`}>{brand}</button>
+                        <button key={brand} onClick={() => setActiveBrand(activeBrand === brand ? null : brand)} className={`px-4 py-2 rounded-full border text-sm transition-colors active:scale-95 ${activeBrand === brand ? 'bg-[#6D4C91] text-white border-[#6D4C91]' : 'border-gray-200'}`}>{brand}</button>
                       ))}
                     </div>
                   </div>
                 )}
                 <div>
-                  <h3 className="text-[14px] font-bold uppercase tracking-widest mb-6 text-[#6D4C91]">Price Range</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-widest mb-6 text-[#6D4C91]">Price Range</h3>
                   <div className="flex flex-wrap gap-3">
                     {PRICE_RANGES.map(pr => (
-                      <button key={pr} onClick={() => setActivePriceRange(activePriceRange === pr ? null : pr)} className={`px-4 py-2 rounded-full border text-[14px] transition-colors active:scale-95 ${activePriceRange === pr ? 'bg-[#6D4C91] text-white border-[#6D4C91]' : 'border-gray-200'}`}>{pr}</button>
+                      <button key={pr} onClick={() => setActivePriceRange(activePriceRange === pr ? null : pr)} className={`px-4 py-2 rounded-full border text-sm transition-colors active:scale-95 ${activePriceRange === pr ? 'bg-[#6D4C91] text-white border-[#6D4C91]' : 'border-gray-200'}`}>{pr}</button>
                     ))}
                   </div>
                 </div>
 
                 <div className="pt-8 border-t border-gray-100">
                   <div className="bg-[#FDFBF7] p-8 rounded-2xl border border-[#6D4C91]/20">
-                    <h4 className="font-serif italic text-[18px] mb-2">Expert Advice</h4>
-                    <p className="text-[13px] text-gray-500 mb-4 leading-relaxed">Not sure what's right for you? Take our quick quiz for personalized recommendations.</p>
-                    <Link to="/book" onClick={() => setIsFilterMobileOpen(false)} className="bg-[#6D4C91] text-white px-8 py-3 rounded-full text-[12px] font-bold uppercase tracking-widest inline-block active:scale-95 transition-transform">Start Quiz</Link>
+                    <h4 className="font-serif italic text-lg mb-2">Expert Advice</h4>
+                    <p className="text-sm text-gray-500 mb-4 leading-relaxed">Not sure what's right for you? Take our quick quiz for personalized recommendations.</p>
+                    <Link to="/book" onClick={() => setIsFilterMobileOpen(false)} className="bg-[#6D4C91] text-white px-8 py-3 rounded-full text-xs font-bold uppercase tracking-widest inline-block active:scale-95 transition-transform">Start Quiz</Link>
                   </div>
                 </div>
 
-                <button onClick={() => setIsFilterMobileOpen(false)} className="w-full bg-[#000000] text-white py-5 rounded-full text-[14px] font-bold uppercase tracking-widest active:scale-[0.98] transition-transform">
+                <button onClick={() => setIsFilterMobileOpen(false)} className="w-full bg-[#000000] text-white py-5 rounded-full text-sm font-bold uppercase tracking-widest active:scale-[0.98] transition-transform">
                   Show {sortedProducts.length} Results
                 </button>
               </div>

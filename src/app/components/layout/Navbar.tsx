@@ -146,7 +146,7 @@ export function Navbar() {
                 <ChevronDown className="w-4 h-4" />
               </button>
             </div>
-            <Link to="/book" className="text-[14px] font-medium text-white/80 hover:text-white transition-colors uppercase tracking-wider">Services</Link>
+            <Link to="/services" className="text-[14px] font-medium text-white/80 hover:text-white transition-colors uppercase tracking-wider">Services</Link>
           </div>
 
           {/* Logo */}
@@ -297,7 +297,8 @@ export function Navbar() {
                 <div className="space-y-6">
                   <Link to="/" className="block text-[18px] font-bold text-[#1A1A1A] active:text-[#6D4C91]" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
                   <Link to="/shop" className="block text-[18px] font-bold text-[#1A1A1A] active:text-[#6D4C91]" onClick={() => setIsMobileMenuOpen(false)}>Shop Collection</Link>
-                  <Link to="/book" className="block text-[18px] font-bold text-[#1A1A1A] active:text-[#6D4C91]" onClick={() => setIsMobileMenuOpen(false)}>Book Services</Link>
+                  <Link to="/services" className="block text-[18px] font-bold text-[#1A1A1A] active:text-[#6D4C91]" onClick={() => setIsMobileMenuOpen(false)}>Services & Treatments</Link>
+                  <Link to="/book" className="block text-[18px] font-bold text-[#1A1A1A] active:text-[#6D4C91]" onClick={() => setIsMobileMenuOpen(false)}>Book a Treatment</Link>
                   
                   <div className="pt-6 border-t border-gray-100">
                     <p className="text-[12px] text-gray-400 uppercase tracking-widest mb-4 font-bold">Quick Links</p>
@@ -326,13 +327,13 @@ export function Navbar() {
                   <div className="pt-6">
                     <div className="bg-[#6D4C91] p-6 rounded-2xl text-white">
                       <h4 className="font-serif italic text-[18px] mb-2">Expert Advice</h4>
-                      <p className="text-[12px] text-white/80 mb-4 leading-relaxed">Not sure what's right for you? Take our skin quiz.</p>
-                      <Link 
-                        to="/book" 
+                      <p className="text-[12px] text-white/80 mb-4 leading-relaxed">Not sure what's right for your skin? Book a free consultation with our experts.</p>
+                      <Link
+                        to="/book"
                         onClick={() => setIsMobileMenuOpen(false)}
                         className="text-[12px] font-bold underline underline-offset-4 uppercase tracking-widest inline-block active:scale-95 transition-transform"
                       >
-                        Start Quiz
+                        Free Consultation
                       </Link>
                     </div>
                   </div>

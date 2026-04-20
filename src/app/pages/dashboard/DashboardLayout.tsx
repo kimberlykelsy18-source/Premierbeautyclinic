@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
-import { LayoutDashboard, ShoppingCart, CalendarDays, Box, Users, Settings, LogOut, Bell, Search, Menu, X, Lock, Eye, EyeOff, ShieldCheck, Truck, ShoppingBag, Calendar, AlertTriangle, CheckCheck } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, CalendarDays, Box, Users, Settings, LogOut, Bell, Search, Menu, X, Lock, Eye, EyeOff, ShieldCheck, Truck, ShoppingBag, Calendar, AlertTriangle, CheckCheck, Layers, MessageSquare } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -130,6 +130,8 @@ export function DashboardLayout() {
     { name: 'Orders',       path: '/staff/orders',        icon: ShoppingCart    },
     { name: 'Appointments', path: '/staff/appointments',  icon: CalendarDays    },
     { name: 'Inventory',    path: '/staff/inventory',     icon: Box             },
+    { name: 'Reviews',      path: '/staff/reviews',       icon: MessageSquare, permission: 'manage_reviews' },
+    { name: 'Services',     path: '/staff/services',      icon: Layers, permission: 'admin' },
     { name: 'Customers',    path: '/staff/customers',     icon: Users,   permission: 'admin' },
     { name: 'Shipping',     path: '/staff/shipping',      icon: Truck,   permission: 'admin' },
     { name: 'Settings',     path: '/staff/settings',      icon: Settings, permission: 'admin' },
@@ -140,8 +142,12 @@ export function DashboardLayout() {
     navigate('/staff/login');
   };
 
-  const isRestricted = (item: typeof navItems[0]) =>
-    item.permission === 'admin' && user?.role !== 'admin';
+  const isRestricted = (item: typeof navItems[0]) => {
+    if (!item.permission) return false;
+    if (user?.role === 'admin') return false;
+    if (item.permission === 'admin') return true;
+    return !((user as any)?.permissions ?? []).includes(item.permission);
+  };
 
   // ── Loading screen while auth restores ───────────────────────────────────
   if (authLoading) {
