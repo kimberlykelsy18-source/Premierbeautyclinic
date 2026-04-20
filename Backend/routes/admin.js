@@ -1106,6 +1106,41 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     res.json(data);
   });
 
+  // ── Image Upload ─────────────────────────────────────────────────────────────
+  // POST /admin/upload — accepts base64-encoded image, uploads to Supabase Storage,
+  // returns the public URL. No extra packages needed — just Buffer from Node core.
+  router.post('/admin/upload', authenticate, async (req, res) => {
+    const { data: base64, filename, folder = 'general' } = req.body;
+    if (!base64 || !filename) return res.status(400).json({ error: 'data and filename are required' });
+
+    // Strip data-URL prefix (e.g. "data:image/png;base64,") if present
+    const raw = base64.replace(/^data:[^;]+;base64,/, '');
+    const buffer = Buffer.from(raw, 'base64');
+
+    const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
+    const mime = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' }[ext] || 'image/jpeg';
+    const safeName = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const storagePath = `${folder}/${safeName}`;
+    const BUCKET = 'clinic-images';
+
+    const tryUpload = async () =>
+      adminDb.storage.from(BUCKET).upload(storagePath, buffer, { contentType: mime, upsert: true });
+
+    let { error } = await tryUpload();
+
+    // If bucket doesn't exist yet, create it then retry
+    if (error && (error.message?.includes('not found') || error.statusCode === '404' || error.error === 'Bucket not found')) {
+      await adminDb.storage.createBucket(BUCKET, { public: true });
+      const retry = await tryUpload();
+      error = retry.error;
+    }
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    const { data: { publicUrl } } = adminDb.storage.from(BUCKET).getPublicUrl(storagePath);
+    res.json({ url: publicUrl });
+  });
+
   // ── Promo Carousel ─────────────────────────────────────────────────────────
   router.get('/admin/promo-carousel', authenticate, async (req, res) => {
     const { data, error } = await adminDb

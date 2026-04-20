@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Settings, Shield, Bell, CreditCard, Users, Link as LinkIcon, Globe, Palette, Database, UserPlus, ChevronDown, ChevronUp, Edit, Trash2, Plus, X, Save, ToggleLeft, ToggleRight, AlertCircle, MonitorPlay } from 'lucide-react';
+import { ImageUpload } from '../../components/ui/ImageUpload';
 import { useStore } from '../../context/StoreContext';
 import { apiFetch } from '../../lib/api';
 import { toast } from 'sonner';
@@ -235,11 +236,15 @@ function CarouselTab({ token, sessionId }: { token: string | null; sessionId: st
                 <input value={form.subtitle ?? ''} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))} placeholder="Complete 3-step routine in one bundle" className={inputCls} />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Image URL <span className="text-red-500">*</span></label>
-                <input value={form.image_url ?? ''} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://..." className={inputCls} />
-                {form.image_url?.trim() && (
-                  <img src={form.image_url} alt="" className="mt-2 h-24 w-full object-cover rounded-xl bg-gray-200" onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0.3'; }} />
-                )}
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Slide Image <span className="text-red-500">*</span></label>
+                <ImageUpload
+                  value={form.image_url ?? ''}
+                  onChange={url => setForm(f => ({ ...f, image_url: url }))}
+                  token={token}
+                  sessionId={sessionId}
+                  folder="carousel"
+                  aspectClass="aspect-video"
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Button text</label>
@@ -1076,7 +1081,7 @@ export function DashboardSettings() {
                         <div className="flex items-center justify-between mb-1">
                           <div>
                             <h3 className="text-[15px] font-bold">Skin Concern Images</h3>
-                            <p className="text-[12px] text-gray-400 mt-0.5">Images shown on the "What's Your Skin Concern?" section. Paste a direct image URL for each.</p>
+                            <p className="text-[12px] text-gray-400 mt-0.5">Images shown on the "What's Your Skin Concern?" section. Upload a photo for each concern.</p>
                           </div>
                           <button
                             onClick={saveSkinConcerns}
@@ -1087,37 +1092,21 @@ export function DashboardSettings() {
                             Save Images
                           </button>
                         </div>
-                        <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">
-                          Leave blank to use the built-in default image for that concern.
-                        </p>
-                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                           {skinConcerns.map((sc, i) => (
-                            <div key={sc.label} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                              {/* Preview */}
-                              <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-gray-200 border border-gray-200">
-                                {sc.image ? (
-                                  <img src={sc.image} alt={sc.label} className="w-full h-full object-cover"
-                                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400 font-bold text-center px-1 leading-tight">
-                                    Default
-                                  </div>
-                                )}
-                              </div>
-                              <span className="text-[13px] font-semibold text-gray-700 w-36 shrink-0">{sc.label}</span>
-                              <input
+                            <div key={sc.label} className="flex flex-col gap-1.5">
+                              <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wide truncate">{sc.label}</span>
+                              <ImageUpload
                                 value={sc.image}
-                                onChange={e => setSkinConcerns(prev => prev.map((x, idx) => idx === i ? { ...x, image: e.target.value } : x))}
-                                placeholder="https://... (leave blank for default)"
-                                className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-[12px] outline-none focus:ring-2 focus:ring-[#6D4C91]/20 focus:border-[#6D4C91]"
+                                onChange={url => setSkinConcerns(prev => prev.map((x, idx) => idx === i ? { ...x, image: url } : x))}
+                                token={token}
+                                sessionId={sessionId}
+                                folder="skin-concerns"
+                                aspectClass="aspect-square"
+                                placeholder="Upload photo"
                               />
-                              {sc.image && (
-                                <button
-                                  onClick={() => setSkinConcerns(prev => prev.map((x, idx) => idx === i ? { ...x, image: '' } : x))}
-                                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
-                                >
-                                  <X className="w-3.5 h-3.5"/>
-                                </button>
+                              {!sc.image && (
+                                <p className="text-[9px] text-gray-400 text-center">Uses default</p>
                               )}
                             </div>
                           ))}

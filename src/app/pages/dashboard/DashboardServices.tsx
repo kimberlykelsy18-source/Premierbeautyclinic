@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { apiFetch } from '../../lib/api';
 import { useStore } from '../../context/StoreContext';
 import { Link } from 'react-router';
+import { ImageUpload } from '../../components/ui/ImageUpload';
 
 interface FormField {
   name: string;
@@ -67,7 +68,7 @@ function Label({ children, required }: { children: React.ReactNode; required?: b
 const inputCls = 'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6D4C91]/25 focus:border-[#6D4C91] bg-white transition-colors';
 
 // ── Add / Edit Modal ───────────────────────────────────────────────────────────
-function ServiceModal({ service, onClose, onSave }: { service: Partial<Service> | null; onClose: () => void; onSave: (s: Partial<Service>) => Promise<void> }) {
+function ServiceModal({ service, onClose, onSave, token, sessionId }: { service: Partial<Service> | null; onClose: () => void; onSave: (s: Partial<Service>) => Promise<void>; token: string | null; sessionId: string | null }) {
   const isNew = !service?.id;
   const [form, setForm]                     = useState<Partial<Service>>(service ?? EMPTY_SERVICE);
   const [saving, setSaving]                 = useState(false);
@@ -75,9 +76,14 @@ function ServiceModal({ service, onClose, onSave }: { service: Partial<Service> 
   const [rawFormFields, setRawFormFields]   = useState(service?.form_fields ? JSON.stringify(service.form_fields, null, 2) : '[]');
   const [formFieldsError, setFormFieldsError] = useState('');
   const [rawBenefits, setRawBenefits]       = useState((service?.benefits ?? []).join('\n'));
-  const [rawImages, setRawImages]           = useState((service?.images ?? []).join('\n'));
 
   const set = (key: keyof Service, val: unknown) => setForm(f => ({ ...f, [key]: val }));
+
+  const images      = form.images ?? [];
+  const setImages   = (imgs: string[]) => setForm(f => ({ ...f, images: imgs }));
+  const addSlot     = () => setImages([...images, '']);
+  const removeSlot  = (i: number) => setImages(images.filter((_, idx) => idx !== i));
+  const updateSlot  = (i: number, url: string) => setImages(images.map((v, idx) => idx === i ? url : v));
 
   const handleSubmit = async () => {
     if (!form.name?.trim()) { toast.error('Service name is required'); return; }
@@ -95,12 +101,12 @@ function ServiceModal({ service, onClose, onSave }: { service: Partial<Service> 
       }
     }
 
-    const benefits = rawBenefits.split('\n').map(s => s.trim()).filter(Boolean);
-    const images   = rawImages.split('\n').map(s => s.trim()).filter(Boolean);
+    const benefits    = rawBenefits.split('\n').map(s => s.trim()).filter(Boolean);
+    const cleanImages = images.filter(Boolean);
 
     setSaving(true);
     try {
-      await onSave({ ...form, form_fields: parsedFields, benefits, images });
+      await onSave({ ...form, form_fields: parsedFields, benefits, images: cleanImages });
     } finally {
       setSaving(false);
     }
@@ -189,26 +195,41 @@ function ServiceModal({ service, onClose, onSave }: { service: Partial<Service> 
             />
           </div>
 
-          {/* Images — one URL per line */}
+          {/* Images — upload tiles */}
           <div>
             <Label>
-              <span className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Result photos <span className="text-xs font-normal text-gray-400">(image URLs, one per line — first is the cover)</span></span>
+              <span className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4" /> Photos
+                <span className="text-xs font-normal text-gray-400">— first is the cover shown on the services page</span>
+              </span>
             </Label>
-            <textarea
-              value={rawImages}
-              onChange={e => setRawImages(e.target.value)}
-              rows={4}
-              placeholder="https://example.com/before-after-1.jpg"
-              className={`${inputCls} resize-none font-mono text-xs`}
-            />
-            {/* Preview thumbnails */}
-            {rawImages.trim() && (
-              <div className="flex gap-2 mt-2 flex-wrap">
-                {rawImages.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 6).map((url, i) => (
-                  <img key={i} src={url} alt="" className="w-16 h-16 object-cover rounded-lg bg-gray-100" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-3 gap-3">
+              {images.map((url, i) => (
+                <div key={i} className="relative">
+                  {i === 0 && (
+                    <span className="absolute top-1.5 left-1.5 z-10 bg-[#6D4C91] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">Cover</span>
+                  )}
+                  <ImageUpload
+                    value={url}
+                    onChange={newUrl => newUrl ? updateSlot(i, newUrl) : removeSlot(i)}
+                    token={token}
+                    sessionId={sessionId}
+                    folder="services"
+                    aspectClass="aspect-square"
+                  />
+                </div>
+              ))}
+              {images.length < 6 && (
+                <button
+                  type="button"
+                  onClick={addSlot}
+                  className="aspect-square border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-gray-400 hover:border-[#6D4C91]/50 hover:text-[#6D4C91] transition-all text-xs font-semibold"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add photo
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Active toggle (edit mode only) */}
@@ -721,7 +742,7 @@ export function DashboardServices() {
       {/* Modal */}
       <AnimatePresence>
         {modalOpen && editTarget !== null && (
-          <ServiceModal service={editTarget} onClose={closeModal} onSave={handleSave} />
+          <ServiceModal service={editTarget} onClose={closeModal} onSave={handleSave} token={token} sessionId={sessionId} />
         )}
       </AnimatePresence>
     </div>
