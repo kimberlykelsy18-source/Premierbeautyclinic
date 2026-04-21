@@ -34,7 +34,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
 
   // Inventory + low stock alerts
   router.get('/admin/inventory', authenticate, requireEmployeePermission('view_inventory'), async (req, res) => {
-    const { data: products } = await supabase
+    const { data: products } = await adminDb
       .from('products')
       .select('*, categories(name)')
       .order('stock', { ascending: true });
@@ -802,6 +802,26 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     res.json(data);
   });
 
+  // Delete a single product permanently
+  router.delete('/admin/products/:id', authenticate, requireEmployeePermission('edit_stock'), validateIntId, async (req, res) => {
+    const { error } = await adminDb.from('products').delete().eq('id', req.params.id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+  });
+
+  // Bulk delete multiple products
+  router.post('/admin/products/bulk-delete', authenticate, requireEmployeePermission('edit_stock'), async (req, res) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0)
+      return res.status(400).json({ error: 'No product IDs provided' });
+    const validIds = ids.filter(id => /^\d+$/.test(String(id)) && Number(id) >= 1);
+    if (validIds.length === 0)
+      return res.status(400).json({ error: 'No valid IDs provided' });
+    const { error } = await adminDb.from('products').delete().in('id', validIds);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, deleted: validIds.length });
+  });
+
   // Bulk create products from spreadsheet upload
   router.post('/admin/products/bulk', authenticate, requireEmployeePermission('edit_stock'), async (req, res) => {
     const { products: rows } = req.body;
@@ -813,23 +833,15 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     const catMap = {};
     (cats || []).forEach(c => { catMap[c.name.toLowerCase().trim()] = c.id; });
 
-    const inserted = [];
-    const errors   = [];
-
-    for (let i = 0; i < rows.length; i++) {
-      const row    = rows[i];
+    const results = await Promise.all(rows.map(async (row, i) => {
       const rowNum = i + 1;
+      if (!row.name?.trim())
+        return { success: false, row: rowNum, error: 'Name is required' };
+      if (!row.price || isNaN(Number(row.price)) || Number(row.price) <= 0)
+        return { success: false, row: rowNum, name: row.name, error: 'Valid price is required' };
 
-      if (!row.name?.trim()) {
-        errors.push({ row: rowNum, error: 'Name is required' });
-        continue;
-      }
-      if (!row.price || isNaN(Number(row.price)) || Number(row.price) <= 0) {
-        errors.push({ row: rowNum, name: row.name, error: 'Valid price is required' });
-        continue;
-      }
-
-      const slug       = row.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const baseSlug   = row.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const slug       = `${baseSlug}-${Date.now()}-${i}`;
       const categoryId = row.category ? (catMap[row.category.toLowerCase().trim()] ?? null) : null;
 
       const { data, error } = await adminDb.from('products').insert({
@@ -840,18 +852,17 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
         stock:               Number(row.stock)               || 0,
         low_stock_threshold: Number(row.low_stock_threshold) || 5,
         category_id:         categoryId,
-        is_active:           false,   // hidden until images are added
+        is_active:           false,
         brand:               row.brand?.trim() || null,
         images:              [],
       }).select('id, name').single();
 
-      if (error) {
-        errors.push({ row: rowNum, name: row.name, error: error.message });
-      } else {
-        inserted.push(data);
-      }
-    }
+      if (error) return { success: false, row: rowNum, name: row.name, error: error.message };
+      return { success: true, ...data };
+    }));
 
+    const inserted = results.filter(r => r.success);
+    const errors   = results.filter(r => !r.success);
     res.json({ created: inserted.length, errors, inserted });
   });
 

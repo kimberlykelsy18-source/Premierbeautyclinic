@@ -138,6 +138,11 @@ export function DashboardInventory() {
   const [previewProduct, setPreviewProduct] = useState<ApiProduct | null>(null);
   const [previewIndex, setPreviewIndex]     = useState(0);
 
+  // ── Multi-select delete ───────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds]               = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete]   = useState(false);
+  const [bulkDeleting, setBulkDeleting]             = useState(false);
+
   // ── Bulk Upload modal ─────────────────────────────────────────────────────
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkStep,   setBulkStep]   = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
@@ -441,6 +446,27 @@ export function DashboardInventory() {
     }
   };
 
+  // ── Bulk delete selected products ────────────────────────────────────────
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkDeleting(true);
+    try {
+      await apiFetch('/admin/products/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      }, token, sessionId);
+      setProducts(prev => prev.filter(p => !selectedIds.has(p.id)));
+      setLowStockAlerts(prev => prev.filter(p => !selectedIds.has(p.id)));
+      toast.success(`${selectedIds.size} product${selectedIds.size !== 1 ? 's' : ''} deleted`);
+      setSelectedIds(new Set());
+      setConfirmBulkDelete(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete products');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   // ── New-product form field helper ─────────────────────────────────────────
   const npField = (key: keyof typeof EMPTY_PRODUCT) => ({
     value:    newProduct[key] as string,
@@ -646,7 +672,16 @@ export function DashboardInventory() {
           <h1 className="text-[32px] font-serif font-bold italic mb-2">Inventory Control</h1>
           <p className="text-gray-500">Manage products, stock levels, and supply alerts.</p>
         </div>
-        <div className="flex space-x-4">
+        <div className="flex space-x-4 flex-wrap gap-y-2">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={() => setConfirmBulkDelete(true)}
+              className="bg-red-600 text-white px-6 py-4 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all flex items-center shadow-sm active:scale-95"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete {selectedIds.size} Selected
+            </button>
+          )}
           <button
             onClick={() => fetchInventory(true)}
             disabled={refreshing}
@@ -746,6 +781,17 @@ export function DashboardInventory() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#FDFBF7] border-b border-gray-100">
+                  <th className="px-4 py-5 w-10">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 accent-[#6D4C91] cursor-pointer"
+                      checked={filteredProducts.length > 0 && filteredProducts.every(p => selectedIds.has(p.id))}
+                      onChange={e => {
+                        if (e.target.checked) setSelectedIds(new Set(filteredProducts.map(p => p.id)));
+                        else setSelectedIds(new Set());
+                      }}
+                    />
+                  </th>
                   <th className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest text-gray-400">Product</th>
                   <th className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest text-gray-400">Category</th>
                   <th className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest text-gray-400">Brand</th>
@@ -760,7 +806,22 @@ export function DashboardInventory() {
                 {filteredProducts.map((item) => {
                   const status = getStockStatus(item);
                   return (
-                    <tr key={item.id} className={`hover:bg-[#FDFBF7] transition-colors ${!item.is_active ? 'opacity-60' : ''}`}>
+                    <tr key={item.id} className={`hover:bg-[#FDFBF7] transition-colors ${!item.is_active ? 'opacity-60' : ''} ${selectedIds.has(item.id) ? 'bg-[#F2F1F8]' : ''}`}>
+                      <td className="px-4 py-6">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 accent-[#6D4C91] cursor-pointer"
+                          checked={selectedIds.has(item.id)}
+                          onChange={e => {
+                            setSelectedIds(prev => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(item.id);
+                              else next.delete(item.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      </td>
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-3">
                           {item.images?.[0] ? (
@@ -1353,6 +1414,35 @@ export function DashboardInventory() {
                 {bulkStep === 'done' && (
                   <button onClick={closeBulkModal} className="bg-[#6D4C91] text-white px-10 py-4 rounded-full font-bold uppercase tracking-widest text-[12px] hover:bg-[#5a3e79] active:scale-95 transition-all">Done</button>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ══════════════════════ CONFIRM BULK DELETE ══════════════════════ */}
+      <AnimatePresence>
+        {confirmBulkDelete && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { if (!bulkDeleting) setConfirmBulkDelete(false); }} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl">
+              <div className="p-8 text-center">
+                <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-7 h-7 text-red-500" />
+                </div>
+                <h3 className="text-[20px] font-serif mb-2">Delete {selectedIds.size} Product{selectedIds.size !== 1 ? 's' : ''}?</h3>
+                <p className="text-[13px] text-gray-500 mb-1">This will <strong className="text-black">permanently delete</strong> the selected products from the database.</p>
+                <p className="text-[12px] text-gray-400">This cannot be undone.</p>
+              </div>
+              <div className="px-8 pb-8 flex gap-3">
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="flex-1 bg-red-600 text-white py-4 rounded-full font-bold uppercase tracking-widest text-[11px] hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center disabled:opacity-60"
+                >
+                  {bulkDeleting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Delete Permanently'}
+                </button>
+                <button onClick={() => setConfirmBulkDelete(false)} disabled={bulkDeleting} className="px-6 py-4 border border-gray-200 rounded-full font-bold uppercase tracking-widest text-[11px] hover:bg-gray-100 transition-all disabled:opacity-50">Cancel</button>
               </div>
             </motion.div>
           </div>
