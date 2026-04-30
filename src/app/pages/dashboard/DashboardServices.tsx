@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Pencil, ToggleLeft, ToggleRight, X, ChevronDown, ChevronUp, Clock, Tag, DollarSign, FileText, Layers, ShoppingBag, Star, Search, Image as ImageIcon, MessageSquare } from 'lucide-react';
+import { Plus, Pencil, ToggleLeft, ToggleRight, X, ChevronDown, ChevronUp, Clock, Tag, DollarSign, FileText, Layers, ShoppingBag, Star, Search, Image as ImageIcon, MessageSquare, Upload, FileSpreadsheet, Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '../../lib/api';
 import { useStore } from '../../context/StoreContext';
@@ -39,7 +39,104 @@ interface Product {
   categories: { name: string } | null;
 }
 
-const CATEGORIES = ['Facial', 'Chemical Peel', 'Body Treatment', 'Massage', 'Waxing', 'Nail Care', 'Consultation', 'Other'];
+const CATEGORIES = [
+  'Imaging & Consultation',
+  'Facial Treatments',
+  'Chemical Peel Treatments',
+  'Regenerative Therapy',
+  'Skin Treatments',
+  'Acne Program',
+  'Hyperpigmentation Program',
+  'Melasma',
+  'Body Treatment',
+  'Massage',
+  'Waxing',
+  'Nail Care',
+  'Other',
+];
+
+interface BulkServiceRow {
+  name: string;
+  category: string;
+  price: string;
+  duration_minutes: string;
+  deposit_percentage: string;
+  description: string;
+}
+
+function parseBulkServicesFile(file: File): Promise<BulkServiceRow[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async e => {
+      try {
+        const XLSX = await import('xlsx');
+        const data = new Uint8Array(e.target!.result as ArrayBuffer);
+        const wb   = XLSX.read(data, { type: 'array' });
+        const ws   = wb.Sheets[wb.SheetNames[0]];
+        const raw: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const rows = raw.slice(1).filter(r => r.some((c: any) => String(c).trim() !== ''));
+        resolve(rows.map(r => ({
+          name:               String(r[0] ?? '').trim(),
+          category:           String(r[1] ?? '').trim(),
+          price:              String(r[2] ?? '').trim(),
+          duration_minutes:   String(r[3] ?? '60').trim(),
+          deposit_percentage: String(r[4] ?? '0').trim(),
+          description:        String(r[5] ?? '').trim(),
+        })));
+      } catch {
+        reject(new Error('Could not read file. Make sure it is a valid .xlsx or .csv file.'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read file.'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function downloadServiceTemplate() {
+  const XLSX = await import('xlsx');
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Name', 'Category', 'Price (KES)', 'Duration (min)', 'Deposit %', 'Description'],
+    ['Consultation & AI Skin Analysis', 'Imaging & Consultation', 2500, 60, 0, 'Comprehensive assessment combining consultation and professional evaluation of skin type, condition and key skin parameters'],
+    ['Dermatologist Consultation', 'Imaging & Consultation', 5000, 60, 0, 'Medical assessment by a Dermatologist to evaluate skin concerns, establish diagnosis and recommend treatment options'],
+    ['Scalp Analysis', 'Imaging & Consultation', 2500, 60, 0, 'Thorough examination of scalp and hair to assess dryness, oil imbalance, dandruff, hair thinning or scalp sensitivity'],
+    ['Dermatoscopy', 'Imaging & Consultation', 3500, 60, 0, 'Non-invasive diagnostic procedure using a dermatoscope to examine skin lesions, vascular patterns and other structures'],
+    ['Hydrafacial', 'Facial Treatments', 15000, 60, 0, 'Deep cleanses, exfoliates, extracts pores and hydrates using serum infusion technology to improve glow and reduce congestion'],
+    ['Premier Signature Facial', 'Facial Treatments', 8500, 45, 0, 'Deep cleansing treatment that removes impurities for a clean, balanced and refreshed skin'],
+    ['Brightening Facial', 'Facial Treatments', 8500, 60, 0, 'Enhances product absorption and evens out skin tone with brightening ingredients and boosts radiance'],
+    ['Premier Anti-Age Facial', 'Facial Treatments', 15000, 50, 0, 'Firming facial using collagen-boosting serums and facial massage including neck and decollete'],
+    ['Skin Soothing Facial', 'Facial Treatments', 7500, 45, 0, 'Gentle treatment that reduces irritation, calms the skin and boosts moisture balance for radiance'],
+    ['Express Facial', 'Facial Treatments', 5000, 30, 0, 'Quick effective treatment that deep cleanses, exfoliates and hydrates the skin'],
+    ['Bridal Facial', 'Facial Treatments', 18000, 90, 0, 'Luxurious radiance boosting treatment that deeply hydrates, firms and brightens face, neck and decollete'],
+    ['Clarifying Peel', 'Chemical Peel Treatments', 15000, 60, 0, 'Instant radiance, smoother texture and beginner friendly'],
+    ['Brightening Peel', 'Chemical Peel Treatments', 15000, 60, 0, 'Targets hyperpigmentation, sun damage and uneven skin tone'],
+    ['Revitalizing Peel', 'Chemical Peel Treatments', 15000, 60, 0, 'Clears congestion, controls oil and reduces breakouts'],
+    ['Age-Defying Retinol Peel', 'Chemical Peel Treatments', 18000, 60, 0, 'Anti-aging, collagen boosting treatment that refines pores'],
+    ['Microneedling with Concentrate', 'Regenerative Therapy', 18000, 90, 0, 'Promotes collagen production, improves skin texture and reduces scars using concentrated active serum blend'],
+    ['Microneedling with GFC', 'Regenerative Therapy', 35000, 90, 0, 'Promotes collagen production and improves skin texture using Growth Factor Concentrate technology'],
+    ['Premier Regeneration – Face & Neck', 'Regenerative Therapy', 25000, 90, 0, 'Targets early aging signs, improves elasticity and enhances overall tone and texture'],
+    ['Premier Regeneration – Stretch Marks', 'Regenerative Therapy', 35000, 90, 0, 'Customized microneedling protocol for stretch marks, uneven texture or post-inflammatory pigmentation'],
+    ['Brightening IV Therapy', 'Regenerative Therapy', 20000, 120, 0, 'Medical-grade IV therapy to improve skin radiance and even skin tone by delivering antioxidants into the bloodstream'],
+    ['Weightloss IV Therapy', 'Regenerative Therapy', 20000, 120, 0, 'Medical-grade IV therapy to support metabolism and fat burning while providing essential nutrients and hydration'],
+    ['Detox IV Therapy', 'Regenerative Therapy', 20000, 120, 0, 'IV therapy infused with vitamins and antioxidants to support hydration, replenish nutrients and promote wellness'],
+    ['Skin Tag Removal', 'Skin Treatments', 0, 45, 0, 'Safe and precise removal of benign skin growths to restore smooth, healthy-looking skin — update price before publishing'],
+    ['Microdermabrasion', 'Skin Treatments', 0, 45, 0, 'Non-invasive exfoliation of dead skin cells improving texture and promoting a smoother, radiant complexion — update price before publishing'],
+    ['Dermaplaning', 'Skin Treatments', 2000, 30, 0, 'Non-invasive exfoliation to eliminate surface buildup and fine facial hair for a radiant, refined complexion'],
+    ['Acne Program – Level 1 (Comedonal)', 'Acne Program', 50000, 0, 30, 'Multi-session program for whiteheads and blackheads: 2x Clarifying Facial+LED, 2x Clarifying Peel+LED, 1x Microneedling'],
+    ['Acne Program – Level 2 (Papular)', 'Acne Program', 107000, 0, 30, 'Multi-session program for red inflamed bumps: 2x Clarifying Facial, 3x Clarifying Peel, 1x Microneedling, 3x IV Gut Health'],
+    ['Acne Program – Level 3 (Pustular)', 'Acne Program', 142500, 0, 30, 'Multi-session program for pus-filled lesions: 3x Clarifying Facial, 3x Clarifying Peel, 1x Microneedling, 5x IV Gut Health'],
+    ['Acne Program – Level 4 (Cystic)', 'Acne Program', 163000, 0, 30, 'Multi-session program for deep cysts: Medical Management, 4x Clarifying Facial, 3x Clarifying Peel, 2x Microneedling, 5x IV Gut Health'],
+    ['Hyperpigmentation Program – Level 1 (Mild PIH)', 'Hyperpigmentation Program', 55500, 0, 30, 'Mild brown spots: 1x Clarifying Facial, 2x Brightening Facial, 1x Brightening Peel, 1x Clarifying Peel, 1x Microneedling'],
+    ['Hyperpigmentation Program – Level 2 (Moderate)', 'Hyperpigmentation Program', 82500, 0, 30, 'Dark brown spots: 1x Clarifying Facial, 2x Brightening Facial, 1x Clarifying Peel, 2x Brightening Peel, 2x Microneedling'],
+    ['Hyperpigmentation Program – Level 3 (Severe PIH)', 'Hyperpigmentation Program', 110500, 0, 30, 'Severe pigmentation: 1x Clarifying Facial, 2x Brightening Facial, 1x Clarifying Peel, 2x Brightening Peel, 2x Microneedling, 1x Microneedling+GFC'],
+    ['Melasma – Level 1 (Epidermal)', 'Melasma', 82500, 0, 30, 'Light brown patches: 1x Clarifying Facial, 2x Brightening Facial, 3x Brightening Peel, 2x Microneedling with Tranexamic'],
+    ['Melasma – Level 2 (Dermal)', 'Melasma', 122500, 0, 30, 'Dark blurred patches: 1x Clarifying Facial, 2x Brightening Facial, 4x Brightening Peel, 4x Microneedling, 1x Microneedling+GFC'],
+    ['Melasma – Level 3 (Mixed)', 'Melasma', 165500, 0, 30, 'Mixed patches: 1x Clarifying Facial, 2x Brightening Facial, 5x Brightening Peel, 3x Microneedling, 2x Microneedling+GFC'],
+  ]);
+  ws['!cols'] = [{ wch: 45 }, { wch: 28 }, { wch: 14 }, { wch: 15 }, { wch: 12 }, { wch: 90 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Services');
+  XLSX.writeFile(wb, 'services_bulk_template.xlsx');
+}
 
 const EMPTY_SERVICE: Partial<Service> = {
   name: '',
@@ -68,7 +165,7 @@ function Label({ children, required }: { children: React.ReactNode; required?: b
 const inputCls = 'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6D4C91]/25 focus:border-[#6D4C91] bg-white transition-colors';
 
 // ── Add / Edit Modal ───────────────────────────────────────────────────────────
-function ServiceModal({ service, onClose, onSave, token, sessionId }: { service: Partial<Service> | null; onClose: () => void; onSave: (s: Partial<Service>) => Promise<void>; token: string | null; sessionId: string | null }) {
+function ServiceModal({ service, onClose, onSave, token, sessionId, categories }: { service: Partial<Service> | null; onClose: () => void; onSave: (s: Partial<Service>) => Promise<void>; token: string | null; sessionId: string | null; categories: string[] }) {
   const isNew = !service?.id;
   const [form, setForm]                     = useState<Partial<Service>>(service ?? EMPTY_SERVICE);
   const [saving, setSaving]                 = useState(false);
@@ -87,7 +184,9 @@ function ServiceModal({ service, onClose, onSave, token, sessionId }: { service:
 
   const handleSubmit = async () => {
     if (!form.name?.trim()) { toast.error('Service name is required'); return; }
-    if (!form.base_price || form.base_price <= 0) { toast.error('A valid price is required'); return; }
+    if (form.base_price === undefined || form.base_price === null || isNaN(Number(form.base_price)) || Number(form.base_price) < 0) {
+      toast.error('Price must be 0 or more'); return;
+    }
 
     let parsedFields: FormField[] = [];
     if (rawFormFields.trim() && rawFormFields.trim() !== '[]') {
@@ -168,7 +267,7 @@ function ServiceModal({ service, onClose, onSave, token, sessionId }: { service:
             <Label>Category</Label>
             <select value={form.category ?? ''} onChange={e => set('category', e.target.value)} className={inputCls}>
               <option value="">Select a category</option>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 
@@ -454,6 +553,14 @@ export function DashboardServices() {
   const [expandedTab, setExpandedTab] = useState<'details' | 'products'>('details');
   const [filter, setFilter]         = useState<'all' | 'active' | 'inactive'>('all');
 
+  // ── Bulk Upload ───────────────────────────────────────────────────────────
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkStep,   setBulkStep]   = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
+  const [bulkRows,   setBulkRows]   = useState<BulkServiceRow[]>([]);
+  const [bulkErrors, setBulkErrors] = useState<string | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ created: number; errors: any[] } | null>(null);
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -467,6 +574,51 @@ export function DashboardServices() {
   };
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Bulk upload helpers ───────────────────────────────────────────────────
+  function closeBulkModal() {
+    setIsBulkModalOpen(false);
+    setTimeout(() => { setBulkStep('upload'); setBulkRows([]); setBulkErrors(null); setBulkResult(null); }, 300);
+  }
+
+  async function handleBulkFilePick(file: File) {
+    setBulkErrors(null);
+    try {
+      const rows = await parseBulkServicesFile(file);
+      if (rows.length === 0) {
+        setBulkErrors('No data rows found. Make sure the file has a header row and at least one service row.');
+        return;
+      }
+      setBulkRows(rows);
+      setBulkStep('preview');
+    } catch (err: any) {
+      setBulkErrors(err.message || 'Failed to read file.');
+    }
+  }
+
+  async function handleServiceBulkImport() {
+    const validRows = bulkRows.filter(r => r.name && r.price !== '' && !isNaN(Number(r.price)) && Number(r.price) >= 0);
+    if (validRows.length === 0) return;
+    setBulkStep('importing');
+    try {
+      const result = await apiFetch('/admin/services/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ services: validRows }),
+      }, token, sessionId);
+      setBulkResult(result);
+      setBulkStep('done');
+      load();
+    } catch (err: any) {
+      toast.error(err.message || 'Bulk import failed');
+      setBulkStep('preview');
+    }
+  }
+
+  // Dynamic categories: hardcoded defaults + any categories from existing services
+  const allServiceCategories = useMemo(() => {
+    const fromServices = services.map(s => s.category).filter(Boolean) as string[];
+    return [...new Set([...CATEGORIES, ...fromServices])].sort();
+  }, [services]);
 
   const openAdd    = () => { setEditTarget({ ...EMPTY_SERVICE }); setModalOpen(true); };
   const openEdit   = (s: Service) => { setEditTarget({ ...s }); setModalOpen(true); };
@@ -546,13 +698,22 @@ export function DashboardServices() {
             <Link to="/staff/reviews" className="text-[#6D4C91] hover:underline">Manage reviews →</Link>
           </p>
         </div>
-        <button
-          onClick={openAdd}
-          className="inline-flex items-center gap-2 bg-[#6D4C91] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#5c3f80] transition-colors self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          Add service
-        </button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => setIsBulkModalOpen(true)}
+            className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Bulk upload
+          </button>
+          <button
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 bg-[#6D4C91] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#5c3f80] transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add service
+          </button>
+        </div>
       </div>
 
       {/* Filter tabs */}
@@ -742,7 +903,206 @@ export function DashboardServices() {
       {/* Modal */}
       <AnimatePresence>
         {modalOpen && editTarget !== null && (
-          <ServiceModal service={editTarget} onClose={closeModal} onSave={handleSave} token={token} sessionId={sessionId} />
+          <ServiceModal service={editTarget} onClose={closeModal} onSave={handleSave} token={token} sessionId={sessionId} categories={allServiceCategories} />
+        )}
+      </AnimatePresence>
+
+      {/* ══════════════════════ BULK UPLOAD MODAL ══════════════════════ */}
+      <AnimatePresence>
+        {isBulkModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeBulkModal} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className={`relative bg-white w-full ${bulkStep === 'preview' ? 'max-w-5xl' : 'max-w-3xl'} rounded-[32px] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col transition-all duration-300`}
+            >
+              {/* Header */}
+              <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-[#F2F1F8] flex-shrink-0">
+                <div>
+                  <h2 className="text-[24px] font-serif mb-1">Bulk Service Upload</h2>
+                  <p className="text-gray-500 text-[12px] font-bold uppercase tracking-widest">
+                    {bulkStep === 'upload'    && 'Upload Multiple Services via Spreadsheet'}
+                    {bulkStep === 'preview'   && `Preview — ${bulkRows.length} row${bulkRows.length !== 1 ? 's' : ''} detected`}
+                    {bulkStep === 'importing' && 'Importing services…'}
+                    {bulkStep === 'done'      && 'Import Complete'}
+                  </p>
+                </div>
+                <button onClick={closeBulkModal} className="p-2 bg-white rounded-full border border-gray-100 hover:bg-gray-50 active:scale-90 transition-all"><X className="w-6 h-6" /></button>
+              </div>
+
+              {/* Scrollable content */}
+              <div className="overflow-y-auto flex-1">
+
+                {/* ── Step 1: Upload ── */}
+                {bulkStep === 'upload' && (
+                  <div className="p-8 space-y-8">
+                    <div className="flex items-start space-x-3 p-6 bg-blue-50 rounded-xl border border-blue-100">
+                      <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-[12px] text-blue-700 space-y-1">
+                        <p className="font-bold">How it works</p>
+                        <p>Download the template — it comes pre-filled with all Premier Beauty Clinic services. Edit prices, descriptions and durations as needed, then upload.</p>
+                        <p>Services will be saved as <strong>hidden</strong>. Add photos and activate each one from this page afterwards. Services with price 0 (e.g. Skin Tag Removal) must have their price updated before activating.</p>
+                      </div>
+                    </div>
+
+                    {/* Drop zone */}
+                    <div
+                      className="border-2 border-dashed border-gray-200 rounded-[32px] p-12 text-center hover:border-[#6D4C91] hover:bg-[#F2F1F8] transition-all cursor-pointer group"
+                      onClick={() => bulkFileInputRef.current?.click()}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={async e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) await handleBulkFilePick(f); }}
+                    >
+                      <input
+                        ref={bulkFileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        className="hidden"
+                        onChange={async e => { const f = e.target.files?.[0]; if (f) await handleBulkFilePick(f); e.target.value = ''; }}
+                      />
+                      <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                        <FileSpreadsheet className="w-10 h-10 text-gray-300 group-hover:text-[#6D4C91]" />
+                      </div>
+                      <p className="text-[16px] font-bold mb-2">Drop Excel or CSV file here</p>
+                      <p className="text-[13px] text-gray-400 mb-6">or click to browse — .xlsx, .xls, .csv supported</p>
+                      <button
+                        onClick={e => { e.stopPropagation(); downloadServiceTemplate(); }}
+                        className="bg-white border border-gray-200 text-black px-6 py-3 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all"
+                      >
+                        Download Template
+                      </button>
+                    </div>
+
+                    {bulkErrors && (
+                      <div className="flex items-center space-x-3 p-4 bg-red-50 rounded-xl border border-red-100">
+                        <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                        <p className="text-[12px] text-red-600">{bulkErrors}</p>
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      <h3 className="text-[13px] font-bold uppercase tracking-widest text-gray-400">Column Order</h3>
+                      <div className="bg-gray-50 p-5 rounded-xl text-[12px] font-mono text-gray-700">
+                        Name · Category · Price (KES) · Duration (min) · Deposit % · Description
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Step 2: Preview ── */}
+                {bulkStep === 'preview' && (() => {
+                  const validCount = bulkRows.filter(r => r.name && r.price !== '' && !isNaN(Number(r.price)) && Number(r.price) >= 0).length;
+                  return (
+                    <div className="p-8 space-y-6">
+                      <div className="flex items-center space-x-3 p-4 bg-amber-50 rounded-xl border border-amber-100">
+                        <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                        <p className="text-[12px] text-amber-700">
+                          Review the data below. <strong>{validCount} valid</strong> row{validCount !== 1 ? 's' : ''} will be imported.
+                          {bulkRows.length - validCount > 0 && <span className="text-red-600"> {bulkRows.length - validCount} invalid row{bulkRows.length - validCount !== 1 ? 's' : ''} will be skipped.</span>}
+                        </p>
+                      </div>
+                      <div className="overflow-x-auto rounded-[20px] border border-gray-100">
+                        <table className="w-full text-[12px]">
+                          <thead>
+                            <tr className="bg-gray-50 border-b border-gray-100">
+                              <th className="px-4 py-3 text-left font-bold uppercase tracking-widest text-gray-400">#</th>
+                              <th className="px-4 py-3 text-left font-bold uppercase tracking-widest text-gray-400">Name</th>
+                              <th className="px-4 py-3 text-left font-bold uppercase tracking-widest text-gray-400">Category</th>
+                              <th className="px-4 py-3 text-right font-bold uppercase tracking-widest text-gray-400">Price</th>
+                              <th className="px-4 py-3 text-right font-bold uppercase tracking-widest text-gray-400">Duration</th>
+                              <th className="px-4 py-3 text-right font-bold uppercase tracking-widest text-gray-400">Deposit %</th>
+                              <th className="px-4 py-3 text-left font-bold uppercase tracking-widest text-gray-400">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {bulkRows.map((row, i) => {
+                              const invalid = !row.name || row.price === '' || isNaN(Number(row.price)) || Number(row.price) < 0;
+                              return (
+                                <tr key={i} className={`border-b border-gray-50 ${invalid ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
+                                  <td className="px-4 py-3 text-gray-400">{i + 1}</td>
+                                  <td className="px-4 py-3 font-medium">{row.name || <span className="text-red-500 italic">missing</span>}</td>
+                                  <td className="px-4 py-3 text-gray-500">{row.category || '—'}</td>
+                                  <td className="px-4 py-3 text-right">{row.price !== '' ? `KES ${Number(row.price).toLocaleString()}` : <span className="text-red-500 italic">missing</span>}</td>
+                                  <td className="px-4 py-3 text-right">{row.duration_minutes ? `${row.duration_minutes} min` : '—'}</td>
+                                  <td className="px-4 py-3 text-right">{row.deposit_percentage || '0'}%</td>
+                                  <td className="px-4 py-3">
+                                    {invalid
+                                      ? <span className="text-[10px] bg-red-100 text-red-600 font-bold uppercase px-2 py-1 rounded-full">Skip</span>
+                                      : <span className="text-[10px] bg-green-100 text-green-700 font-bold uppercase px-2 py-1 rounded-full">Ready</span>
+                                    }
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── Step 3: Importing ── */}
+                {bulkStep === 'importing' && (
+                  <div className="p-20 flex flex-col items-center justify-center">
+                    <div className="w-14 h-14 border-4 border-[#6D4C91] border-t-transparent rounded-full animate-spin mb-6" />
+                    <p className="text-[16px] font-bold mb-1">Importing services…</p>
+                    <p className="text-[13px] text-gray-400">Please wait, do not close this window.</p>
+                  </div>
+                )}
+
+                {/* ── Step 4: Done ── */}
+                {bulkStep === 'done' && bulkResult && (
+                  <div className="p-16 flex flex-col items-center justify-center text-center">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                      <Check className="w-8 h-8 text-green-600" />
+                    </div>
+                    <p className="text-[20px] font-bold mb-2">Import Complete</p>
+                    <p className="text-[15px] text-gray-500 mb-6">
+                      <span className="font-bold text-[#6D4C91]">{bulkResult.created}</span> service{bulkResult.created !== 1 ? 's' : ''} added successfully.
+                    </p>
+                    {bulkResult.errors.length > 0 && (
+                      <div className="w-full bg-red-50 rounded-xl border border-red-100 p-5 text-left mb-6">
+                        <p className="text-[12px] font-bold uppercase tracking-widest text-red-600 mb-3">{bulkResult.errors.length} row{bulkResult.errors.length !== 1 ? 's' : ''} skipped</p>
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                          {bulkResult.errors.map((e: any, i: number) => (
+                            <p key={i} className="text-[12px] text-red-600">Row {e.row}{e.name ? ` (${e.name})` : ''}: {e.error}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-[12px] text-gray-400">Services are hidden by default. Add photos and activate each one from this page.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-8 bg-gray-50 flex justify-end space-x-4 flex-shrink-0 border-t border-gray-100">
+                {bulkStep === 'upload' && (
+                  <button onClick={closeBulkModal} className="px-8 py-4 border border-gray-200 rounded-full font-bold uppercase tracking-widest text-[12px] hover:bg-gray-100 active:scale-95 transition-all">Cancel</button>
+                )}
+                {bulkStep === 'preview' && (() => {
+                  const validCount = bulkRows.filter(r => r.name && r.price !== '' && !isNaN(Number(r.price)) && Number(r.price) >= 0).length;
+                  return (
+                    <>
+                      <button onClick={() => setBulkStep('upload')} className="px-8 py-4 border border-gray-200 rounded-full font-bold uppercase tracking-widest text-[12px] hover:bg-gray-100 active:scale-95 transition-all">Back</button>
+                      <button
+                        onClick={handleServiceBulkImport}
+                        disabled={validCount === 0}
+                        className="bg-[#6D4C91] text-white px-10 py-4 rounded-full font-bold uppercase tracking-widest text-[12px] hover:bg-[#5a3e79] active:scale-95 transition-all flex items-center shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Import {validCount} Service{validCount !== 1 ? 's' : ''}
+                      </button>
+                    </>
+                  );
+                })()}
+                {bulkStep === 'done' && (
+                  <button onClick={closeBulkModal} className="bg-[#6D4C91] text-white px-10 py-4 rounded-full font-bold uppercase tracking-widest text-[12px] hover:bg-[#5a3e79] active:scale-95 transition-all">Done</button>
+                )}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

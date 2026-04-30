@@ -828,10 +828,38 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     if (!Array.isArray(rows) || rows.length === 0)
       return res.status(400).json({ error: 'No products provided' });
 
-    // Build category name → id map (case-insensitive)
-    const { data: cats } = await adminDb.from('categories').select('id, name');
+    // Collect all unique category names from the uploaded rows
+    const uniqueCatNames = [...new Set(
+      rows.filter(r => r.category?.trim()).map(r => r.category.trim())
+    )];
+
+    // Fetch existing categories and build a name → id map (case-insensitive)
+    const { data: existingCats } = await adminDb.from('categories').select('id, name');
     const catMap = {};
-    (cats || []).forEach(c => { catMap[c.name.toLowerCase().trim()] = c.id; });
+    (existingCats || []).forEach(c => { catMap[c.name.toLowerCase().trim()] = c.id; });
+
+    // Auto-create any categories from the spreadsheet that don't exist yet
+    for (const catName of uniqueCatNames) {
+      const key = catName.toLowerCase().trim();
+      if (!catMap[key]) {
+        const slug = key.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const { data: newCat, error: insertErr } = await adminDb.from('categories').insert({
+          name: catName.trim(),
+          slug: `${slug}-${Date.now()}`,
+        }).select('id, name').single();
+        if (newCat) {
+          catMap[key] = newCat.id;
+        } else if (insertErr) {
+          // Possible unique name conflict — look up the existing row by name
+          const { data: existing } = await adminDb
+            .from('categories')
+            .select('id, name')
+            .ilike('name', catName.trim())
+            .maybeSingle();
+          if (existing) catMap[key] = existing.id;
+        }
+      }
+    }
 
     const results = await Promise.all(rows.map(async (row, i) => {
       const rowNum = i + 1;
@@ -871,7 +899,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
   router.get('/admin/services', authenticate, requireEmployeePermission('view_appointments'), async (req, res) => {
     const { data, error } = await adminDb
       .from('services')
-      .select('id, name, slug, description, base_price, deposit_percentage, duration_minutes, category, is_active, images, form_fields')
+      .select('id, name, slug, description, base_price, deposit_percentage, duration_minutes, category, is_active, images, form_fields, benefits, results_stat')
       .order('category')
       .order('name');
     if (error) return res.status(500).json({ error: error.message });
@@ -1240,12 +1268,15 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     for (const key of ALLOWED) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
     }
-    if (updates.name)         { updates.name = sanitize(updates.name).trim(); updates.slug = updates.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
-    if (updates.description)  updates.description  = sanitize(updates.description).trim();
-    if (updates.category)     updates.category     = sanitize(updates.category).trim();
-    if (updates.results_stat) updates.results_stat = sanitize(updates.results_stat).trim();
+    if (updates.name)        { updates.name = sanitize(updates.name).trim(); updates.slug = updates.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+    if (updates.description !== undefined) updates.description  = updates.description  ? sanitize(String(updates.description)).trim()  : null;
+    if (updates.category    !== undefined) updates.category     = updates.category     ? sanitize(String(updates.category)).trim()     : null;
+    if (updates.results_stat !== undefined) updates.results_stat = updates.results_stat ? sanitize(String(updates.results_stat)).trim() : null;
     const { data, error } = await adminDb.from('services').update(updates).eq('id', Number(req.params.id)).select().single();
-    if (error) return res.status(400).json({ error: error.message });
+    if (error) {
+      if (error.code === '23505') return res.status(409).json({ error: 'A service with that name already exists. Choose a different name.' });
+      return res.status(400).json({ error: error.message });
+    }
     res.json(data);
   });
 
@@ -1276,6 +1307,46 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     const { error } = await adminDb.from('services').update({ is_active: false }).eq('id', Number(req.params.id));
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true });
+  });
+
+  // Bulk create services from spreadsheet upload
+  router.post('/admin/services/bulk', authenticate, requireEmployeePermission('manage_staff'), async (req, res) => {
+    const { services: rows } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0)
+      return res.status(400).json({ error: 'No services provided' });
+
+    const results = await Promise.all(rows.map(async (row, i) => {
+      const rowNum = i + 1;
+      if (!row.name?.trim())
+        return { success: false, row: rowNum, error: 'Name is required' };
+      if (row.price === undefined || row.price === null || row.price === '' || isNaN(Number(row.price)) || Number(row.price) < 0)
+        return { success: false, row: rowNum, name: row.name, error: 'Valid price is required' };
+
+      const baseSlug = row.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const slug     = `${baseSlug}-${Date.now()}-${i}`;
+
+      const { data, error } = await adminDb.from('services').insert({
+        name:               sanitize(row.name).trim(),
+        slug,
+        description:        row.description ? sanitize(row.description).trim() : null,
+        base_price:         Number(row.price),
+        deposit_percentage: Number(row.deposit_percentage) || 0,
+        duration_minutes:   Number(row.duration_minutes)   || 60,
+        category:           row.category ? sanitize(row.category).trim() : null,
+        images:             [],
+        form_fields:        [],
+        benefits:           [],
+        results_stat:       null,
+        is_active:          false,
+      }).select('id, name').single();
+
+      if (error) return { success: false, row: rowNum, name: row.name, error: error.message };
+      return { success: true, ...data };
+    }));
+
+    const inserted = results.filter(r => r.success);
+    const errors   = results.filter(r => !r.success);
+    res.json({ created: inserted.length, errors, inserted });
   });
 
   return router;

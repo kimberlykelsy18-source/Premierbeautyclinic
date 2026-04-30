@@ -212,9 +212,9 @@ export function DashboardInventory() {
         method: 'POST',
         body: JSON.stringify({ products: validRows }),
       }, token, sessionId);
+      await fetchInventory();
       setBulkResult(result);
       setBulkStep('done');
-      fetchInventory();
     } catch (err: any) {
       toast.error(err.message || 'Bulk import failed');
       setBulkStep('preview');
@@ -1255,7 +1255,7 @@ export function DashboardInventory() {
                       <div className="text-[12px] text-blue-700 space-y-1">
                         <p className="font-bold">How it works</p>
                         <p>Download the template, fill in your products, then upload the file. Products will be saved as <strong>hidden</strong> — add images and publish each one from the inventory table afterwards.</p>
-                        <p>Category names must match existing categories exactly (case-insensitive).</p>
+                        <p>New category names from your file will be created automatically and added to the dropdown.</p>
                       </div>
                     </div>
 
