@@ -482,7 +482,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
 
   // Walk-ins — collect payment after the fact (STK push to already-recorded walk-in)
   router.post('/admin/walkins/:id/pay', authenticate, requireEmployeePermission('create_walkin'), validateId, async (req, res) => {
-    const { phone, amount } = req.body;
+    const { phone } = req.body;
     if (!phone) return res.status(400).json({ error: 'phone is required' });
 
     const { data: walkin } = await adminDb.from('walk_ins').select('*').eq('id', req.params.id).single();
@@ -491,7 +491,8 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
       return res.status(400).json({ error: `Walk-in is already ${walkin.status}` });
     }
 
-    const depositAmount = Number(amount) || Number(walkin.deposit_paid) || 0;
+    // Always use the amount stored in the DB — never trust the client-supplied value.
+    const depositAmount = Math.round(Number(walkin.deposit_paid) || 0);
     if (depositAmount <= 0) return res.status(400).json({ error: 'No amount to collect' });
 
     const normalized = normalizePhone(phone);

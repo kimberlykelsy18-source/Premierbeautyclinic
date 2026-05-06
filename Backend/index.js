@@ -69,7 +69,19 @@ app.use(morgan('combined', {
 }));
 
 // ── Rate limiters ────────────────────────────────────────────────────────────
-// Auth endpoints: max 10 attempts per 15 minutes per IP
+
+// Global: 500 req / 15 min per IP — catches raw DDoS floods on any endpoint.
+// Specific limiters below override this with stricter limits for sensitive routes.
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again shortly.' },
+});
+app.use(globalLimiter);
+
+// Auth endpoints: max 10 attempts per 15 minutes per IP (brute-force protection)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -78,7 +90,7 @@ const authLimiter = rateLimit({
   message: { error: 'Too many attempts. Please try again in 15 minutes.' },
 });
 
-// Payment endpoints: max 5 STK pushes per minute per IP (prevents spam)
+// STK Push endpoints: max 5 per minute per IP (prevents M-Pesa spam = financial abuse)
 const paymentLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
@@ -87,16 +99,34 @@ const paymentLimiter = rateLimit({
   message: { error: 'Too many payment requests. Please wait a moment.' },
 });
 
+// Review submissions: max 10 per hour per IP (prevents fake-review floods)
+const reviewLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many review submissions. Please try again later.' },
+});
+
+// Auth routes
 app.use('/auth/login',            authLimiter);
 app.use('/auth/signup',           authLimiter);
 app.use('/auth/forgot-password',  authLimiter);
 app.use('/employee/login',        authLimiter);
 app.use('/developer/',            authLimiter);
-app.use('/checkout/mpesa',            paymentLimiter);
-app.use('/checkout/card',             paymentLimiter);
-app.use('/checkout/card/submit_pin',  paymentLimiter);
-app.use('/checkout/card/submit_otp',  paymentLimiter);
-app.use('/api/mpesa/initiate',        paymentLimiter);
+
+// Payment / STK Push routes — ALL routes that trigger M-Pesa
+app.use('/checkout/mpesa',                paymentLimiter);
+app.use('/checkout/card',                 paymentLimiter);
+app.use('/checkout/card/submit_pin',      paymentLimiter);
+app.use('/checkout/card/submit_otp',      paymentLimiter);
+app.use('/api/mpesa/initiate',            paymentLimiter);
+app.use('/appointments/book-mpesa',       paymentLimiter); // customer appointment booking
+app.use('/admin/walkin',                  paymentLimiter); // walk-in creation (may trigger STK)
+app.use('/admin/walkins',                 paymentLimiter); // walk-in pay/complete actions
+
+// Review submissions
+app.use('/reviews',                       reviewLimiter);
 
 // ── Build shared middlewares ──────────────────────────────────────────────────
 const { authenticate, authenticateOptional, requireEmployeePermission } = createAuthMiddleware(supabase, createServiceClient());

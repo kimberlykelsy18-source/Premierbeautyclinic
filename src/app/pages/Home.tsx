@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { ArrowRight, ChevronRight, ShoppingBag, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { apiFetch } from '../lib/api';
+import { LazyImage } from '../components/LazyImage';
 
 interface PromoSlide {
   id: string;
@@ -121,9 +122,10 @@ export function Home() {
                   transition={{ duration: 0.6 }}
                   className="absolute inset-0"
                 >
-                  <img
+                  <LazyImage
                     src={slide.image_url}
                     alt=""
+                    priority={index === 0}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/45 to-black/60 flex items-center justify-center">
@@ -244,11 +246,11 @@ export function Home() {
                     to={c.link}
                     className="group block relative overflow-hidden rounded-2xl aspect-[3/4] cursor-pointer"
                   >
-                    <img
+                    <LazyImage
                       src={imgSrc}
                       alt={c.label}
+                      fallbackSrc={c.defaultImage}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      onError={e => { const el = e.currentTarget as HTMLImageElement; if (el.src !== c.defaultImage) el.src = c.defaultImage; }}
                     />
                     {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
@@ -272,7 +274,7 @@ export function Home() {
               to="/book"
               className="inline-flex items-center bg-gray-900 text-white px-8 py-4 rounded-full font-bold hover:bg-[#6D4C91] transition-colors"
             >
-              Free Skin Consultation
+            Book A Skin Consultation
               <ArrowRight className="w-5 h-5 ml-2" />
             </Link>
           </div>
@@ -312,7 +314,7 @@ export function Home() {
                     >
                       <div className="relative aspect-[4/5] overflow-hidden bg-[#F2F1F8]">
                         {product.images?.[0] ? (
-                          <img
+                          <LazyImage
                             src={product.images[0]}
                             alt={product.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -385,7 +387,7 @@ export function Home() {
                   >
                     <div className="relative aspect-square overflow-hidden">
                       {kit.images?.[0] ? (
-                        <img
+                        <LazyImage
                           src={kit.images[0]}
                           alt={kit.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -451,7 +453,7 @@ export function Home() {
                 </div>
               </div>
               <div className="hidden lg:block h-full">
-                <img
+                <LazyImage
                   src="https://images.unsplash.com/photo-1707544738443-c8ff4113c9c5?w=600&q=80&auto=format&fit=crop"
                   alt="Skin treatment"
                   className="w-full h-full object-cover"

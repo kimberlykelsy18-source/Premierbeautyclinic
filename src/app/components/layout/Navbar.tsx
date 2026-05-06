@@ -20,23 +20,29 @@ interface SearchProduct {
 const CATEGORIES = [
   {
     name: 'Shop by Skin Type',
-    items: ['Oily Skin', 'Dry Skin', 'Combination', 'Sensitive', 'Acne Prone', 'Mature Skin']
+    items: ['Normal Skin', 'Oily Skin', 'Dry Skin', 'Combination', 'Sensitive', 'Acne-Prone', 'Mature Skin']
   },
   {
     name: 'Shop by Brand',
-    items: ['La Roche-Posay', 'CeraVe', 'Bioderma', 'Vichy', 'The Ordinary', 'Paula\'s Choice', 'Mario Badescu', 'Premier']
+    items: [
+      'La Roche-Posay', 'CeraVe', 'The Ordinary', 'Bioderma', 'Neutrogena',
+      'Cetaphil', 'Avène', 'Eucerin', 'SkinCeuticals', 'Obagi', 'Murad',
+      "Paula's Choice", 'Aveeno', 'Garnier', 'Some By Mi', 'Innisfree',
+      'Olay', 'Thayers', 'Dr. Jart+', "Kiehl's", 'Embryolisse',
+      'Glamglow', 'SheaMoisture', 'Bio-Oil', 'Premier Beauty'
+    ]
   },
   {
     name: 'Shop by Product',
-    items: ['Cleansers', 'Moisturizers', 'Serums & Oils', 'Sun Protection', 'Masks & Peels', 'Eye Care']
+    items: ['Cleansers', 'Moisturisers', 'Serums', 'Sunscreen', 'Toners & Mists', 'Eye Care', 'Masks & Treatments', 'Body Care', 'Hair Care', 'Wellness', 'Fragrances']
   },
   {
     name: 'Shop by Collection',
-    items: ['New Arrivals', 'Bestsellers', 'Skincare Kits', 'Hygiene Essentials', 'Professional Grade', 'Eco-Friendly']
+    items: ['New Arrivals', 'Bestsellers', 'Starter Kits', 'Skincare Kits', 'Professional Grade', 'Eco-Friendly']
   },
   {
     name: 'Clinic Services',
-    items: ['Skin Analysis', 'Consultation', 'Facial Treatment', 'Chemical Peels', 'Microneedling']
+    items: ['Imaging & Consultation', 'Facial Treatments', 'Chemical Peel Treatments', 'Regenerative Therapy', 'Skin Treatments', 'Acne Program', 'Hyperpigmentation Program', 'Melasma']
   }
 ];
 
@@ -91,7 +97,10 @@ export function Navbar() {
     // Navigate to shop with filter parameters
     const params = new URLSearchParams();
     
-    if (categoryName === 'Shop by Skin Type') {
+    if (categoryName === 'Clinic Services') {
+      navigate(`/services?category=${encodeURIComponent(item)}`);
+      return;
+    } else if (categoryName === 'Shop by Skin Type') {
       params.set('skinType', item);
     } else if (categoryName === 'Shop by Brand') {
       params.set('brand', item);
@@ -100,7 +109,7 @@ export function Navbar() {
     } else if (categoryName === 'Shop by Collection') {
       params.set('collection', item);
     }
-    
+
     navigate(`/shop?${params.toString()}`);
   };
 
@@ -235,32 +244,70 @@ export function Navbar() {
         {/* Mega Menu Overlay (Desktop) */}
         <AnimatePresence>
           {activeMegaMenu === 'categories' && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
               onMouseEnter={() => setActiveMegaMenu('categories')}
               onMouseLeave={() => setActiveMegaMenu(null)}
-              className="hidden md:block absolute top-full left-0 right-0 bg-[#F2F1F8] border-t border-gray-100 shadow-xl"
+              className="hidden md:block absolute top-full left-0 right-0 bg-[#F2F1F8] border-t border-gray-200 shadow-2xl"
             >
-              <div className="max-w-7xl mx-auto px-8 py-10 grid grid-cols-5 gap-8">
-                {CATEGORIES.map((cat) => (
-                  <div key={cat.name}>
-                    <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#6D4C91] mb-4">{cat.name}</h3>
-                    <ul className="space-y-3">
-                      {cat.items.map(item => (
-                        <li key={item}>
-                          <Link to="/shop" className="text-[14px] text-gray-600 hover:text-[#6D4C91] transition-colors" onClick={() => handleCategoryClick(cat.name, item)}>{item}</Link>
-                        </li>
-                      ))}
-                    </ul>
+              <div className="max-w-7xl mx-auto px-8 pt-8 pb-6">
+
+                {/* Top row: 4 nav columns + card */}
+                <div className="grid grid-cols-5 gap-8 mb-7">
+                  {CATEGORIES.filter(c => c.name !== 'Shop by Brand').map((cat) => (
+                    <div key={cat.name}>
+                      <h3 className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#6D4C91] mb-4 border-b border-[#6D4C91]/20 pb-2">{cat.name}</h3>
+                      <ul className="space-y-2.5">
+                        {cat.items.map(item => (
+                          <li key={item}>
+                            <button
+                              className="text-[13px] text-gray-600 hover:text-[#6D4C91] transition-colors text-left leading-snug"
+                              onClick={() => handleCategoryClick(cat.name, item)}
+                            >
+                              {item}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+
+                  {/* Skin type card */}
+                  <div className="bg-white rounded-2xl p-5 flex flex-col justify-center items-center text-center shadow-sm border border-gray-100">
+                    <div className="w-8 h-8 rounded-full bg-[#6D4C91]/10 flex items-center justify-center mb-3">
+                      <span className="text-[#6D4C91] text-[16px]">✦</span>
+                    </div>
+                    <h3 className="text-[14px] font-serif italic mb-1.5 leading-snug">Not sure about your skin type?</h3>
+                    <p className="text-[11px] text-gray-400 mb-4 leading-relaxed">Book a free 5-minute skin analysis with our experts.</p>
+                    <Link
+                      to="/book"
+                      onClick={() => setActiveMegaMenu(null)}
+                      className="bg-[#6D4C91] text-white px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-colors"
+                    >
+                      Book Now
+                    </Link>
                   </div>
-                ))}
-                <div className="bg-[#FDFBF7] p-6 rounded-lg flex flex-col justify-center items-center text-center">
-                  <h3 className="text-[16px] font-serif mb-2 italic">Not sure about your skin type?</h3>
-                  <p className="text-[13px] text-gray-500 mb-4">Book a free 5-minute skin analysis with our experts.</p>
-                  <Link to="/book" className="bg-[#6D4C91] text-white px-6 py-2 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#5a3e79] transition-colors">Book Now</Link>
                 </div>
+
+                {/* Bottom row: brand pills */}
+                <div className="border-t border-gray-200 pt-5">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#6D4C91] mb-3">Shop by Brand</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {CATEGORIES.find(c => c.name === 'Shop by Brand')!.items.map(brand => (
+                      <button
+                        key={brand}
+                        onClick={() => handleCategoryClick('Shop by Brand', brand)}
+                        className="px-3 py-1.5 bg-white border border-gray-200 rounded-full text-[12px] text-gray-600 hover:border-[#6D4C91] hover:text-[#6D4C91] hover:bg-white transition-colors whitespace-nowrap"
+                      >
+                        {brand}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
               </div>
             </motion.div>
           )}
@@ -303,23 +350,36 @@ export function Navbar() {
                   <div className="pt-6 border-t border-gray-100">
                     <p className="text-[12px] text-gray-400 uppercase tracking-widest mb-4 font-bold">Quick Links</p>
                     <div className="grid grid-cols-1 gap-4">
-                      {CATEGORIES.map(cat => (
+                      {CATEGORIES.filter(c => c.name !== 'Shop by Brand').map(cat => (
                         <div key={cat.name} className="mb-2">
-                          <p className="text-[14px] font-bold mb-3 text-[#6D4C91]">{cat.name}</p>
-                          <div className="grid grid-cols-1 gap-3 pl-2">
+                          <p className="text-[13px] font-bold mb-3 text-[#6D4C91]">{cat.name}</p>
+                          <div className="grid grid-cols-1 gap-2.5 pl-2">
                             {cat.items.map(item => (
-                              <Link 
-                                key={item} 
-                                to="/shop" 
-                                className="text-[14px] text-gray-600 active:text-[#6D4C91]" 
+                              <button
+                                key={item}
+                                className="text-[13px] text-gray-600 active:text-[#6D4C91] text-left"
                                 onClick={() => handleCategoryClick(cat.name, item)}
                               >
                                 {item}
-                              </Link>
+                              </button>
                             ))}
                           </div>
                         </div>
                       ))}
+                      <div className="mb-2">
+                        <p className="text-[13px] font-bold mb-3 text-[#6D4C91]">Shop by Brand</p>
+                        <div className="flex flex-wrap gap-1.5 pl-2">
+                          {CATEGORIES.find(c => c.name === 'Shop by Brand')!.items.map(brand => (
+                            <button
+                              key={brand}
+                              onClick={() => handleCategoryClick('Shop by Brand', brand)}
+                              className="px-2.5 py-1 bg-[#F2F1F8] border border-gray-200 rounded-full text-[11px] text-gray-600 active:text-[#6D4C91] active:border-[#6D4C91]"
+                            >
+                              {brand}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
