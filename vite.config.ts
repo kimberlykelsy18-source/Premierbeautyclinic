@@ -31,16 +31,18 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // Split vendor libraries into separate chunks so they load in parallel
-        // and are cached independently from app code.
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
-          if (id.includes('react-dom') || id.includes('react/'))   return 'vendor-react';
-          if (id.includes('react-router'))                          return 'vendor-router';
-          if (id.includes('/motion/') || id.includes('framer'))     return 'vendor-motion';
-          if (id.includes('recharts') || id.includes('/d3-'))       return 'vendor-charts';
-          if (id.includes('lucide-react'))                          return 'vendor-icons';
-          if (id.includes('@radix-ui'))                             return 'vendor-radix';
+          // Keep all React-ecosystem libs together to avoid chunk init-order errors.
+          // Splitting react into its own chunk causes `PureComponent` undefined errors
+          // in production when sibling chunks initialize before vendor-react loads.
+          if (
+            id.includes('react') ||
+            id.includes('/motion/') || id.includes('framer') ||
+            id.includes('@radix-ui')
+          ) return 'vendor-react';
+          if (id.includes('recharts') || id.includes('/d3-')) return 'vendor-charts';
+          if (id.includes('lucide-react'))                     return 'vendor-icons';
           return 'vendor';
         },
       },
