@@ -56,12 +56,12 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     let sessionCart = null;
 
     if (userId) {
-      const { data } = await db.from('carts').select('id').eq('user_id', userId).single();
+      const { data } = await db.from('carts').select('id').eq('user_id', userId).maybeSingle();
       userCart = data || null;
     }
 
     if (sessionId) {
-      const { data } = await db.from('carts').select('id').eq('session_id', sessionId).single();
+      const { data } = await db.from('carts').select('id').eq('session_id', sessionId).maybeSingle();
       sessionCart = data || null;
     }
 

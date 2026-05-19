@@ -788,7 +788,6 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
       if (req.body[key] !== undefined) updates[key] = req.body[key];
     }
     if (updates.name) {
-      updates.slug = updates.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       updates.name = updates.name.trim();
     }
 
@@ -801,6 +800,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
 
     if (error) {
       console.error('[Products PATCH] Supabase error:', error.message, error.code);
+      if (error.code === '23505') return res.status(409).json({ error: 'A product with this name already exists.' });
       return res.status(500).json({ error: error.message });
     }
     res.json(data);
