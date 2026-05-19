@@ -138,10 +138,11 @@ export function DashboardInventory() {
   const [previewProduct, setPreviewProduct] = useState<ApiProduct | null>(null);
   const [previewIndex, setPreviewIndex]     = useState(0);
 
-  // ── Multi-select delete ───────────────────────────────────────────────────
+  // ── Multi-select delete + visibility ─────────────────────────────────────
   const [selectedIds, setSelectedIds]               = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete]   = useState(false);
   const [bulkDeleting, setBulkDeleting]             = useState(false);
+  const [bulkVisibilityLoading, setBulkVisibilityLoading] = useState<'hide' | 'show' | null>(null);
 
   // ── Bulk Upload modal ─────────────────────────────────────────────────────
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -446,6 +447,27 @@ export function DashboardInventory() {
     }
   };
 
+  // ── Bulk visibility (hide / show selected products) ──────────────────────
+  const handleBulkVisibility = async (is_active: boolean) => {
+    if (selectedIds.size === 0) return;
+    const action = is_active ? 'show' : 'hide';
+    setBulkVisibilityLoading(action);
+    try {
+      await apiFetch('/admin/products/bulk-visibility', {
+        method: 'POST',
+        body: JSON.stringify({ ids: Array.from(selectedIds), is_active }),
+      }, token, sessionId);
+      setProducts(prev => prev.map(p => selectedIds.has(p.id) ? { ...p, is_active } : p));
+      const label = is_active ? 'visible' : 'hidden';
+      toast.success(`${selectedIds.size} product${selectedIds.size !== 1 ? 's' : ''} ${label}`);
+      setSelectedIds(new Set());
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update visibility');
+    } finally {
+      setBulkVisibilityLoading(null);
+    }
+  };
+
   // ── Bulk delete selected products ────────────────────────────────────────
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
@@ -672,16 +694,63 @@ export function DashboardInventory() {
           <h1 className="text-[32px] font-serif font-bold italic mb-2">Inventory Control</h1>
           <p className="text-gray-500">Manage products, stock levels, and supply alerts.</p>
         </div>
-        <div className="flex space-x-4 flex-wrap gap-y-2">
-          {selectedIds.size > 0 && (
-            <button
-              onClick={() => setConfirmBulkDelete(true)}
-              className="bg-red-600 text-white px-6 py-4 rounded-full text-[13px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all flex items-center shadow-sm active:scale-95"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete {selectedIds.size} Selected
-            </button>
-          )}
+        <div className="flex items-center gap-3 flex-wrap">
+          <AnimatePresence>
+            {selectedIds.size > 0 && (() => {
+              const selected = products.filter(p => selectedIds.has(p.id));
+              const hasVisible = selected.some(p => p.is_active);
+              const hasHidden  = selected.some(p => !p.is_active);
+              return (
+                <motion.div
+                  key="bulk-actions"
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                  className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-2 shadow-sm"
+                >
+                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                    {selectedIds.size} selected
+                  </span>
+                  <div className="w-px h-5 bg-gray-200 mx-1" />
+                  {hasVisible && (
+                    <button
+                      onClick={() => handleBulkVisibility(false)}
+                      disabled={bulkVisibilityLoading !== null}
+                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gray-800 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-gray-900 transition-all disabled:opacity-50 active:scale-95"
+                    >
+                      <EyeOff className="w-3.5 h-3.5" />
+                      {bulkVisibilityLoading === 'hide' ? 'Hiding…' : 'Hide'}
+                    </button>
+                  )}
+                  {hasHidden && (
+                    <button
+                      onClick={() => handleBulkVisibility(true)}
+                      disabled={bulkVisibilityLoading !== null}
+                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-green-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-green-700 transition-all disabled:opacity-50 active:scale-95"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      {bulkVisibilityLoading === 'show' ? 'Showing…' : 'Show'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setConfirmBulkDelete(true)}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-red-600 transition-all active:scale-95"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="p-1.5 rounded-full hover:bg-gray-100 transition-colors ml-1"
+                    aria-label="Clear selection"
+                  >
+                    <X className="w-3.5 h-3.5 text-gray-400" />
+                  </button>
+                </motion.div>
+              );
+            })()}
+          </AnimatePresence>
           <button
             onClick={() => fetchInventory(true)}
             disabled={refreshing}

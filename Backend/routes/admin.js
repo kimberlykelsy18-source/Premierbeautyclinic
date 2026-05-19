@@ -823,6 +823,21 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     res.json({ success: true, deleted: validIds.length });
   });
 
+  // Bulk hide / unhide products
+  router.post('/admin/products/bulk-visibility', authenticate, requireEmployeePermission('edit_stock'), async (req, res) => {
+    const { ids, is_active } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0)
+      return res.status(400).json({ error: 'No product IDs provided' });
+    if (typeof is_active !== 'boolean')
+      return res.status(400).json({ error: 'is_active must be a boolean' });
+    const validIds = ids.filter(id => /^\d+$/.test(String(id)) && Number(id) >= 1);
+    if (validIds.length === 0)
+      return res.status(400).json({ error: 'No valid IDs provided' });
+    const { error } = await adminDb.from('products').update({ is_active }).in('id', validIds);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, updated: validIds.length });
+  });
+
   // Bulk create products from spreadsheet upload
   router.post('/admin/products/bulk', authenticate, requireEmployeePermission('edit_stock'), async (req, res) => {
     const { products: rows } = req.body;
