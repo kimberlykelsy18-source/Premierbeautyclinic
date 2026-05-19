@@ -312,7 +312,7 @@ export function Home() {
                       to={`/shop/${product.id}`}
                       className="group block bg-white rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300 border border-gray-100"
                     >
-                      <div className="relative aspect-[4/5] overflow-hidden bg-[#F2F1F8]">
+                      <div className="relative aspect-square overflow-hidden bg-[#F2F1F8]">
                         {product.images?.[0] ? (
                           <LazyImage
                             src={product.images[0]}

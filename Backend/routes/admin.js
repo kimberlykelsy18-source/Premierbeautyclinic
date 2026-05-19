@@ -795,11 +795,14 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     const { data, error } = await adminDb
       .from('products')
       .update(updates)
-      .eq('id', req.params.id)
+      .eq('id', Number(req.params.id))
       .select('*, categories(name)')
       .single();
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error('[Products PATCH] Supabase error:', error.message, error.code);
+      return res.status(500).json({ error: error.message });
+    }
     res.json(data);
   });
 
