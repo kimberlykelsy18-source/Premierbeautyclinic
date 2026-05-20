@@ -41,7 +41,7 @@ function DetailSkeleton() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 animate-pulse">
       <div className="space-y-4">
-        <div className="aspect-[4/5] bg-gray-200 rounded-2xl md:rounded-[32px]" />
+        <div className="aspect-square bg-gray-200 rounded-2xl md:rounded-[32px]" />
         <div className="grid grid-cols-4 gap-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="aspect-square bg-gray-200 rounded-xl" />
@@ -208,7 +208,7 @@ export function ProductDetail() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="relative aspect-[4/5] bg-gray-100 rounded-2xl md:rounded-[32px] overflow-hidden"
+                className="relative aspect-square bg-gray-100 rounded-2xl md:rounded-[32px] overflow-hidden"
               >
                 <AnimatePresence mode="wait">
                   {product.images && product.images.length > 0 ? (

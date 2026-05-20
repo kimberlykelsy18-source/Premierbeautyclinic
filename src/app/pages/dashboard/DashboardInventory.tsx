@@ -1531,7 +1531,7 @@ export function DashboardInventory() {
               </button>
 
               {/* Main image */}
-              <div className="relative aspect-[4/5] rounded-[24px] overflow-hidden bg-gray-900">
+              <div className="relative aspect-square rounded-[24px] overflow-hidden bg-gray-900">
                 <AnimatePresence mode="wait">
                   <motion.img
                     key={previewIndex}
