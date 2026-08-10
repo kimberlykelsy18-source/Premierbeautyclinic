@@ -208,6 +208,7 @@ export function DashboardAppointments() {
   const [checkInStep, setCheckInStep]       = useState<'idle' | 'phone' | 'awaiting' | 'done' | 'failed'>('idle');
   const [checkInMsg, setCheckInMsg]         = useState('');
   const [completingId, setCompletingId]     = useState<string | null>(null);
+  const [confirmingId, setConfirmingId]     = useState<string | null>(null);
 
   // Walk-in detail popup
   const [selectedWalkIn, setSelectedWalkIn] = useState<WalkIn | null>(null);
@@ -421,6 +422,31 @@ export function DashboardAppointments() {
       toast.error(err.message || 'Failed to check in');
     } finally {
       setCompletingId(null);
+    }
+  };
+
+  // ── Appointment: manual confirm for WhatsApp-originated bookings (M-Pesa paused) ──
+  // Flips pending → confirmed and unlocks check-in, once staff have sorted
+  // payment/details over WhatsApp.
+  const handleConfirmBooking = async (apt: ApiAppointment) => {
+    setConfirmingId(apt.id);
+    try {
+      await apiFetch(`/admin/appointments/${apt.id}/confirm`, { method: 'POST' }, token, sessionId);
+      const updated: ApiAppointment = {
+        ...apt,
+        status: 'confirmed',
+        payments: [
+          ...(apt.payments || []),
+          { status: 'paid', mpesa_receipt: 'WHATSAPP', amount: apt.total_amount, failure_reason: null },
+        ],
+      };
+      setAppointments(prev => prev.map(a => a.id === apt.id ? updated : a));
+      if (selectedApt?.id === apt.id) setSelectedApt(updated);
+      toast.success(`${apt.profiles?.full_name || 'Client'}'s booking confirmed — ready for check-in.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to confirm booking');
+    } finally {
+      setConfirmingId(null);
     }
   };
 
@@ -1165,6 +1191,14 @@ export function DashboardAppointments() {
                   {(depositPayment?.mpesa_receipt || isCompleted) && (
                     <button onClick={() => printAptReceipt(apt, logoUrl)} className="flex items-center justify-center gap-2 px-6 py-4 bg-white border border-gray-200 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-gray-50 active:scale-95 transition-all">
                       <Printer className="w-4 h-4" /> Receipt
+                    </button>
+                  )}
+                  {apt.status === 'pending' && (
+                    <button onClick={() => handleConfirmBooking(apt)} disabled={confirmingId === apt.id} className="flex-1 bg-[#1A1A1A] text-white py-4 rounded-full text-[12px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                      {confirmingId === apt.id
+                        ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        : <><CheckCircle2 className="w-4 h-4" /> Confirm Booking</>
+                      }
                     </button>
                   )}
                   {canCheckIn && (

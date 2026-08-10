@@ -17,6 +17,7 @@ interface FormField {
 interface RelatedProduct {
   id: number;
   name: string;
+  size: string | null;
   price: string;
   images: string[] | null;
   slug: string;
@@ -468,7 +469,10 @@ export function TreatmentDetail() {
                     </Link>
                     <div className="flex-1 min-w-0">
                       <Link to={`/shop/${product.id}`}>
-                        <p className="text-xs font-bold leading-tight line-clamp-2 hover:text-[#6D4C91] transition-colors">{product.name}</p>
+                        <p className="text-xs font-bold leading-tight line-clamp-2 hover:text-[#6D4C91] transition-colors">
+                          {product.name}
+                          {product.size && <span className="text-gray-400 font-medium"> · {product.size}</span>}
+                        </p>
                       </Link>
                       {product.categories?.name && (
                         <p className="text-xs text-gray-400 mt-0.5">{product.categories.name}</p>
@@ -476,7 +480,7 @@ export function TreatmentDetail() {
                       <p className="text-xs font-bold text-[#6D4C91] mt-1">KES {Number(product.price).toLocaleString()}</p>
                       <button
                         onClick={() => {
-                          addToCart({ id: String(product.id), name: product.name, price: Number(product.price), image: product.images?.[0] || '', category: product.categories?.name || '', description: '' });
+                          addToCart({ id: String(product.id), name: product.name, size: product.size, price: Number(product.price), image: product.images?.[0] || '', category: product.categories?.name || '', description: '' });
                           toast.success(`${product.name} added to cart`);
                         }}
                         className="mt-2 text-xs bg-black text-white px-3 py-1 rounded-full hover:bg-[#6D4C91] transition-colors"

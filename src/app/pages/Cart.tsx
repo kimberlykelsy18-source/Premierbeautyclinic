@@ -64,7 +64,10 @@ export function Cart() {
                     </Link>
                     <div className="flex-grow flex flex-col justify-between">
                       <div>
-                        <h3 className="text-[16px] md:text-[20px] font-bold mb-1 md:mb-2 pr-6">{item.name}</h3>
+                        <h3 className="text-[16px] md:text-[20px] font-bold mb-1 md:mb-2 pr-6">
+                          {item.name}
+                          {item.size && <span className="text-gray-400 font-medium"> · {item.size}</span>}
+                        </h3>
                         <p className="text-[11px] md:text-[12px] text-gray-400 uppercase tracking-widest">{item.category}</p>
                       </div>
                       <div className="flex items-center justify-between mt-4">

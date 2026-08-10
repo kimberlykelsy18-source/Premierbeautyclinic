@@ -31,6 +31,7 @@ interface ApiProduct {
   stock: number;
   low_stock_threshold: number;
   brand: string | null;
+  size: string | null;
   usage_instructions: string | null;
   categories: { name: string; slug: string } | null;
   product_avg_ratings: { average_rating: string; rating_count: string } | null;
@@ -176,6 +177,7 @@ export function ProductDetail() {
       addToCart({
         id: String(product.id),
         name: product.name,
+        size: product.size,
         price: Number(product.price),
         image: product.images?.[0] ?? '',
         category: product.categories?.name ?? '',
@@ -289,7 +291,10 @@ export function ProductDetail() {
                   </div>
                 </div>
 
-                <h1 className="text-[28px] md:text-[42px] font-serif leading-tight mb-3 md:mb-4">{product.name}</h1>
+                <h1 className="text-[28px] md:text-[42px] font-serif leading-tight mb-3 md:mb-4">
+                  {product.name}
+                  {product.size && <span className="text-gray-400 text-[18px] md:text-[26px]"> · {product.size}</span>}
+                </h1>
 
                 {/* Rating */}
                 {product.product_avg_ratings && Number(product.product_avg_ratings.rating_count) > 0 && (
@@ -633,6 +638,7 @@ export function ProductDetail() {
                       {p.brand && <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{p.brand}</p>}
                       <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-[#6D4C91] transition-colors">
                         {p.name}
+                        {p.size && <span className="text-gray-400"> · {p.size}</span>}
                       </p>
                       <p className="text-sm font-bold text-gray-700 mt-2">
                         KES {Number(p.price).toLocaleString()}

@@ -3,6 +3,7 @@ const express = require('express');
 // Customer-facing routes (auth, products, cart, checkout, appointments)
 const path = require('path');
 const LOGO_PATH = path.join(__dirname, '../../src/assets/logo.png');
+const { buildWhatsAppUrl, buildOrderMessage, buildBookingMessage, formatDeliveryLine } = require('../services/whatsapp');
 
 function toShortId(prefix, n) {
   if (!n) return `${prefix}-???`;
@@ -98,13 +99,27 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
   const { createServiceClient } = require('../config/supabase');
 
   // Auth
+  // "Database error saving new user" is a transient Supabase-side failure we've seen
+  // under connection pressure (the on_auth_user_created trigger racing to insert the
+  // profile row) — retrying once after a short delay clears it. Real validation errors
+  // (weak password, duplicate email, etc.) come back with a 4xx status and are not retried.
+  const isTransientSignupError = err => (err?.status ?? 0) >= 500 || /database error/i.test(err?.message || '');
+
   router.post('/auth/signup', async (req, res) => {
     const { email, password, full_name, phone } = req.body;
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name, phone } }
-    });
+
+    let data, error;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      ({ data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name, phone } }
+      }));
+      if (!error || !isTransientSignupError(error)) break;
+      console.warn(`[signup] Transient error, retrying (attempt ${attempt + 1}):`, error.message);
+      await new Promise(r => setTimeout(r, 500));
+    }
+
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true, user: data.user, session: data.session });
   });
@@ -335,7 +350,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
         supabase.from('service_avg_ratings').select('average_rating, rating_count').eq('service_id', serviceBase.id).single()
       ).catch(() => ({ data: null })),
       Promise.resolve(
-        supabase.from('service_products').select('product_id, products(id, name, price, images, slug, categories(name))').eq('service_id', serviceBase.id)
+        supabase.from('service_products').select('product_id, products(id, name, size, price, images, slug, categories(name))').eq('service_id', serviceBase.id)
       ).catch(() => ({ data: [] })),
       Promise.resolve(
         supabase.from('reviews').select('id, reviewer_name, rating, title, body, is_verified_purchase, created_at').eq('service_id', serviceBase.id).eq('status', 'approved').order('created_at', { ascending: false }).limit(20)
@@ -366,7 +381,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
 
     const { data: items } = await db
       .from('cart_items')
-      .select('quantity, products(id, name, price, images)')
+      .select('quantity, products(id, name, size, price, images)')
       .eq('cart_id', cart.id);
 
     res.json({ cart_id: cart.id, items: items || [] });
@@ -538,6 +553,97 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
       const message = darajaError?.errorMessage || 'Failed to initiate M-Pesa payment. Please check your phone number and try again.';
       return res.status(502).json({ error: message });
     }
+  });
+
+  // ── WhatsApp checkout handoff (M-Pesa/card paused) ────────────────────────────
+  // Creates the order as 'pending' with no payment attempt, then hands back a
+  // pre-filled wa.me link so the customer sends their order details to the
+  // clinic's WhatsApp themselves. Staff follows up manually from there.
+  router.post('/checkout/whatsapp', authenticateOptional, async (req, res) => {
+    const { shipping_address, phone, session_id: bodySessionId, customer_email, customer_name } = req.body;
+    const userId = req.user?.id || null;
+    const sessionId = bodySessionId || req.headers['x-session-id'];
+
+    const normalizedShipping = normalizeShippingAddress(shipping_address);
+    const normalizedPhone = phone ? normalizeMpesaPhone(phone) : null;
+
+    if (!normalizedShipping || !normalizedPhone) {
+      return res.status(400).json({ error: 'shipping_address and phone required' });
+    }
+    if (!/^2547\d{8}$|^2541\d{8}$/.test(normalizedPhone)) {
+      return res.status(400).json({ error: 'Invalid phone number. Use a valid Kenyan number (e.g. 0712345678 or 254712345678).' });
+    }
+    if (!userId && !sessionId) {
+      return res.status(400).json({ error: 'session id or login required' });
+    }
+
+    const cart = await getOrCreateCart(userId, sessionId);
+    if (!cart) return res.status(400).json({ error: 'Cart is empty' });
+
+    const { data: cartItems } = await db
+      .from('cart_items')
+      .select('quantity, products(id, name, size, price)')
+      .eq('cart_id', cart.id);
+
+    if (!cartItems || cartItems.length === 0) return res.status(400).json({ error: 'Cart is empty' });
+
+    const validItems = cartItems.filter(item => item?.products?.id && item?.products?.price);
+    if (validItems.length === 0) return res.status(400).json({ error: 'No valid products in cart' });
+
+    let subtotal = 0;
+    const orderItems = [];
+    const messageItems = [];
+    validItems.forEach(item => {
+      const price = Number(item.products.price);
+      subtotal += price * item.quantity;
+      orderItems.push({ product_id: item.products.id, quantity: item.quantity, price_at_time: price });
+      messageItems.push({ name: item.products.name + (item.products.size ? ` (${item.products.size})` : ''), quantity: item.quantity, price });
+    });
+
+    const clientFee = typeof req.body.shipping_fee === 'number' ? Math.round(req.body.shipping_fee) : null;
+    const shipping_fee = (clientFee !== null && clientFee >= 0 && clientFee <= 5000) ? clientFee : 200;
+    const total = subtotal + shipping_fee;
+
+    const customerName = (customer_name || '').trim() || 'Customer';
+
+    const orderData = {
+      subtotal,
+      shipping_fee,
+      total,
+      shipping_address: { ...normalizedShipping, fullName: customerName },
+      status: 'pending',
+      payment_method: 'whatsapp',
+      customer_email: customer_email || null,
+    };
+    if (userId) orderData.user_id = userId;
+    if (sessionId) orderData.session_id = sessionId;
+
+    const { data: order, error: orderError } = await db
+      .from('orders')
+      .insert(orderData)
+      .select()
+      .single();
+
+    if (orderError || !order) {
+      console.error('WhatsApp order insert failed:', orderError);
+      return res.status(500).json({ error: orderError?.message || 'Failed to create order' });
+    }
+
+    await db.from('order_items').insert(orderItems.map(i => ({ ...i, order_id: order.id })));
+
+    const orderRef = toShortId('ORD', order.order_number);
+    const message = buildOrderMessage({
+      customerName,
+      phone: normalizedPhone,
+      deliveryLine: formatDeliveryLine(normalizedShipping),
+      items: messageItems,
+      subtotal,
+      shippingFee: shipping_fee,
+      total,
+      orderRef,
+    });
+
+    res.json({ success: true, order_id: order.id, order_ref: orderRef, whatsapp_url: buildWhatsAppUrl(message) });
   });
 
   // ── Paystack direct card charge flow ─────────────────────────────────────────
@@ -1106,6 +1212,93 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     }
   });
 
+  // ── WhatsApp booking handoff (M-Pesa/card paused) ─────────────────────────────
+  // Creates the appointment as 'pending' with no deposit/payment attempt, then
+  // hands back a pre-filled wa.me link. Stays 'pending' until staff manually
+  // confirm it via POST /admin/appointments/:id/confirm (unlocks check-in).
+  router.post('/appointments/book-whatsapp', authenticate, async (req, res) => {
+    const { service_id, appointment_time, form_responses, phone } = req.body;
+
+    const { data: service } = await db
+      .from('services')
+      .select('name, base_price, duration_minutes')
+      .eq('id', service_id)
+      .single();
+
+    if (!service) return res.status(400).json({ error: 'Invalid service_id' });
+
+    // Same double-booking check as /appointments/book-mpesa
+    const newStart     = new Date(appointment_time).getTime();
+    const durationMs   = (service.duration_minutes || 60) * 60000;
+    const newEnd       = newStart + durationMs;
+    const windowStart  = new Date(newStart - 4 * 3600000).toISOString();
+    const windowEnd    = new Date(newEnd).toISOString();
+
+    const { data: nearby } = await db
+      .from('appointments')
+      .select('id, appointment_time, services(duration_minutes)')
+      .in('status', ['pending', 'confirmed'])
+      .gte('appointment_time', windowStart)
+      .lte('appointment_time', windowEnd);
+
+    const hasConflict = (nearby || []).some(apt => {
+      const existStart = new Date(apt.appointment_time).getTime();
+      const existEnd   = existStart + (apt.services?.duration_minutes || 60) * 60000;
+      return newStart < existEnd && newEnd > existStart;
+    });
+
+    if (hasConflict) {
+      return res.status(409).json({ error: 'This time slot is already booked. Please choose a different time.' });
+    }
+
+    const total = Number(service.base_price);
+
+    const { data: appointment, error: aptError } = await db
+      .from('appointments')
+      .insert({
+        user_id:          req.user.id,
+        service_id,
+        appointment_time,
+        form_responses,
+        deposit_amount:   0,
+        total_amount:     total,
+        status:           'pending',
+      })
+      .select('*, appointment_number')
+      .single();
+
+    if (aptError || !appointment) {
+      console.error('WhatsApp appointment insert failed:', aptError);
+      return res.status(500).json({ error: aptError?.message || 'Failed to create appointment' });
+    }
+
+    const { data: profile } = await db
+      .from('profiles')
+      .select('full_name, phone')
+      .eq('id', req.user.id)
+      .single();
+
+    const customerName = profile?.full_name || 'Customer';
+    const customerPhone = phone || profile?.phone || '';
+    const aptRef = toShortAptId(appointment.appointment_number);
+    const timeLabel = new Date(appointment_time)
+      .toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit', hour12: true })
+      .replace(/am|pm/i, m => m.toUpperCase());
+    const dateLabel = `${new Date(appointment_time).toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short' })} — ${timeLabel}`;
+    const hidePrice = !(total > 0 && total <= 20000);
+
+    const message = buildBookingMessage({
+      customerName,
+      phone: customerPhone,
+      serviceName: service.name,
+      dateLabel,
+      priceKes: hidePrice ? null : total,
+      aptRef,
+    });
+
+    res.json({ success: true, appointment_id: appointment.id, whatsapp_url: buildWhatsAppUrl(message) });
+  });
+
   // Delete account — cleans up dependent rows first to avoid FK constraint errors,
   // then removes the auth user (which cascades to the profiles row).
   router.delete('/account', authenticate, async (req, res) => {
@@ -1145,7 +1338,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
   router.get('/orders', authenticate, async (req, res) => {
     const { data, error } = await db
       .from('orders')
-      .select('*, order_number, order_items(id, product_id, quantity, price_at_time, products(id, name, price, images))')
+      .select('*, order_number, order_items(id, product_id, quantity, price_at_time, products(id, name, size, price, images))')
       .eq('user_id', req.user.id)
       .order('created_at', { ascending: false });
     if (error) console.error('[Orders] Query error:', error.message);
@@ -1194,6 +1387,21 @@ module.exports = ({ supabase, serviceSupabase, authenticate, authenticateOptiona
     const { data, error } = await query;
     if (error) return res.status(500).json({ error: error.message });
     res.json(data || []);
+  });
+
+  // GET /reviews/featured?limit=N — recent high-rated approved product reviews, for homepage social proof
+  router.get('/reviews/featured', async (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 12, 20);
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('id, reviewer_name, rating, title, body, is_verified_purchase, created_at, product_id, products(id, name, size, images, price)')
+      .eq('status', 'approved')
+      .not('product_id', 'is', null)
+      .gte('rating', 4)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json((data || []).filter(r => r.products));
   });
 
   // POST /reviews — submit a new review (status = 'pending', awaits staff approval)

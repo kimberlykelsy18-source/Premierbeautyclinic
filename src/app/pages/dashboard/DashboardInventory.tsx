@@ -15,6 +15,7 @@ interface ApiProduct {
   low_stock_threshold: number | null;
   is_active: boolean;
   brand?: string | null;
+  size?: string | null;
   description?: string | null;
   category_id?: number | null;
   images?: string[] | null;
@@ -80,6 +81,7 @@ function parseBulkFile(file: File): Promise<BulkRow[]> {
 const EMPTY_PRODUCT = {
   name:                '',
   brand:               '',
+  size:                '',
   category_id:         '',
   description:         '',
   price:               '',
@@ -127,7 +129,7 @@ export function DashboardInventory() {
 
   // ── Edit Product modal ────────────────────────────────────────────────────
   const [editProduct, setEditProduct]   = useState<ApiProduct | null>(null);
-  const [editForm, setEditForm]         = useState({ name: '', brand: '', category_id: '', price: '', low_stock_threshold: '', is_active: true });
+  const [editForm, setEditForm]         = useState({ name: '', brand: '', size: '', category_id: '', price: '', low_stock_threshold: '', is_active: true });
   const [updatingProduct, setUpdatingProduct] = useState(false);
 
   // ── Deactivate confirmation ───────────────────────────────────────────────
@@ -303,6 +305,7 @@ export function DashboardInventory() {
         body: JSON.stringify({
           name:                newProduct.name.trim(),
           brand:               newProduct.brand.trim() || null,
+          size:                newProduct.size.trim() || null,
           category_id:         newProduct.category_id ? Number(newProduct.category_id) : null,
           description:         newProduct.description.trim() || null,
           price:               Number(newProduct.price),
@@ -339,6 +342,7 @@ export function DashboardInventory() {
     setEditForm({
       name:                product.name,
       brand:               product.brand || '',
+      size:                product.size || '',
       category_id:         product.category_id ? String(product.category_id) : '',
       price:               String(product.price),
       low_stock_threshold: String(product.low_stock_threshold ?? 5),
@@ -368,6 +372,7 @@ export function DashboardInventory() {
         body: JSON.stringify({
           name:                editForm.name.trim(),
           brand:               editForm.brand.trim() || null,
+          size:                editForm.size.trim() || null,
           category_id:         editForm.category_id ? Number(editForm.category_id) : null,
           price:               Number(editForm.price),
           low_stock_threshold: Number(editForm.low_stock_threshold) || 5,
@@ -503,8 +508,8 @@ export function DashboardInventory() {
       {activeStep === 1 && (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
           <h3 className="text-[18px] font-serif border-b border-gray-100 pb-4">Basic Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2 md:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2 md:col-span-3">
               <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Product Name *</label>
               <input
                 placeholder="e.g. Ultra Hydrating Serum"
@@ -532,6 +537,14 @@ export function DashboardInventory() {
                 <option value="">Select Category</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Size</label>
+              <input
+                placeholder="e.g. 100ml"
+                {...npField('size')}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 transition-all text-[14px] text-gray-900"
+              />
             </div>
           </div>
           <div className="space-y-2">
@@ -645,6 +658,7 @@ export function DashboardInventory() {
             <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Product Summary</p>
             <div className="flex justify-between text-[13px]"><span className="text-gray-500">Name</span><span className="font-bold">{newProduct.name || '—'}</span></div>
             {newProduct.brand && <div className="flex justify-between text-[13px]"><span className="text-gray-500">Brand</span><span className="font-medium">{newProduct.brand}</span></div>}
+            {newProduct.size && <div className="flex justify-between text-[13px]"><span className="text-gray-500">Size</span><span className="font-medium">{newProduct.size}</span></div>}
             {newProduct.category_id && <div className="flex justify-between text-[13px]"><span className="text-gray-500">Category</span><span className="font-medium">{categories.find(c => String(c.id) === newProduct.category_id)?.name || '—'}</span></div>}
             <div className="flex justify-between text-[13px]"><span className="text-gray-500">Price</span><span className="font-bold text-[#6D4C91]">{newProduct.price ? `KES ${Number(newProduct.price).toLocaleString()}` : '—'}</span></div>
             <div className="flex justify-between text-[13px]"><span className="text-gray-500">Initial Stock</span><span className="font-medium">{newProduct.stock} units</span></div>
@@ -864,6 +878,7 @@ export function DashboardInventory() {
                   <th className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest text-gray-400">Product</th>
                   <th className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest text-gray-400">Category</th>
                   <th className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest text-gray-400">Brand</th>
+                  <th className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest text-gray-400">Size</th>
                   <th className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest text-gray-400">Price</th>
                   <th className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest text-gray-400">Stock</th>
                   <th className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest text-gray-400">Status</th>
@@ -911,6 +926,7 @@ export function DashboardInventory() {
                       </td>
                       <td className="px-8 py-6 text-[14px] text-gray-500">{item.categories?.name || '—'}</td>
                       <td className="px-8 py-6 text-[14px] text-gray-500">{item.brand || '—'}</td>
+                      <td className="px-8 py-6 text-[14px] text-gray-500">{item.size || '—'}</td>
                       <td className="px-8 py-6 text-[14px] font-bold">KES {item.price?.toLocaleString()}</td>
                       <td className="px-8 py-6 text-[14px] font-bold">{item.stock}</td>
                       <td className="px-8 py-6">
@@ -1132,6 +1148,15 @@ export function DashboardInventory() {
                       <option value="">— No category —</option>
                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Size</label>
+                    <input
+                      value={editForm.size}
+                      onChange={e => setEditForm(prev => ({ ...prev, size: e.target.value }))}
+                      placeholder="e.g. 100ml"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-[#6D4C91]/20 text-[14px] text-gray-900"
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Retail Price (KES) *</label>

@@ -41,6 +41,7 @@ interface Product {
 
 const CATEGORIES = [
   'Imaging & Consultation',
+  'Add-Ons & Extras',
   'Facial Treatments',
   'Chemical Peel Treatments',
   'Regenerative Therapy',

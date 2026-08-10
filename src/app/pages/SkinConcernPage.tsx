@@ -27,6 +27,7 @@ interface ApiProduct {
   price: string;
   images: string[] | null;
   brand: string | null;
+  size: string | null;
   skin_concerns: string[] | null;
   categories: { name: string; slug: string } | null;
 }
@@ -297,6 +298,7 @@ function ProductCard({ product, formatPrice, onAddToCart }: {
         {product.brand && <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{product.brand}</p>}
         <Link to={`/shop/${product.id}`} className="text-sm font-bold text-gray-900 leading-snug mb-2 hover:text-[#6D4C91] transition-colors line-clamp-2">
           {product.name}
+          {product.size && <span className="text-gray-400 font-medium"> · {product.size}</span>}
         </Link>
         <div className="flex items-center justify-between mt-auto pt-2">
           <p className="text-sm font-bold text-gray-900">{formatPrice(Number(product.price))}</p>
@@ -370,6 +372,7 @@ export function SkinConcernPage() {
     addToCart({
       id: String(p.id),
       name: p.name,
+      size: p.size,
       price: Number(p.price),
       image: p.images?.[0] ?? '',
       category: p.categories?.name ?? '',

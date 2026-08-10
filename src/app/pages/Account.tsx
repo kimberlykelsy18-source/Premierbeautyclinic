@@ -17,6 +17,7 @@ interface ApiOrderItem {
   products: {
     id: number;
     name: string;
+    size: string | null;
     price: string;
     images: string[] | null;
   } | null;
@@ -282,6 +283,7 @@ export function Account() {
         addToCart({
           id:          String(item.products!.id),
           name:        item.products!.name,
+          size:        item.products!.size,
           price:       Number(item.products!.price),
           image:       item.products!.images?.[0] ?? '',
           category:    '',
@@ -636,6 +638,7 @@ export function Account() {
                                         <div className="flex-1 min-w-0">
                                           <p className="text-sm font-bold truncate">
                                             {item.products?.name ?? `Product #${item.product_id}`}
+                                            {item.products?.size && <span className="text-gray-400 font-medium"> · {item.products.size}</span>}
                                           </p>
                                           <p className="text-xs md:text-sm text-gray-400">Qty: {item.quantity}</p>
                                         </div>

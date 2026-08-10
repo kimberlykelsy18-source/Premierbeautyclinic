@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Search, ShoppingBag, User, Menu, X, ChevronDown, Heart, Phone, Globe } from 'lucide-react';
+import { Search, ShoppingBag, User, Menu, X, ChevronDown, Phone, Globe, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../../context/StoreContext';
 import { CURRENCIES } from '../../context/StoreContext';
@@ -13,6 +13,7 @@ interface SearchProduct {
   price: string;
   images: string[] | null;
   brand: string | null;
+  size: string | null;
   description: string | null;
   categories: { name: string; slug: string } | null;
 }
@@ -132,7 +133,7 @@ export function Navbar() {
       </div>
 
       {/* Main Navbar */}
-      <nav className={`transition-all duration-300 bg-[#000000] ${isScrolled ? 'shadow-md py-2' : 'py-3 md:py-4'}`}>
+      <nav className={`transition-all duration-300 ${isScrolled ? 'bg-[#1A1A1A]/95 backdrop-blur-md shadow-md py-2' : 'bg-[#1A1A1A] py-3 md:py-4'}`}>
         <div className="max-w-7xl mx-auto px-3 md:px-8 flex items-center justify-between">
           {/* Mobile Menu Toggle */}
           <button
@@ -168,7 +169,14 @@ export function Navbar() {
           </Link>
 
           {/* Right Navigation */}
-          <div className="flex items-center space-x-1 md:space-x-6 z-10">
+          <div className="flex items-center space-x-1 md:space-x-4 z-10">
+            <Link
+              to="/book"
+              className="hidden lg:inline-flex items-center gap-1.5 bg-[#6D4C91] text-white text-[12px] font-bold uppercase tracking-widest px-4 py-2 rounded-full hover:bg-[#8B5CF6] transition-colors"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              Book Consultation
+            </Link>
             <button
               onClick={() => setIsSearchOpen(true)}
               className="p-2 text-white/80 hover:text-white transition-colors"
@@ -489,7 +497,10 @@ export function Navbar() {
                             )}
                           </div>
                           <p className="font-eczar text-[10px] text-gray-400 uppercase tracking-widest mb-1">{product.categories?.name ?? ''}</p>
-                          <p className="font-alice text-[13px] md:text-[14px] group-hover:text-[#6D4C91] transition-colors line-clamp-2">{product.name}</p>
+                          <p className="font-alice text-[13px] md:text-[14px] group-hover:text-[#6D4C91] transition-colors line-clamp-2">
+                            {product.name}
+                            {product.size && <span className="text-gray-400"> · {product.size}</span>}
+                          </p>
                           <p className="font-serif text-[13px] font-bold mt-1">KES {Number(product.price).toLocaleString()}</p>
                         </Link>
                       ))}

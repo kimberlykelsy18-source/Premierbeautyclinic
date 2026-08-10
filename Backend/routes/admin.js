@@ -3,6 +3,17 @@ const path    = require('path');
 
 const LOGO_PATH = path.join(__dirname, '../../src/assets/logo.png');
 
+// Matches src/app/lib/api.ts's toShortAptId/toShortOrderId — kept as a small local
+// copy since this router module doesn't share code with customer.js.
+function toShortId(prefix, n) {
+  if (!n) return `${prefix}-???`;
+  const letterIndex = Math.floor((n - 1) / 999);
+  const numPart     = ((n - 1) % 999) + 1;
+  const letter      = String.fromCharCode(65 + letterIndex);
+  return `${prefix}-${letter}${String(numPart).padStart(3, '0')}`;
+}
+const toShortAptId = n => toShortId('APT', n);
+
 // Admin dashboard routes (inventory, orders, appointments, sales)
 module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePermission, initiateSTKPush, transporter }) => {
   // Use service client for queries that need to bypass RLS (e.g. payments join)
@@ -125,6 +136,82 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
     const update = { status: 'completed' };
     if (req.body.practitioner) update.practitioner = sanitize(req.body.practitioner).slice(0, 100);
     await adminDb.from('appointments').update(update).eq('id', req.params.id);
+    res.json({ success: true });
+  });
+
+  // Manual confirmation for WhatsApp-originated bookings (M-Pesa/card paused).
+  // Staff click this once they've settled payment/details over WhatsApp — flips
+  // pending → confirmed and inserts a synthetic 'paid' payment record (marked
+  // with a 'WHATSAPP' receipt, not a real M-Pesa one) so the existing check-in
+  // logic — which requires a paid payment with a truthy mpesa_receipt — unlocks
+  // with no other frontend changes needed.
+  router.post('/admin/appointments/:id/confirm', authenticate, requireEmployeePermission('complete_appointment'), validateId, async (req, res) => {
+    const { data: apt, error: aptErr } = await adminDb
+      .from('appointments')
+      .select('id, status, total_amount, service_id, user_id, appointment_time, appointment_number, services(name)')
+      .eq('id', req.params.id)
+      .single();
+
+    if (aptErr || !apt) return res.status(404).json({ error: 'Appointment not found' });
+    if (apt.status !== 'pending') return res.status(400).json({ error: `Appointment is already ${apt.status}` });
+
+    const { data: profile } = await adminDb
+      .from('profiles')
+      .select('email, full_name, phone')
+      .eq('id', apt.user_id)
+      .single();
+
+    await adminDb.from('appointments').update({ status: 'confirmed' }).eq('id', apt.id);
+
+    await adminDb.from('payments').insert({
+      appointment_id: apt.id,
+      amount:         apt.total_amount,
+      phone:          profile?.phone || null,
+      status:         'paid',
+      mpesa_receipt:  'WHATSAPP',
+    });
+
+    if (transporter && profile?.email) {
+      const shortAptId = toShortAptId(apt.appointment_number);
+      const aptDate = new Date(apt.appointment_time).toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      const aptTime = new Date(apt.appointment_time).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' });
+
+      transporter.sendMail({
+        from:        `"Premier Beauty Clinic" <${process.env.SMTP_USER}>`,
+        to:          profile.email,
+        subject:     `Appointment Confirmed — ${apt.services?.name || 'Your Booking'} · Premier Beauty Clinic`,
+        attachments: [{ filename: 'logo.png', path: LOGO_PATH, cid: 'premier_logo' }],
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee">
+            <div style="background:#1A1A1A;padding:28px 32px;text-align:center">
+              <img src="cid:premier_logo" alt="Premier Beauty Clinic" style="height:48px;object-fit:contain" />
+            </div>
+            <div style="background:#6D4C91;padding:24px 32px;text-align:center">
+              <p style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:2px;margin:0 0 6px">Appointment Confirmed</p>
+              <h2 style="color:#fff;margin:0;font-size:22px">${apt.services?.name || 'Your Booking'}</h2>
+            </div>
+            <div style="padding:36px 32px">
+              <p style="color:#555;margin:0 0 24px;font-size:15px">Hi ${profile.full_name || 'there'}! Your appointment is confirmed. We look forward to seeing you.</p>
+              <table style="background:#FDFBF7;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
+                <tr><td style="padding:8px 12px;color:#888;font-size:13px;width:140px">Booking Ref</td><td style="padding:8px 12px;font-weight:bold;font-size:14px;color:#6D4C91">${shortAptId}</td></tr>
+                <tr><td style="padding:8px 12px;color:#888;font-size:13px">Service</td><td style="padding:8px 12px;font-weight:bold;font-size:14px">${apt.services?.name || ''}</td></tr>
+                <tr><td style="padding:8px 12px;color:#888;font-size:13px">Date</td><td style="padding:8px 12px;font-size:14px">${aptDate}</td></tr>
+                <tr><td style="padding:8px 12px;color:#888;font-size:13px">Time</td><td style="padding:8px 12px;font-size:14px">${aptTime}</td></tr>
+              </table>
+              <div style="background:#f5f3ff;border-left:4px solid #6D4C91;padding:12px 16px;border-radius:4px;margin:24px 0 0;font-size:13px;color:#4c1d95">
+                <strong>📍 Location:</strong> Premier Beauty Clinic, Ngong Road, Nairobi<br>
+                <strong>⏰ Please arrive</strong> 5–10 minutes before your appointment time.
+              </div>
+            </div>
+            <div style="background:#FDFBF7;padding:20px 32px;text-align:center;border-top:1px solid #eee">
+              <p style="color:#aaa;font-size:12px;margin:0">© ${new Date().getFullYear()} Premier Beauty Clinic · Nairobi, Kenya</p>
+              <p style="color:#aaa;font-size:12px;margin:6px 0 0">Need to reschedule? Call or WhatsApp us at +254707259295</p>
+            </div>
+          </div>
+        `,
+      }).catch(err => console.error('Confirmation email failed:', err));
+    }
+
     res.json({ success: true });
   });
 
@@ -757,7 +844,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
 
   // Create new product
   router.post('/admin/products', authenticate, requireEmployeePermission('edit_stock'), async (req, res) => {
-    const { name, description, price, stock, low_stock_threshold, category_id, is_active, brand } = req.body;
+    const { name, description, price, stock, low_stock_threshold, category_id, is_active, brand, size } = req.body;
     if (!name?.trim())                                 return res.status(400).json({ error: 'Product name is required' });
     if (!price || isNaN(Number(price)) || Number(price) <= 0) return res.status(400).json({ error: 'Valid price is required' });
 
@@ -773,6 +860,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
       category_id:         category_id ? Number(category_id) : null,
       is_active:           is_active ?? true,
       brand:               brand?.trim() || null,
+      size:                size?.trim() || null,
       images:              Array.isArray(req.body.images) ? req.body.images : [],
     }).select('*, categories(name)').single();
 
@@ -782,7 +870,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
 
   // Edit product (price, name, threshold, active, brand, category)
   router.patch('/admin/products/:id', authenticate, requireEmployeePermission('edit_stock'), validateIntId, async (req, res) => {
-    const ALLOWED = ['name', 'price', 'low_stock_threshold', 'is_active', 'brand', 'description', 'category_id', 'images'];
+    const ALLOWED = ['name', 'price', 'low_stock_threshold', 'is_active', 'brand', 'size', 'description', 'category_id', 'images'];
     const updates = {};
     for (const key of ALLOWED) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];

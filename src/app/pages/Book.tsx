@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, User, CheckCircle2, Sparkles, ShieldCheck, Smartphone, Edit2, Check, Home, CalendarCheck, ClipboardList, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Check, Home, CalendarCheck, ClipboardList, AlertCircle, ChevronRight, HelpCircle, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import mpesaLogo from '../../assets/mpesa.png';
 import { useStore } from '../context/StoreContext';
 import { useNavigate, Link, useSearchParams } from 'react-router';
 import { apiFetch } from '../lib/api';
-import { normalizeMpesaPhone } from '../lib/phone';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface FormField {
@@ -31,15 +29,6 @@ interface ApiService {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function getCategoryIcon(category: string | null) {
-  switch (category?.toLowerCase()) {
-    case 'facial':       return <Sparkles className="w-6 h-6" />;
-    case 'consultation': return <ShieldCheck className="w-6 h-6" />;
-    case 'virtual':      return <User className="w-6 h-6" />;
-    default:             return <Sparkles className="w-6 h-6" />;
-  }
-}
 
 function getAvailableDates(): Date[] {
   const dates: Date[] = [];
@@ -74,6 +63,10 @@ function buildAppointmentTime(date: Date, timeStr: string): string {
 }
 
 const TIME_SLOTS = ['09:00 AM', '10:00 AM', '11:30 AM', '01:30 PM', '02:30 PM', '04:00 PM', '05:00 PM'];
+
+// Same threshold used on the Treatments page: priced services show their fee up front;
+// higher-value programs (and anything with no set price yet) are "priced at consultation".
+const SERVICE_PRICE_CEILING = 20000;
 
 // ─── Intake Form Field Renderer ───────────────────────────────────────────────
 function IntakeField({
@@ -188,10 +181,7 @@ export function Book() {
   const [intakeResponses, setIntakeResponses] = useState<Record<string, any>>({});
 
   const [isLoading, setIsLoading]                 = useState(false);
-  const [awaitingPayment, setAwaitingPayment]     = useState(false);
-  const [paymentMethod, setPaymentMethod]         = useState('mpesa');
-  const [mpesaPhone, setMpesaPhone]               = useState(user?.phone || '');
-  const [isEditingMpesaPhone, setIsEditingMpesaPhone] = useState(false);
+  const [whatsappUrl, setWhatsappUrl]             = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation]   = useState(false);
   const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -205,6 +195,7 @@ export function Book() {
   const [loadingServices, setLoadingServices] = useState(true);
   const [bookedSlots, setBookedSlots]         = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading]       = useState(false);
+  const [customRequest, setCustomRequest]     = useState('');
 
   useEffect(() => {
     const preselect = searchParams.get('service');
@@ -222,10 +213,6 @@ export function Book() {
       .catch(() => toast.error('Failed to load services. Please refresh.'))
       .finally(() => setLoadingServices(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!isEditingMpesaPhone) setMpesaPhone(formData.phone);
-  }, [formData.phone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!selectedService || !selectedDate) { setBookedSlots([]); return; }
@@ -246,9 +233,10 @@ export function Book() {
 
   const availableDates = getAvailableDates();
 
-  const deposit = selectedService
-    ? Math.round(selectedService.base_price * (selectedService.deposit_percentage / 100))
-    : 0;
+  // No online payment happens anymore, so there's nothing left to disclose an
+  // amount for before charging — price can stay hidden all the way through for
+  // consult-priced services, matching the WhatsApp message and Step 1's lanes.
+  const hidePrice = !(selectedService && selectedService.base_price > 0 && selectedService.base_price <= SERVICE_PRICE_CEILING);
 
   // Services with form_fields populated require an intake step
   const hasIntakeForm = (selectedService?.form_fields?.length ?? 0) > 0;
@@ -265,6 +253,28 @@ export function Book() {
   const prevStep = () => {
     if (step === 3 && !hasIntakeForm) { setStep(1); return; }
     setStep(s => s - 1);
+  };
+
+  // Selecting a service from step 1 must decide the next step from that service's own
+  // form_fields, not the `hasIntakeForm` closure above — that constant is computed from
+  // the *previous* render's selectedService, so calling nextStep() right after
+  // setSelectedService() here would read stale state and skip the intake form on first pick.
+  const selectService = (service: ApiService) => {
+    setSelectedService(service);
+    setIntakeResponses({});
+    setStep((service.form_fields?.length ?? 0) > 0 ? 2 : 3);
+  };
+
+  const handleCustomRequest = () => {
+    const text = customRequest.trim();
+    if (!text) { toast.error("Please describe what you're looking for."); return; }
+    const consultService =
+      services.find(s => s.name === 'Dermatologist Consultation') ||
+      services.find(s => s.category === 'Imaging & Consultation');
+    if (!consultService) { toast.error('Consultation booking is unavailable right now. Please try again later.'); return; }
+    setSelectedService(consultService);
+    setIntakeResponses({ _custom_request: text });
+    setStep((consultService.form_fields?.length ?? 0) > 0 ? 2 : 3);
   };
 
   const validateIntakeForm = (): boolean => {
@@ -284,65 +294,40 @@ export function Book() {
     setIntakeResponses(prev => ({ ...prev, [name]: value }));
   };
 
-  const pollPaymentStatus = async (checkoutRequestId: string): Promise<'paid' | 'failed' | 'timeout'> => {
-    for (let attempt = 0; attempt < 40; attempt++) {
-      await new Promise(r => setTimeout(r, 3000));
-      try {
-        const data = await apiFetch(`/payment/status/${checkoutRequestId}`, {}, token, sessionId);
-        if (data.status === 'paid')   return 'paid';
-        if (data.status === 'failed') return 'failed';
-      } catch { /* keep trying */ }
-    }
-    return 'timeout';
-  };
-
-  const handleBooking = async () => {
+  // M-Pesa/card booking is on hold — this hands off to WhatsApp instead. The
+  // appointment is created as 'pending' first (visible to staff immediately),
+  // then a pre-filled wa.me link opens. The blank tab is opened synchronously,
+  // before the await, so the click's user-activation survives the async gap —
+  // opening it after the await is what popup blockers tend to kill.
+  const handleWhatsAppBooking = async () => {
     if (!user) { toast.error('Please log in to book an appointment.'); navigate('/login'); return; }
     if (!selectedService || !selectedDate || !selectedTime) return;
     if (!formData.name || !formData.phone) { toast.error('Please fill in your name and phone number.'); return; }
 
-    const phoneToUse = mpesaPhone || formData.phone;
-    if (phoneToUse.replace(/\D/g, '').length < 9) { toast.error('Please enter a valid M-Pesa phone number.'); return; }
-
-    const normalizedPhone  = normalizeMpesaPhone(phoneToUse);
-    const appointmentTime  = buildAppointmentTime(selectedDate, selectedTime);
+    const appointmentTime = buildAppointmentTime(selectedDate, selectedTime);
 
     setIsLoading(true);
+    const tab = window.open('', '_blank');
     try {
-      const data = await apiFetch('/appointments/book-mpesa', {
+      const data = await apiFetch('/appointments/book-whatsapp', {
         method: 'POST',
         body: JSON.stringify({
           service_id:       selectedService.id,
           appointment_time: appointmentTime,
-          phone:            normalizedPhone,
+          phone:            formData.phone,
           form_responses:   intakeResponses,
         }),
       }, token, sessionId);
 
-      if (data.free) {
-        setShowConfirmation(true);
-        redirectTimerRef.current = setTimeout(() => navigate('/'), 6000);
-        return;
-      }
+      setWhatsappUrl(data.whatsapp_url);
+      if (tab) tab.location.href = data.whatsapp_url;
+      else window.open(data.whatsapp_url, '_blank');
 
-      const { checkout_request_id } = data;
-      setAwaitingPayment(true);
-      const result = await pollPaymentStatus(checkout_request_id);
-
-      if (result === 'paid') {
-        setAwaitingPayment(false);
-        setShowConfirmation(true);
-        redirectTimerRef.current = setTimeout(() => navigate('/'), 6000);
-        return;
-      }
-
-      toast.error(result === 'failed'
-        ? 'Payment was declined or cancelled. Please try again.'
-        : 'Payment timed out. If charged, contact us with your M-Pesa receipt.');
-      setAwaitingPayment(false);
+      setShowConfirmation(true);
+      redirectTimerRef.current = setTimeout(() => navigate('/'), 6000);
     } catch (err: any) {
+      if (tab) tab.close();
       toast.error(err.message || 'Booking failed. Please try again.');
-      setAwaitingPayment(false);
     } finally {
       setIsLoading(false);
     }
@@ -372,8 +357,8 @@ export function Book() {
           {step === 1 && (
             <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <div className="text-center mb-8 md:mb-12">
-                <h1 className="text-[26px] md:text-[36px] font-serif mb-2 md:mb-4 italic">Select a Service</h1>
-                <p className="text-gray-500 text-sm md:text-base">Choose the treatment or consultation that fits your needs.</p>
+                <h1 className="text-[26px] md:text-[36px] font-serif mb-2 md:mb-4 italic">What Are You Looking For?</h1>
+                <p className="text-gray-500 text-sm md:text-base">Choose a treatment, browse our advanced programs, or tell us what's going on.</p>
               </div>
 
               {loadingServices ? (
@@ -382,44 +367,107 @@ export function Book() {
                 <p className="text-center text-gray-400 py-16">No services available right now. Please check back later.</p>
               ) : (
                 (() => {
-                  const categories = [...new Set(services.map(s => s.category || 'Other'))];
+                  const pricedServices   = services.filter(s => s.base_price > 0 && s.base_price <= SERVICE_PRICE_CEILING);
+                  const consultServices  = services.filter(s => s.base_price === 0 || s.base_price > SERVICE_PRICE_CEILING);
+                  const categories       = [...new Set(pricedServices.map(s => s.category || 'Other'))];
+                  const consultCategories = [...new Set(consultServices.map(s => s.category || 'Other'))];
+
                   return (
-                    <div className="space-y-8">
-                      {categories.map(cat => (
-                        <div key={cat}>
-                          <h2 className="text-xs md:text-sm font-bold uppercase tracking-widest text-[#6D4C91] mb-4">{cat}</h2>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                            {services.filter(s => (s.category || 'Other') === cat).map((service) => (
-                              <button
-                                key={service.id}
-                                onClick={() => {
-                                  setSelectedService(service);
-                                  setIntakeResponses({}); // clear old responses when service changes
-                                  nextStep();
-                                }}
-                                className={`text-left p-6 md:p-8 rounded-2xl md:rounded-3xl border-2 transition-all group active:scale-95 ${selectedService?.id === service.id ? 'border-[#6D4C91] bg-white shadow-xl' : 'border-transparent bg-white/50 hover:bg-white hover:shadow-lg'}`}
-                              >
-                                <div className="flex justify-between items-start mb-4 md:mb-6">
-                                  <div className="p-3 md:p-4 bg-[#FDFBF7] rounded-xl md:rounded-2xl group-hover:bg-[#6D4C91]/10 transition-colors text-[#6D4C91]">
-                                    {getCategoryIcon(service.category)}
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-[16px] md:text-[18px] font-bold">{formatPrice(service.base_price)}</p>
-                                    <p className="text-xs text-gray-400">{service.duration_minutes} mins</p>
+                    <div className="space-y-10 md:space-y-14">
+
+                      {/* ── Lane 1: priced services ── */}
+                      {pricedServices.length > 0 && (
+                        <div className="space-y-8">
+                          {categories.map(cat => (
+                            <div key={cat}>
+                              <h2 className="text-xs md:text-sm font-bold uppercase tracking-widest text-[#6D4C91] mb-4">{cat}</h2>
+                              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
+                                {pricedServices.filter(s => (s.category || 'Other') === cat).map((service) => (
+                                  <button
+                                    key={service.id}
+                                    onClick={() => selectService(service)}
+                                    className={`text-left p-4 md:p-5 rounded-2xl border-2 transition-all group active:scale-95 flex flex-col ${selectedService?.id === service.id ? 'border-[#6D4C91] bg-white shadow-xl' : 'border-transparent bg-white/50 hover:bg-white hover:shadow-lg'}`}
+                                  >
                                     {(service.form_fields?.length ?? 0) > 0 && (
-                                      <p className="text-xs text-[#6D4C91] font-bold uppercase tracking-widest mt-1 flex items-center justify-end gap-1">
-                                        <ClipboardList className="w-3 h-3" /> Intake Form
-                                      </p>
+                                      <div className="flex justify-end mb-2">
+                                        <ClipboardList className="w-3.5 h-3.5 text-[#6D4C91]" aria-label="Intake form required" />
+                                      </div>
                                     )}
-                                  </div>
+                                    <h3 className="text-[14px] font-bold mb-1.5 leading-snug line-clamp-2">{service.name}</h3>
+                                    <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-2 flex-1">{service.description}</p>
+                                    <div className="flex items-center justify-between pt-2 border-t border-black/5">
+                                      <p className="text-[14px] font-bold">{formatPrice(service.base_price)}</p>
+                                      <p className="text-[11px] text-gray-400">{service.duration_minutes} min</p>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* ── Lane 2: advanced programs, priced at consultation ── */}
+                      {consultServices.length > 0 && (
+                        <div>
+                          <div className="mb-4">
+                            <h2 className="text-xs md:text-sm font-bold uppercase tracking-widest text-[#6D4C91]">Advanced Programs</h2>
+                            <p className="text-xs text-gray-400 mt-1">Higher-value programs, priced at your consultation once we understand your goals.</p>
+                          </div>
+                          <div className="bg-white rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-sm border border-gray-100 space-y-7">
+                            {consultCategories.map(cat => (
+                              <div key={cat}>
+                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">{cat}</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 divide-y divide-gray-100 md:divide-y-0">
+                                  {consultServices.filter(s => (s.category || 'Other') === cat).map(service => (
+                                    <button
+                                      key={service.id}
+                                      onClick={() => selectService(service)}
+                                      className="group w-full flex items-center justify-between gap-4 py-3.5 text-left"
+                                    >
+                                      <div className="min-w-0">
+                                        <p className="font-bold text-sm group-hover:text-[#6D4C91] transition-colors truncate">{service.name}</p>
+                                        <p className="text-[11px] text-[#6D4C91]/80 font-semibold uppercase tracking-widest mt-0.5">Priced at Consultation</p>
+                                      </div>
+                                      <span className="shrink-0 w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center group-hover:bg-[#6D4C91] group-hover:text-white group-hover:border-[#6D4C91] transition-colors">
+                                        <ChevronRight className="w-4 h-4" />
+                                      </span>
+                                    </button>
+                                  ))}
                                 </div>
-                                <h3 className="text-[16px] md:text-[20px] font-bold mb-2 md:mb-3">{service.name}</h3>
-                                <p className="text-xs md:text-sm text-gray-500 leading-relaxed">{service.description}</p>
-                              </button>
+                              </div>
                             ))}
                           </div>
                         </div>
-                      ))}
+                      )}
+
+                      {/* ── Lane 3: something else — free-text, resolved at consultation ── */}
+                      <div className="bg-[#1A1A1A] rounded-2xl md:rounded-3xl p-6 md:p-10 text-white">
+                        <div className="flex items-start gap-4 mb-5">
+                          <div className="p-3 bg-white/10 rounded-xl md:rounded-2xl text-[#8B5CF6] shrink-0">
+                            <HelpCircle className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h2 className="text-[18px] md:text-[20px] font-bold mb-1">Not Sure What You Need?</h2>
+                            <p className="text-white/60 text-xs md:text-sm">Tell us what's going on and we'll recommend the right treatment during your consultation.</p>
+                          </div>
+                        </div>
+                        <textarea
+                          value={customRequest}
+                          onChange={e => setCustomRequest(e.target.value)}
+                          rows={3}
+                          placeholder="e.g. I've had breakouts along my jawline for a few months and nothing I try seems to help…"
+                          className="w-full px-4 py-3 rounded-xl bg-white/5 border-2 border-white/10 focus:border-[#8B5CF6] outline-none text-[14px] text-white placeholder:text-white/30 transition-colors resize-none"
+                        />
+                        <button
+                          onClick={handleCustomRequest}
+                          className="mt-4 inline-flex items-center bg-[#6D4C91] text-white px-6 py-3 rounded-full font-bold text-sm hover:bg-[#5c3f80] transition-colors"
+                        >
+                          Continue to Consultation
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </button>
+                      </div>
+
                     </div>
                   );
                 })()
@@ -444,6 +492,18 @@ export function Book() {
                 <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                 <p className="text-[12px] text-amber-800">Your responses are confidential and shared only with your treating practitioner. Fields marked <span className="text-red-500 font-bold">*</span> are required.</p>
               </div>
+
+              {intakeResponses._custom_request !== undefined && (
+                <div className="bg-[#6D4C91]/5 border border-[#6D4C91]/15 rounded-2xl p-5 md:p-6 mb-6 md:mb-8">
+                  <label className="block text-xs font-bold uppercase tracking-widest text-[#6D4C91] mb-3">What you told us</label>
+                  <textarea
+                    value={intakeResponses._custom_request}
+                    onChange={e => updateIntake('_custom_request', e.target.value)}
+                    rows={2}
+                    className="w-full px-4 py-3 rounded-xl bg-white border-2 border-transparent focus:border-[#6D4C91] outline-none text-[14px] transition-colors resize-none"
+                  />
+                </div>
+              )}
 
               <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-gray-100">
                 <div className="space-y-7">
@@ -579,84 +639,10 @@ export function Book() {
                       <input type="email" placeholder="jane.doe@example.com" className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#FDFBF7] border-transparent focus:border-[#6D4C91] outline-none transition-all text-sm md:text-base" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Phone Number (M-Pesa)</label>
+                      <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Phone Number</label>
                       <input type="tel" placeholder="07XX XXX XXX" className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#FDFBF7] border-transparent focus:border-[#6D4C91] outline-none transition-all text-sm md:text-base" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                     </div>
                   </div>
-
-                  {deposit > 0 && (
-                    <div className="bg-white p-6 md:p-8 rounded-2xl md:rounded-[32px] shadow-sm border border-gray-100 space-y-4 md:space-y-6">
-                      <h3 className="text-xs md:text-sm font-bold uppercase tracking-widest text-gray-400">Payment Method</h3>
-
-                      {awaitingPayment ? (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-5 bg-green-50 border border-green-200 rounded-xl">
-                          <div className="flex items-start space-x-3">
-                            <Smartphone className="w-6 h-6 text-green-600 flex-shrink-0 animate-pulse mt-0.5" />
-                            <div>
-                              <p className="text-[14px] font-bold text-green-900 mb-1">STK Push Sent!</p>
-                              <p className="text-[13px] text-green-700">Check your phone <span className="font-bold">({mpesaPhone || formData.phone})</span> and enter your M-Pesa PIN to confirm your KES {deposit.toLocaleString()} deposit.</p>
-                              <div className="mt-3 flex items-center space-x-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
-                                <span className="text-[12px] text-green-600 font-medium">Waiting for payment confirmation...</span>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ) : (
-                        <>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                            <button type="button" onClick={() => setPaymentMethod('mpesa')} className={`p-4 md:p-6 rounded-xl md:rounded-2xl border-2 flex items-center space-x-3 md:space-x-4 transition-all active:scale-95 ${paymentMethod === 'mpesa' ? 'border-[#6D4C91] bg-[#FDFBF7]' : 'border-gray-100 hover:border-gray-200'}`}>
-                              <div className="bg-white px-2 md:px-3 py-1.5 md:py-2 rounded-lg border border-gray-100"><img src={mpesaLogo} alt="M-Pesa" className="h-5 md:h-7 w-auto" /></div>
-                              <div className="text-left flex-grow"><p className="font-bold text-xs md:text-sm">M-Pesa</p><p className="text-xs text-gray-400">STK Push</p></div>
-                              {paymentMethod === 'mpesa' && <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-[#6D4C91]" />}
-                            </button>
-                            <button type="button" onClick={() => setPaymentMethod('card')} className={`p-4 md:p-6 rounded-xl md:rounded-2xl border-2 flex items-center space-x-3 md:space-x-4 transition-all active:scale-95 ${paymentMethod === 'card' ? 'border-[#6D4C91] bg-[#FDFBF7]' : 'border-gray-100 hover:border-gray-200'}`}>
-                              <div className="flex items-center space-x-1 md:space-x-2 bg-gray-50 px-2 md:px-3 py-1.5 md:py-2 rounded-lg">
-                                <svg className="w-6 h-5 md:w-8 md:h-6" viewBox="0 0 48 32" fill="none"><rect width="48" height="32" rx="4" fill="#1434CB" /><path d="M17 10h14M17 16h14M17 22h8" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
-                                <svg className="w-6 h-5 md:w-8 md:h-6" viewBox="0 0 48 32" fill="none"><rect width="48" height="32" rx="4" fill="#EB001B" /><circle cx="20" cy="16" r="8" fill="#FF5F00" /><circle cx="28" cy="16" r="8" fill="#F79E1B" /></svg>
-                              </div>
-                              <div className="text-left flex-grow"><p className="font-bold text-xs md:text-sm">Card</p><p className="text-xs text-gray-400">Visa, Mastercard</p></div>
-                              {paymentMethod === 'card' && <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-[#6D4C91]" />}
-                            </button>
-                          </div>
-
-                          {paymentMethod === 'mpesa' && (
-                            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-                              <p className="text-xs md:text-sm text-gray-500 mb-3">When you book, an STK push will be sent to:</p>
-                              <div className="bg-[#FDFBF7] p-3 md:p-4 rounded-xl border border-gray-200 flex items-center justify-between">
-                                {isEditingMpesaPhone ? (
-                                  <input type="tel" value={mpesaPhone} onChange={(e) => setMpesaPhone(e.target.value)} placeholder="07XX XXX XXX" className="flex-1 px-3 py-2 rounded-lg border border-gray-300 outline-none focus:border-[#6D4C91] text-sm md:text-base" autoFocus />
-                                ) : (
-                                  <span className="text-[15px] md:text-[17px] font-bold">{mpesaPhone || formData.phone || '—'}</span>
-                                )}
-                                <button type="button" onClick={() => { if (isEditingMpesaPhone) { setIsEditingMpesaPhone(false); } else { if (!mpesaPhone) setMpesaPhone(formData.phone); setIsEditingMpesaPhone(true); } }} className="ml-3 p-2 hover:bg-gray-200 rounded-lg transition-colors flex-shrink-0">
-                                  {isEditingMpesaPhone ? <Check className="w-4 h-4 text-green-600" /> : <Edit2 className="w-4 h-4 text-gray-500" />}
-                                </button>
-                              </div>
-                              <p className="text-xs text-gray-400 mt-2 italic">Keep your phone nearby to enter your M-Pesa PIN when prompted.</p>
-                            </motion.div>
-                          )}
-
-                          {paymentMethod === 'card' && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 md:space-y-4 pt-3 md:pt-4 border-t border-gray-100">
-                              <div>
-                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Card Number</label>
-                                <input type="text" placeholder="1234 5678 9012 3456" maxLength={19} className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#FDFBF7] border border-transparent focus:border-blue-500 outline-none transition-all text-[13px] md:text-[14px]" />
-                              </div>
-                              <div className="grid grid-cols-2 gap-3 md:gap-4">
-                                <div><label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Expiry</label><input type="text" placeholder="MM/YY" maxLength={5} className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#FDFBF7] border border-transparent focus:border-blue-500 outline-none transition-all text-[13px] md:text-[14px]" /></div>
-                                <div><label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">CVV</label><input type="text" placeholder="123" maxLength={3} className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#FDFBF7] border border-transparent focus:border-blue-500 outline-none transition-all text-[13px] md:text-[14px]" /></div>
-                              </div>
-                              <div className="flex items-center space-x-2 md:space-x-3 p-3 md:p-4 bg-blue-50 rounded-lg md:rounded-xl border border-blue-100">
-                                <ShieldCheck className="w-3 h-3 md:w-4 md:h-4 text-blue-600 flex-shrink-0" />
-                                <p className="text-xs text-blue-700 font-medium">Secure payment. Your card data is encrypted.</p>
-                              </div>
-                            </motion.div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
                 </div>
 
                 {/* Booking Summary Sidebar */}
@@ -668,34 +654,37 @@ export function Book() {
                       <div className="flex justify-between text-xs md:text-sm"><span className="text-gray-400">Date:</span><span className="font-bold text-right">{selectedDate ? formatDateLabel(selectedDate) : '—'}</span></div>
                       <div className="flex justify-between text-xs md:text-sm"><span className="text-gray-400">Time:</span><span className="font-bold">{selectedTime}</span></div>
                       <div className="pt-3 md:pt-4 border-t border-gray-100 flex justify-between items-center">
-                        <span className="text-[14px] md:text-[16px] font-bold">Total Fee:</span>
-                        <span className="text-[16px] md:text-[18px] font-bold text-[#6D4C91]">{formatPrice(selectedService?.base_price || 0)}</span>
+                        <span className="text-[14px] md:text-[16px] font-bold">{hidePrice ? 'Pricing:' : 'Price:'}</span>
+                        <span className={`font-bold text-[#6D4C91] ${hidePrice ? 'text-[13px] md:text-[14px] text-right' : 'text-[16px] md:text-[18px]'}`}>
+                          {hidePrice ? 'To be confirmed at consultation' : formatPrice(selectedService?.base_price || 0)}
+                        </span>
                       </div>
                       <div className="bg-[#FDFBF7] p-3 md:p-4 rounded-xl md:rounded-2xl">
-                        {deposit > 0 ? (
-                          <>
-                            <p className="text-xs text-[#6D4C91] font-bold uppercase tracking-widest mb-1">Deposit Required ({selectedService?.deposit_percentage ?? 0}%)</p>
-                            <p className="text-xs md:text-sm text-gray-600">Pay {formatPrice(deposit)} now via M-Pesa to secure your slot. Balance of {formatPrice((selectedService?.base_price || 0) - deposit)} paid at the clinic.</p>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-xs text-green-700 font-bold uppercase tracking-widest mb-1">No Deposit Required</p>
-                            <p className="text-xs md:text-sm text-gray-600">Full payment of {formatPrice(selectedService?.base_price || 0)} is collected at the clinic. Book your slot instantly.</p>
-                          </>
-                        )}
+                        <p className="text-xs text-[#6D4C91] font-bold uppercase tracking-widest mb-1">No Online Payment</p>
+                        <p className="text-xs md:text-sm text-gray-600">We'll confirm your booking and payment over WhatsApp — no charge happens here.</p>
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={handleBooking}
+                      onClick={handleWhatsAppBooking}
                       disabled={!formData.name || !formData.phone || isLoading || !user}
                       className="w-full bg-[#6D4C91] text-white py-3.5 md:py-5 rounded-full text-xs md:text-sm font-bold uppercase tracking-widest hover:bg-[#5a3e79] shadow-lg transition-all disabled:opacity-50 active:scale-95"
                     >
-                      {awaitingPayment ? 'Waiting for payment...' : isLoading ? 'Booking...' : deposit > 0 ? `Book & Pay ${formatPrice(deposit)}` : 'Confirm Booking'}
+                      {isLoading ? 'Booking...' : 'Confirm via WhatsApp'}
                     </button>
-                    <button type="button" onClick={prevStep} disabled={isLoading || awaitingPayment} className="w-full mt-3 md:mt-4 text-center text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-[#1A1A1A] disabled:opacity-50">
+                    <button type="button" onClick={prevStep} disabled={isLoading} className="w-full mt-3 md:mt-4 text-center text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-[#1A1A1A] disabled:opacity-50">
                       Go Back
                     </button>
+                    {whatsappUrl && (
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mt-3 text-center text-[11px] font-bold text-[#6D4C91] hover:underline"
+                      >
+                        Didn't open? Tap here to open WhatsApp
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
@@ -720,8 +709,8 @@ export function Book() {
                 <CalendarCheck className="w-10 h-10 text-green-600" />
               </motion.div>
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                <h2 className="text-[26px] md:text-[30px] font-serif italic mb-3">Booking Confirmed!</h2>
-                <p className="text-gray-500 text-sm md:text-base leading-relaxed mb-2">Your appointment for <span className="font-bold text-[#1A1A1A]">{selectedService?.name}</span> has been successfully booked.</p>
+                <h2 className="text-[26px] md:text-[30px] font-serif italic mb-3">Request Sent!</h2>
+                <p className="text-gray-500 text-sm md:text-base leading-relaxed mb-2">Your request for <span className="font-bold text-[#1A1A1A]">{selectedService?.name}</span> has been received.</p>
                 {selectedDate && selectedTime && (
                   <div className="flex items-center justify-center space-x-4 my-5 bg-[#F2F1F8] rounded-2xl p-4">
                     <div className="flex items-center space-x-2 text-[13px] font-medium"><Calendar className="w-4 h-4 text-[#6D4C91]" /><span>{formatDateLabel(selectedDate)}</span></div>
@@ -729,7 +718,7 @@ export function Book() {
                     <div className="flex items-center space-x-2 text-[13px] font-medium"><Clock className="w-4 h-4 text-[#6D4C91]" /><span>{selectedTime}</span></div>
                   </div>
                 )}
-                <p className="text-gray-400 text-[12px] mb-8">A confirmation email has been sent to you. You will be redirected to the home page shortly.</p>
+                <p className="text-gray-400 text-[12px] mb-8">We've opened WhatsApp with your booking details — send the message to confirm with our team. You will be redirected to the home page shortly.</p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button onClick={() => { if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current); navigate('/account'); }} className="flex-1 py-3.5 rounded-full border-2 border-[#6D4C91] text-[#6D4C91] text-[13px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] hover:text-white transition-all">My Appointments</button>
                   <button onClick={() => { if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current); navigate('/'); }} className="flex-1 py-3.5 rounded-full bg-[#1A1A1A] text-white text-[13px] font-bold uppercase tracking-widest hover:bg-[#6D4C91] transition-all flex items-center justify-center space-x-2"><Home className="w-4 h-4" /><span>Go Home</span></button>

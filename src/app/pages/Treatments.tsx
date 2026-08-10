@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router';
-import { ArrowRight, Star, Check, Clock, Shield, ChevronRight as ChevronRightIcon, ChevronLeft } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router';
+import { ArrowRight, Star, Check, Clock, ChevronRight as ChevronRightIcon, ChevronLeft } from 'lucide-react';
 import { StarRating } from '../components/ui/StarRating';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
@@ -44,16 +44,13 @@ const FALLBACK_SLIDES = [
 
 function ServiceSkeleton() {
   return (
-    <div className="bg-white rounded-3xl shadow-sm overflow-hidden border border-gray-100 animate-pulse">
-      <div className="h-64 bg-gray-200" />
-      <div className="p-6 md:p-8 space-y-4">
-        <div className="h-5 bg-gray-200 rounded-full w-2/3" />
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 animate-pulse">
+      <div className="h-40 bg-gray-200" />
+      <div className="p-4 md:p-5 space-y-3">
+        <div className="h-4 bg-gray-200 rounded-full w-2/3" />
         <div className="h-3 bg-gray-200 rounded-full w-full" />
         <div className="h-3 bg-gray-200 rounded-full w-3/4" />
-        <div className="flex gap-3 mt-6">
-          <div className="flex-1 h-11 bg-gray-200 rounded-full" />
-          <div className="flex-1 h-11 bg-gray-200 rounded-full" />
-        </div>
+        <div className="h-9 bg-gray-200 rounded-full mt-4" />
       </div>
     </div>
   );
@@ -72,96 +69,86 @@ function ServiceCard({ service }: { service: Service }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4 }}
-      className="bg-white rounded-3xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-xl hover:border-[#6D4C91]/20 transition-all duration-300 group"
+      className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-xl hover:border-[#6D4C91]/20 transition-all duration-300 group flex flex-col"
     >
       {/* Image */}
       <Link to={`/services/${service.slug ?? service.id}`} className="block relative overflow-hidden">
         <img
           src={heroImg}
           alt={service.name}
-          className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        <div className="absolute top-4 right-4 bg-[#6D4C91] text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg">
+        <div className="absolute top-3 right-3 bg-[#6D4C91] text-white px-3 py-1 rounded-full font-bold text-xs shadow-lg">
           {formatPrice(service.base_price)}
         </div>
-        {service.category && (
-          <div className="absolute top-4 left-4 bg-black/70 backdrop-blur text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
-            {service.category}
-          </div>
-        )}
       </Link>
 
       {/* Body */}
-      <div className="p-6 md:p-8">
-        <div className="flex items-center gap-4 text-gray-500 text-sm mb-3">
+      <div className="p-4 md:p-5 flex flex-col flex-1">
+        <div className="flex items-center gap-3 text-gray-500 text-xs mb-2">
           <div className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
+            <Clock className="w-3.5 h-3.5" />
             <span>{service.duration_minutes} min</span>
           </div>
           {avgRating > 0 && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <StarRating rating={avgRating} size={3} />
-              <span className="text-xs text-gray-400">{avgRating.toFixed(1)} ({ratingCount})</span>
+              <span className="text-[11px] text-gray-400">{avgRating.toFixed(1)} ({ratingCount})</span>
             </div>
           )}
         </div>
 
         <Link to={`/services/${service.slug ?? service.id}`}>
-          <h3 className="text-xl md:text-2xl font-bold leading-tight mb-3 hover:text-[#6D4C91] transition-colors">
+          <h3 className="text-base font-bold leading-tight mb-2 hover:text-[#6D4C91] transition-colors line-clamp-2">
             {service.name}
           </h3>
         </Link>
 
         {service.description && (
-          <p className="text-gray-500 text-sm leading-relaxed mb-5 line-clamp-2">{service.description}</p>
+          <p className="text-gray-500 text-xs leading-relaxed mb-3 line-clamp-2">{service.description}</p>
         )}
 
-        {/* Benefits */}
+        {/* Benefits — top 2, single column to stay compact at 4-up */}
         {service.benefits && service.benefits.length > 0 && (
-          <div className="mb-5">
-            <div className="grid grid-cols-2 gap-y-2 gap-x-3">
-              {service.benefits.slice(0, 4).map((b, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-[#6D4C91] mt-0.5 shrink-0" />
-                  <span className="text-sm text-gray-600">{b}</span>
-                </div>
-              ))}
-            </div>
+          <div className="mb-3 space-y-1.5">
+            {service.benefits.slice(0, 2).map((b, i) => (
+              <div key={i} className="flex items-start gap-1.5">
+                <Check className="w-3.5 h-3.5 text-[#6D4C91] mt-0.5 shrink-0" />
+                <span className="text-xs text-gray-600 line-clamp-1">{b}</span>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Results stat */}
-        {service.results_stat && (
-          <div className="bg-[#F2F1F8] rounded-2xl p-4 mb-5">
-            <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-[#6D4C91] shrink-0" />
-              <span className="text-sm font-semibold text-gray-700">{service.results_stat}</span>
-            </div>
+        <div className="mt-auto pt-1">
+          {/* CTAs */}
+          <div className="flex gap-2">
+            <Link
+              to={`/book?service=${service.id}`}
+              className="flex-1 bg-[#6D4C91] text-white py-2.5 rounded-full font-bold text-center hover:bg-[#5c3f80] transition-colors text-xs"
+            >
+              Book Now
+            </Link>
+            <Link
+              to={`/services/${service.slug ?? service.id}`}
+              aria-label={`View details for ${service.name}`}
+              className="shrink-0 w-9 h-9 bg-black text-white rounded-full hover:bg-gray-800 transition-colors flex items-center justify-center"
+            >
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
-        )}
-
-        {/* CTAs */}
-        <div className="flex gap-3">
-          <Link
-            to={`/book?service=${service.id}`}
-            className="flex-1 bg-[#6D4C91] text-white py-3 rounded-full font-bold text-center hover:bg-[#5c3f80] transition-colors text-sm"
-          >
-            Book Now
-          </Link>
-          <Link
-            to={`/services/${service.slug ?? service.id}`}
-            className="flex-1 bg-black text-white py-3 rounded-full font-bold hover:bg-gray-800 transition-colors text-sm flex items-center justify-center gap-2"
-          >
-            View Details
-            <ArrowRight className="w-4 h-4" />
-          </Link>
         </div>
       </div>
     </motion.div>
   );
 }
 
+// Services priced above this show no price — customers select and book a consultation instead
+const SERVICE_PRICE_CEILING = 20000;
+
 export function Services() {
+  const [searchParams] = useSearchParams();
+  const activeCategory = searchParams.get('category');
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading]   = useState(true);
 
@@ -193,6 +180,12 @@ export function Services() {
     const t = setInterval(goNext, 5000);
     return () => clearInterval(t);
   }, [slides.length, goNext]);
+
+  const visibleServices = activeCategory ? services.filter(s => s.category === activeCategory) : services;
+
+  // Affordable tier shown as full cards with price; higher-value programs shown as a plain bookable list, no price
+  const pricedServices = visibleServices.filter(s => s.base_price > 0 && s.base_price <= SERVICE_PRICE_CEILING);
+  const consultServices = visibleServices.filter(s => s.base_price === 0 || s.base_price > SERVICE_PRICE_CEILING);
 
   return (
     <div className="pt-[70px] md:pt-[100px] bg-[#F2F1F8] min-h-screen">
@@ -254,10 +247,15 @@ export function Services() {
         <div className="max-w-7xl mx-auto px-4 md:px-8 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <p className="text-[#6D4C91] text-xs font-bold uppercase tracking-widest mb-3">In-Clinic Services</p>
-            <h1 className="text-[32px] md:text-[52px] font-bold mb-4 leading-tight">Our Services</h1>
+            <h1 className="text-[32px] md:text-[52px] font-bold mb-4 leading-tight">{activeCategory || 'Our Services'}</h1>
             <p className="text-base md:text-lg text-gray-500 mb-6 max-w-xl mx-auto">
               Transform your skin with clinically-proven treatments performed by certified professionals.
             </p>
+            {activeCategory && (
+              <Link to="/services" className="inline-block text-sm font-bold text-[#6D4C91] hover:underline mb-2">
+                ← View all services
+              </Link>
+            )}
             <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
               <div className="flex items-center gap-1.5">
                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -275,21 +273,50 @@ export function Services() {
       {/* ── Service Grid ───────────────────────────────────────────────────────── */}
       <section className="py-16 md:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {loading
-              ? [1, 2, 3, 4].map(i => <ServiceSkeleton key={i} />)
-              : services.length === 0
+              ? [1, 2, 3, 4, 5, 6, 7, 8].map(i => <ServiceSkeleton key={i} />)
+              : visibleServices.length === 0
                 ? (
-                  <div className="col-span-2 text-center py-24">
-                    <p className="text-gray-400 text-lg">No services available yet.</p>
+                  <div className="col-span-full text-center py-24">
+                    <p className="text-gray-400 text-lg">
+                      {activeCategory ? `No services found in ${activeCategory}.` : 'No services available yet.'}
+                    </p>
                     <Link to="/book" className="mt-4 inline-block text-[#6D4C91] font-bold hover:underline">Book a consultation instead →</Link>
                   </div>
                 )
-                : services.map(service => (
+                : pricedServices.map(service => (
                   <ServiceCard key={service.id} service={service} />
                 ))
             }
           </div>
+
+          {/* Advanced / high-value treatments — no price shown, book a consultation instead */}
+          {!loading && consultServices.length > 0 && (
+            <div className="mt-8 md:mt-10 bg-[#F2F1F8] rounded-3xl p-6 md:p-10">
+              <div className="flex items-center justify-between mb-4 md:mb-6">
+                <h3 className="text-lg md:text-xl font-bold">Advanced Programs &amp; Treatments</h3>
+                <p className="text-xs text-gray-500 hidden sm:block">Priced at consultation</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 divide-y divide-gray-200 md:divide-y-0">
+                {consultServices.map(service => (
+                  <Link
+                    key={service.id}
+                    to={`/book?service=${service.id}`}
+                    className="group flex items-center justify-between gap-4 py-3.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm md:text-base group-hover:text-[#6D4C91] transition-colors truncate">{service.name}</p>
+                      {service.category && <p className="text-xs text-gray-400 mt-0.5">{service.category}</p>}
+                    </div>
+                    <span className="shrink-0 w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center group-hover:bg-[#6D4C91] group-hover:text-white group-hover:border-[#6D4C91] transition-colors">
+                      <ChevronRightIcon className="w-4 h-4" />
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {!loading && services.length > 0 && (
             <div className="text-center mt-16 bg-gradient-to-r from-[#6D4C91] to-[#8B5CF6] rounded-3xl p-8 md:p-12 text-white">

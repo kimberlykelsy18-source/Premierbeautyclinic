@@ -13,6 +13,7 @@ const SESSION_KEY = 'pb_session_id';
 interface Product {
   id: string;
   name: string;
+  size?: string | null;
   price: number;
   image: string;
   category: string;
@@ -227,6 +228,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         .map((item: any) => ({
           id:          String(item.products.id),
           name:        item.products.name,
+          size:        item.products.size ?? null,
           price:       Number(item.products.price),
           image:       item.products.images?.[0] ?? '',
           category:    '',   // GET /cart doesn't join categories — that's fine

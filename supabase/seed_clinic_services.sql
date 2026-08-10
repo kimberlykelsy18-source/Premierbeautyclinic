@@ -157,6 +157,26 @@ VALUES
   '[{"name":"skin_type","label":"Skin type","type":"select","options":["Normal","Dry","Oily","Combination","Sensitive"],"required":true},{"name":"skin_concerns","label":"Skin concerns to address","type":"multiselect","options":["Dullness","Hyperpigmentation","Dehydration","Fine Lines","Uneven Texture","Dark Spots"],"required":true},{"name":"event_date","label":"Event / Wedding date","type":"date","required":true},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Camera-ready luminous complexion','Deeply hydrates and firms','Brightens face, neck and decollete','Long-lasting radiance','Luxurious 90-minute treatment']::text[],
   'Luminous, camera-ready glow on your special day'
+),
+
+(
+  'Oxygen RX Facial',
+  'oxygen-rx-facial',
+  'Calming, oxygen-infused facial that reduces redness and fights acne-causing bacteria while boosting cellular oxygenation for a clearer, calmer complexion.',
+  15000, 0, 45, ARRAY[]::text[], 'Facial Treatments', true,
+  '[{"name":"skin_type","label":"Skin type","type":"select","options":["Normal","Dry","Oily","Combination","Sensitive"],"required":true},{"name":"skin_concerns","label":"Primary skin concerns","type":"multiselect","options":["Redness / Rosacea","Acne / Breakouts","Congestion","Dullness","Sensitivity"],"required":true},{"name":"known_allergies","label":"Known allergies or ingredient sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
+  ARRAY['Calms redness and inflammation','Fights acne-causing bacteria','Boosts cellular oxygenation','Refines pores and clears congestion','Gentle enough for reactive skin']::text[],
+  'Calmer, clearer skin with visibly reduced redness after one session'
+),
+
+(
+  'Hydrating + Calming Facial',
+  'hydrating-calming-facial',
+  'Replenishes moisture and calms reactive, sensitised skin, restoring comfort and balance to the skin barrier.',
+  8500, 0, 45, ARRAY[]::text[], 'Facial Treatments', true,
+  '[{"name":"skin_type","label":"Skin type","type":"select","options":["Normal","Dry","Oily","Combination","Sensitive"],"required":true},{"name":"skin_concerns","label":"Primary concerns","type":"multiselect","options":["Dehydration","Sensitivity / Reactive Skin","Redness","Barrier Damage","Tightness"],"required":true},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
+  ARRAY['Replenishes deep moisture','Calms reactive and sensitised skin','Restores skin barrier function','Reduces tightness and discomfort']::text[],
+  NULL
 )
 
 ON CONFLICT (slug) DO NOTHING;
@@ -209,6 +229,26 @@ VALUES
   '[{"name":"skin_type","label":"Skin type","type":"select","options":["Normal","Dry","Oily","Combination","Sensitive"],"required":true},{"name":"retinol_experience","label":"Have you used retinol or retinoid products before?","type":"select","options":["Yes - regularly","Yes - occasionally","No - first time"],"required":true},{"name":"previous_peel","label":"Have you had a chemical peel before?","type":"radio","options":["Yes","No"],"required":true},{"name":"skin_concerns","label":"Anti-aging concerns","type":"multiselect","options":["Fine Lines","Deep Wrinkles","Loss of Firmness","Enlarged Pores","Dullness","Uneven Texture"],"required":true},{"name":"current_medications","label":"Are you on retinoids, antibiotics or blood thinners?","type":"radio","options":["Yes","No"],"required":true},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"sun_exposure","label":"Significant sun exposure in the past 2 weeks?","type":"radio","options":["Yes","No"],"required":true},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Stimulates collagen production','Reduces fine lines and wrinkles','Refines enlarged pores','Anti-aging and resurfacing']::text[],
   NULL
+),
+
+(
+  'Salicylic Acid Peel',
+  'salicylic-acid-peel',
+  'Dermafrost 12.5% salicylic acid peel that penetrates deep into the pore to clear congestion, control oil and calm breakouts.',
+  15000, 0, 60, ARRAY[]::text[], 'Chemical Peel Treatments', true,
+  '[{"name":"skin_type","label":"Skin type","type":"select","options":["Normal","Dry","Oily","Combination","Sensitive"],"required":true},{"name":"previous_peel","label":"Have you had a chemical peel before?","type":"radio","options":["Yes","No"],"required":true},{"name":"skin_concerns","label":"Primary concerns","type":"multiselect","options":["Acne","Congestion","Oiliness","Blackheads","Enlarged Pores"],"required":true},{"name":"active_acne","label":"Do you currently have active inflamed acne?","type":"radio","options":["Yes","No"],"required":true},{"name":"current_medications","label":"Are you on retinoids, antibiotics or blood thinners?","type":"radio","options":["Yes","No"],"required":true},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
+  ARRAY['Deep pore-penetrating action','Clears congestion and blackheads','Controls excess oil production','Dermafrost 12.5% concentration','Calms active breakouts']::text[],
+  NULL
+),
+
+(
+  'MandeliClear Peel',
+  'mandeliclear-peel',
+  'Gentle, brightening mandelic acid peel formulated for sensitive skin and deeper skin tones, evening tone without compromising the skin barrier.',
+  15000, 0, 60, ARRAY[]::text[], 'Chemical Peel Treatments', true,
+  '[{"name":"skin_type","label":"Skin type","type":"select","options":["Normal","Dry","Oily","Combination","Sensitive"],"required":true},{"name":"previous_peel","label":"Have you had a chemical peel before?","type":"radio","options":["Yes","No"],"required":true},{"name":"skin_concerns","label":"Primary concerns","type":"multiselect","options":["Hyperpigmentation","Uneven Tone","Sensitivity","Post-Inflammatory Marks","Dullness"],"required":true},{"name":"current_medications","label":"Are you on retinoids, antibiotics or blood thinners?","type":"radio","options":["Yes","No"],"required":true},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"sun_exposure","label":"Significant sun exposure in the past 2 weeks?","type":"radio","options":["Yes","No"],"required":true},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
+  ARRAY['Gentle enough for sensitive skin','Safe for deeper skin tones','Brightens and evens skin tone','Low risk of irritation or post-inflammatory marks','Minimal downtime']::text[],
+  NULL
 )
 
 ON CONFLICT (slug) DO NOTHING;
@@ -250,16 +290,6 @@ VALUES
   25000, 30, 90, ARRAY[]::text[], 'Regenerative Therapy', true,
   '[{"name":"skin_type","label":"Skin type","type":"select","options":["Normal","Dry","Oily","Combination","Sensitive"],"required":true},{"name":"skin_concerns","label":"Aging concerns to address","type":"multiselect","options":["Loss of Firmness / Elasticity","Fine Lines","Deep Wrinkles","Uneven Tone","Dullness","Neck Laxity"],"required":true},{"name":"blood_thinners","label":"Are you on blood thinners or anticoagulants?","type":"radio","options":["Yes","No"],"required":true},{"name":"keloid_history","label":"Do you have a history of keloid scarring?","type":"radio","options":["Yes","No"],"required":true},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Targets early signs of aging','Improves skin elasticity','Enhances tone and texture','Covers face and neck','Regenerative collagen treatment']::text[],
-  NULL
-),
-
-(
-  'Premier Regeneration - Stretch Marks',
-  'premier-regeneration-stretch-marks',
-  'Customized microneedling protocol for stretch marks, uneven texture or post-inflammatory pigmentation. Treatment area and duration assessed individually.',
-  35000, 30, 90, ARRAY[]::text[], 'Regenerative Therapy', true,
-  '[{"name":"treatment_area","label":"Treatment area with stretch marks","type":"select","options":["Abdomen","Thighs","Hips / Buttocks","Arms","Breasts","Other"],"required":true},{"name":"stretch_mark_age","label":"How old are the stretch marks?","type":"select","options":["Less than 6 months (red/pink)","6 months - 2 years","More than 2 years (white/silver)"],"required":true},{"name":"blood_thinners","label":"Are you on blood thinners or anticoagulants?","type":"radio","options":["Yes","No"],"required":true},{"name":"keloid_history","label":"Do you have a history of keloid scarring?","type":"radio","options":["Yes","No"],"required":true},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
-  ARRAY['Targets stretch marks on any body zone','Customized treatment protocol','Improves skin texture','Reduces post-inflammatory pigmentation']::text[],
   NULL
 ),
 
@@ -309,7 +339,7 @@ VALUES
   'Skin Tag Removal',
   'skin-tag-removal',
   'Safe and precise removal of benign skin growths, designed to restore smooth, healthy-looking skin with minimal discomfort.',
-  0, 0, 45, ARRAY[]::text[], 'Skin Treatments', false,
+  0, 0, 45, ARRAY[]::text[], 'Skin Treatments', true,
   '[{"name":"lesion_location","label":"Location of skin tag(s)","type":"text","required":true},{"name":"lesion_count","label":"Approximate number of skin tags","type":"select","options":["1","2-3","4-5","6 or more"],"required":true},{"name":"blood_thinners","label":"Are you on blood thinners?","type":"radio","options":["Yes","No"],"required":true},{"name":"keloid_history","label":"History of keloid scarring?","type":"radio","options":["Yes","No"],"required":true},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Safe and precise removal','Minimal discomfort','Smooth, clear skin results','Fast 45-minute procedure']::text[],
   NULL
@@ -319,19 +349,51 @@ VALUES
   'Microdermabrasion',
   'microdermabrasion',
   'Non-invasive treatment that exfoliates dead skin cells, improving texture and promoting a smoother, radiant complexion.',
-  0, 0, 45, ARRAY[]::text[], 'Skin Treatments', false,
+  0, 0, 45, ARRAY[]::text[], 'Skin Treatments', true,
   '[{"name":"skin_type","label":"Skin type","type":"select","options":["Normal","Dry","Oily","Combination","Sensitive"],"required":true},{"name":"skin_concerns","label":"Primary concerns","type":"multiselect","options":["Rough Texture","Dullness","Fine Lines","Large Pores","Mild Hyperpigmentation","Uneven Tone"],"required":true},{"name":"active_conditions","label":"Active rosacea, eczema or open lesions in treatment area?","type":"radio","options":["Yes","No"],"required":true},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Non-invasive exfoliation','Removes dead skin cells','Improves texture and radiance','No downtime']::text[],
   NULL
-),
+)
+
+ON CONFLICT (slug) DO NOTHING;
+
+
+-- -----------------------------------------------------------------------
+-- STEP 6B - ADD-ONS & EXTRAS
+-- -----------------------------------------------------------------------
+
+INSERT INTO public.services
+  (name, slug, description, base_price, deposit_percentage, duration_minutes,
+   images, category, is_active, form_fields, benefits, results_stat)
+VALUES
 
 (
   'Dermaplaning',
   'dermaplaning',
   'A safe, non-invasive exfoliation treatment performed to effectively eliminate dull surface buildup and fine facial hair, promoting a radiant complexion and a more refined skin texture.',
-  2000, 0, 30, ARRAY[]::text[], 'Skin Treatments', true,
+  2000, 0, 30, ARRAY[]::text[], 'Add-Ons & Extras', true,
   '[{"name":"skin_type","label":"Skin type","type":"select","options":["Normal","Dry","Oily","Combination","Sensitive"],"required":true},{"name":"active_acne","label":"Do you have active acne or inflamed breakouts?","type":"radio","options":["Yes","No"],"required":true},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Removes fine facial hair (peach fuzz)','Eliminates dull surface buildup','Radiant, smooth complexion','Enhances product absorption','No downtime']::text[],
+  NULL
+),
+
+(
+  'Vit A Accelerator',
+  'vit-a-accelerator',
+  'An add-on booster that increases cell turnover for faster, more visible results. Pairs with any facial or peel.',
+  5000, 0, 0, ARRAY[]::text[], 'Add-Ons & Extras', true,
+  '[{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
+  ARRAY['Boosts cell turnover','Accelerates visible results','Pairs with any facial or peel treatment']::text[],
+  NULL
+),
+
+(
+  'LED Therapy',
+  'led-therapy',
+  'Add-on light therapy that accelerates healing and calms inflammation across facials, peels and programmes. Price confirmed at consultation.',
+  0, 0, 0, ARRAY[]::text[], 'Add-Ons & Extras', true,
+  '[{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
+  ARRAY['Accelerates healing','Calms inflammation','Available as an add-on to any treatment or programme']::text[],
   NULL
 )
 
@@ -360,8 +422,8 @@ VALUES
 (
   'Acne Program - Level 2 (Papular)',
   'acne-program-level-2-papular',
-  'Targeted multi-session program for papular acne (red inflamed raised bumps, no visible pus). Sessions: 2x Clarifying Facial, 3x Clarifying Peel, 1x Microneedling with Concentrate, 3x IV Gut Health Drip. Includes complimentary progress skin analysis on every return visit.',
-  107000, 30, 0, ARRAY[]::text[], 'Acne Program', true,
+  'Targeted multi-session program for papular acne (red inflamed raised bumps, no visible pus). Sessions: 2x Clarifying Facial, 2x Oxygen RX Facial, 3x Clarifying Peel, 1x Microneedling with Concentrate, 3x IV Gut Health Drip. Includes complimentary progress skin analysis on every return visit.',
+  110000, 30, 0, ARRAY[]::text[], 'Acne Program', true,
   '[{"name":"acne_type","label":"Describe your acne","type":"multiselect","options":["Red Inflamed Bumps","Papules","Post-Acne Marks","No Visible Pus"],"required":true},{"name":"acne_duration","label":"How long have you had this type of acne?","type":"select","options":["Less than 6 months","6 months - 1 year","1-2 years","More than 2 years"],"required":true},{"name":"previous_treatments","label":"Previous acne treatments tried","type":"textarea","required":false},{"name":"current_medications","label":"Current medications","type":"textarea","required":false},{"name":"digestive_concerns","label":"Any digestive or gut health concerns?","type":"radio","options":["Yes","No"],"required":false},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Targets papular inflammatory acne','Includes IV gut health support','9-session protocol for lasting clearance','Addresses internal and external factors']::text[],
   NULL
@@ -370,8 +432,8 @@ VALUES
 (
   'Acne Program - Level 3 (Pustular)',
   'acne-program-level-3-pustular',
-  'Targeted multi-session program for pustular acne (pus-filled lesions with red base, inflamed papules with surrounding redness). Sessions: 3x Clarifying Facial, 3x Clarifying Peel, 1x Microneedling with Concentrate, 5x IV Gut Health Drip. Includes complimentary progress skin analysis.',
-  142500, 30, 0, ARRAY[]::text[], 'Acne Program', true,
+  'Targeted multi-session program for pustular acne (pus-filled lesions with red base, inflamed papules with surrounding redness). Sessions: 3x Clarifying Facial, 2x Oxygen RX Facial, 4x Clarifying Peel, 1x Microneedling with Concentrate, 5x IV Gut Health Drip. Includes complimentary progress skin analysis.',
+  145000, 30, 0, ARRAY[]::text[], 'Acne Program', true,
   '[{"name":"acne_type","label":"Describe your acne","type":"multiselect","options":["Pus-Filled Lesions","Inflamed Papules","Surrounding Redness","Post-Acne Scarring"],"required":true},{"name":"acne_duration","label":"How long have you had this type of acne?","type":"select","options":["Less than 6 months","6 months - 1 year","1-2 years","More than 2 years"],"required":true},{"name":"previous_treatments","label":"Previous treatments tried","type":"textarea","required":false},{"name":"current_medications","label":"Current medications","type":"textarea","required":false},{"name":"digestive_concerns","label":"Any digestive or gut health concerns?","type":"radio","options":["Yes","No"],"required":false},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Treats pustular and inflammatory acne','12-session comprehensive protocol','Includes IV gut health support','Targets root causes of acne']::text[],
   NULL
@@ -380,8 +442,8 @@ VALUES
 (
   'Acne Program - Level 4 (Cystic)',
   'acne-program-level-4-cystic',
-  'Comprehensive program for cystic acne (deep nodules and pus-filled cysts). Sessions: Medical Management with Calming Facials over 3 months, 4x Clarifying Facial, 3x Clarifying Peel, 2x Microneedling with Concentrate, 5x IV Gut Health Drip. Add-ons: LED Therapy, complimentary skin analysis on every return visit.',
-  163000, 30, 0, ARRAY[]::text[], 'Acne Program', true,
+  'Comprehensive program for cystic acne (deep nodules and pus-filled cysts). Sessions: Medical Management with Calming Facials over 3 months, 4x Clarifying Facial, 4x Clarifying Peel, 2x Microneedling with Concentrate, 5x IV Gut Health Drip. Add-ons: LED Therapy, complimentary skin analysis on every return visit.',
+  165000, 30, 0, ARRAY[]::text[], 'Acne Program', true,
   '[{"name":"acne_type","label":"Describe your acne","type":"multiselect","options":["Deep Nodules","Cysts (pus-filled)","Painful Lesions","Scarring","Post-Inflammatory Marks"],"required":true},{"name":"acne_duration","label":"How long have you had cystic acne?","type":"select","options":["Less than 6 months","6 months - 1 year","1-2 years","More than 2 years"],"required":true},{"name":"previous_treatments","label":"Previous treatments tried (including Accutane / isotretinoin)","type":"textarea","required":true},{"name":"current_medications","label":"Current medications","type":"textarea","required":false},{"name":"hormone_related","label":"Do you suspect a hormonal component to your acne?","type":"radio","options":["Yes","No","Unsure"],"required":false},{"name":"digestive_concerns","label":"Any digestive or gut health concerns?","type":"radio","options":["Yes","No"],"required":false},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Medical management component included','Comprehensive cystic acne protocol','Calming and restorative treatments','IV gut health support','Microneedling for post-acne scars']::text[],
   NULL
@@ -403,7 +465,7 @@ VALUES
   'Hyperpigmentation Program - Level 1 (Mild PIH)',
   'hyperpigmentation-program-level-1-mild',
   'Program for mild post-inflammatory hyperpigmentation (light brown scattered spots, mild sunburn, sharp edges, uneven skin tone). Sessions: 1x Clarifying Facial, 2x Brightening Facial, 1x Brightening Peel, 1x Clarifying Peel, 1x Microneedling with Concentrate. Includes complimentary progress skin analysis.',
-  55500, 30, 0, ARRAY[]::text[], 'Hyperpigmentation Program', true,
+  55000, 30, 0, ARRAY[]::text[], 'Hyperpigmentation Program', true,
   '[{"name":"pigmentation_type","label":"Describe your hyperpigmentation","type":"multiselect","options":["Post-Acne Marks (PIH)","Sun Spots","Mild Sunburn","Freckles","Uneven Skin Tone"],"required":true},{"name":"pigmentation_duration","label":"How long have you had this concern?","type":"select","options":["Less than 3 months","3-6 months","6 months - 1 year","More than 1 year"],"required":true},{"name":"sun_protection","label":"Do you use daily SPF?","type":"radio","options":["Yes","No","Sometimes"],"required":true},{"name":"current_medications","label":"Current medications","type":"text","required":false},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Targets mild PIH and sun spots','6-session comprehensive program','Combines peels, facials and microneedling','Complimentary progress skin analysis']::text[],
   NULL
@@ -413,7 +475,7 @@ VALUES
   'Hyperpigmentation Program - Level 2 (Moderate)',
   'hyperpigmentation-program-level-2-moderate',
   'Program for moderate hyperpigmentation (dark brown near-black spots, large areas, slightly blurred edges). Sessions: 1x Clarifying Facial, 2x Brightening Facial, 1x Clarifying Peel, 2x Brightening Peel, 2x Microneedling with Concentrate. Includes complimentary progress skin analysis.',
-  82500, 30, 0, ARRAY[]::text[], 'Hyperpigmentation Program', true,
+  85000, 30, 0, ARRAY[]::text[], 'Hyperpigmentation Program', true,
   '[{"name":"pigmentation_type","label":"Describe your hyperpigmentation","type":"multiselect","options":["Dark Brown Spots","Near-Black Spots","Large Patches","Post-Inflammatory Marks","Uneven Tone"],"required":true},{"name":"pigmentation_duration","label":"How long have you had this concern?","type":"select","options":["Less than 6 months","6 months - 1 year","1-2 years","More than 2 years"],"required":true},{"name":"sun_protection","label":"Do you use daily SPF?","type":"radio","options":["Yes","No","Sometimes"],"required":true},{"name":"previous_treatments","label":"Previous treatments tried","type":"textarea","required":false},{"name":"current_medications","label":"Current medications","type":"text","required":false},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Treats moderate to dark PIH','8-session intensive protocol','Combines brightening peels and microneedling','Complimentary progress tracking']::text[],
   NULL
@@ -423,7 +485,7 @@ VALUES
   'Hyperpigmentation Program - Level 3 (Severe PIH)',
   'hyperpigmentation-program-level-3-severe',
   'Program for severe post-inflammatory hyperpigmentation (mixed light and dark patches, large and persistent areas). Sessions: 1x Clarifying Facial, 2x Brightening Facial, 1x Clarifying Peel, 2x Brightening Peel, 2x Microneedling with Concentrate, 1x Microneedling with GFC. Includes complimentary progress skin analysis.',
-  110500, 30, 0, ARRAY[]::text[], 'Hyperpigmentation Program', true,
+  110000, 30, 0, ARRAY[]::text[], 'Hyperpigmentation Program', true,
   '[{"name":"pigmentation_type","label":"Describe your hyperpigmentation","type":"multiselect","options":["Mixed Light and Dark Patches","Large Areas","Persistent Marks","Stubborn PIH","Possible Melasma Component"],"required":true},{"name":"pigmentation_duration","label":"How long have you had this concern?","type":"select","options":["Less than 1 year","1-2 years","More than 2 years"],"required":true},{"name":"sun_protection","label":"Do you use daily SPF?","type":"radio","options":["Yes","No","Sometimes"],"required":true},{"name":"previous_treatments","label":"Previous treatments tried","type":"textarea","required":true},{"name":"current_medications","label":"Current medications","type":"text","required":false},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Advanced protocol for severe PIH','GFC microneedling for stubborn pigmentation','9-session comprehensive program','Addresses mixed light and dark patches']::text[],
   NULL
@@ -455,7 +517,7 @@ VALUES
   'Melasma - Level 2 (Dermal)',
   'melasma-level-2-dermal',
   'Treatment for dermal melasma (dark patches, blurred borders, large areas). Sessions: 1x Clarifying Facial, 2x Brightening Facial, 4x Brightening Peel, 4x Microneedling with Tranexamic Concentrate, 1x Microneedling with GFC. Includes complimentary progress skin analysis.',
-  122500, 30, 0, ARRAY[]::text[], 'Melasma', true,
+  122000, 30, 0, ARRAY[]::text[], 'Melasma', true,
   '[{"name":"melasma_appearance","label":"Describe your melasma","type":"multiselect","options":["Dark Patches","Blurred Borders","Large Areas","Deep Pigmentation","Hormonally Driven"],"required":true},{"name":"melasma_duration","label":"How long have you had melasma?","type":"select","options":["Less than 1 year","1-2 years","More than 2 years"],"required":true},{"name":"hormonal_trigger","label":"Was onset related to pregnancy, contraception or hormone therapy?","type":"radio","options":["Yes","No","Unsure"],"required":true},{"name":"sun_protection","label":"Do you use daily SPF?","type":"radio","options":["Yes","No","Sometimes"],"required":true},{"name":"previous_treatments","label":"Previous melasma treatments tried","type":"textarea","required":true},{"name":"current_medications","label":"Current medications","type":"text","required":false},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Treats deep dermal melasma','GFC microneedling for advanced results','12-session intensive protocol','Addresses stubborn dark patches']::text[],
   NULL
@@ -465,7 +527,7 @@ VALUES
   'Melasma - Level 3 (Mixed)',
   'melasma-level-3-mixed',
   'Treatment for mixed melasma (both epidermal and dermal - light and dark patches, blurred and defined borders, large areas). Sessions: 1x Clarifying Facial, 2x Brightening Facial, 5x Brightening Peel, 3x Microneedling with Tranexamic Concentrate, 2x Microneedling with GFC. Includes complimentary progress skin analysis.',
-  165500, 30, 0, ARRAY[]::text[], 'Melasma', true,
+  165000, 30, 0, ARRAY[]::text[], 'Melasma', true,
   '[{"name":"melasma_appearance","label":"Describe your melasma","type":"multiselect","options":["Light and Dark Patches","Blurred and Defined Borders","Large Areas","Mixed Epidermal and Dermal","Hormonal Component"],"required":true},{"name":"melasma_duration","label":"How long have you had melasma?","type":"select","options":["Less than 1 year","1-2 years","More than 2 years","Recurring / Chronic"],"required":true},{"name":"hormonal_trigger","label":"Was onset related to pregnancy, contraception or hormone therapy?","type":"radio","options":["Yes","No","Unsure"],"required":true},{"name":"sun_protection","label":"Do you use daily SPF?","type":"radio","options":["Yes","No","Sometimes"],"required":true},{"name":"previous_treatments","label":"Previous melasma treatments tried","type":"textarea","required":true},{"name":"current_medications","label":"Current medications","type":"text","required":false},{"name":"known_allergies","label":"Known allergies or sensitivities","type":"text","required":false},{"name":"pregnant_or_breastfeeding","label":"Are you currently pregnant or breastfeeding?","type":"radio","options":["Yes","No"],"required":true}]'::jsonb,
   ARRAY['Most comprehensive melasma protocol','Targets both epidermal and dermal melasma','GFC and Tranexamic microneedling combined','13-session program for mixed melasma']::text[],
   NULL

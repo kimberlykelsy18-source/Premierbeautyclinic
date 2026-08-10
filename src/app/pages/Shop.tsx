@@ -19,6 +19,7 @@ interface ApiProduct {
   stock: number;
   low_stock_threshold: number;
   brand: string | null;
+  size: string | null;
   usage_instructions: string | null;
   categories: { name: string; slug: string } | null;
   product_avg_ratings: { average_rating: string; rating_count: string } | null;
@@ -27,6 +28,7 @@ interface ApiProduct {
 const mapForCart = (p: ApiProduct) => ({
   id: String(p.id),
   name: p.name,
+  size: p.size,
   price: Number(p.price),
   image: p.images?.[0] ?? '',
   category: p.categories?.name ?? '',
@@ -47,13 +49,41 @@ const CONCERNS = [
 const PRICE_RANGES = ['Under KES 2,500', 'KES 2,500 – 5,000', 'Over KES 5,000'];
 const SORT_OPTIONS = ['Featured', 'Newest', 'Price: Low to High', 'Price: High to Low'];
 
+// Matched against category name/slug via substring — a Jul 2026 bulk import created
+// categories like "Cleanser / Face Wash" and "cleanser-face-wash-<id>" that never matched
+// the old exact-slug list ('cleansers'), silently hiding ~75% of the catalog from every
+// group tab except "All". Keywords are resilient to that naming drift.
 const CATEGORY_GROUPS = [
-  { label: 'All',        slugs: null },
-  { label: 'Skincare',   slugs: ['serums', 'moisturisers', 'cleansers', 'toners', 'sunscreen', 'eye-care', 'face-masks', 'skincare'] },
-  { label: 'Fragrances', slugs: ['fragrances', 'mens-perfume', 'womens-perfume', 'unisex-fragrance'] },
-  { label: 'Body Care',  slugs: ['body-care', 'body-scrubs', 'body-lotion', 'body-oil', 'body-wash'] },
-  { label: 'Wellness',   slugs: ['wellness', 'health-supplements', 'vitamins-minerals'] },
+  { label: 'All',        keywords: null },
+  { label: 'Skincare',   keywords: ['cleanser', 'face wash', 'moistur', 'serum', 'toner', 'essence', 'sunscreen', 'sun protection', 'eye care', 'mask', 'skincare', 'lip care', 'scrub', 'exfoliat'] },
+  { label: 'Fragrances', keywords: ['fragrance', 'perfume', 'cologne'] },
+  { label: 'Body Care',  keywords: ['body', 'bath', 'shower', 'deodorant', 'antiperspirant', 'shaving', 'grooming', 'hair', 'nail', 'oil'] },
+  { label: 'Wellness',   keywords: ['wellness', 'supplement', 'vitamin', 'mineral', 'baby'] },
 ] as const;
+
+// Navbar mega-menu "Shop by Product" labels vs. real category names — same naming-drift problem
+// as CATEGORY_GROUPS above (a bulk import renamed/duplicated categories, e.g. "Moisturisers" vs
+// "Moisturizer / Cream / Lotion"). Exact match is tried first; this is the keyword fallback.
+const PRODUCT_CATEGORY_KEYWORDS: Record<string, string[]> = {
+  'Cleansers':           ['cleanser', 'face wash'],
+  'Moisturisers':        ['moistur'],
+  'Serums':              ['serum'],
+  'Sunscreen':           ['sunscreen', 'sun protection'],
+  'Toners & Mists':      ['toner', 'essence', 'mist'],
+  'Eye Care':            ['eye care'],
+  'Masks & Treatments':  ['mask'],
+  'Body Care':           ['body care'],
+  'Hair Care':           ['hair care'],
+  'Wellness':            ['wellness', 'supplement'],
+  'Fragrances':          ['fragrance', 'perfume', 'cologne'],
+};
+
+// Navbar mega-menu "Shop by Collection" labels. Only collections with a real backing signal in
+// the product data are filterable — "Professional Grade" and "Eco-Friendly" have no such field yet.
+const COLLECTION_CATEGORY_KEYWORDS: Record<string, string[]> = {
+  'Starter Kits':   ['kit'],
+  'Skincare Kits':  ['kit'],
+};
 
 type DropdownId = 'category' | 'skinType' | 'brand' | 'price' | 'sort' | null;
 
@@ -201,6 +231,7 @@ function ProductCard({
         <Link to={`/shop/${product.id}`}>
           <h3 className="font-alice text-[13px] leading-snug mb-1.5 hover:text-[#6D4C91] transition-colors line-clamp-2">
             {product.name}
+            {product.size && <span className="text-gray-400"> · {product.size}</span>}
           </h3>
         </Link>
         <div className="flex items-center justify-between">
@@ -231,6 +262,7 @@ export function Shop() {
   const [activeSkinType, setActiveSkinType]           = useState<string | null>(null);
   const [activeBrand, setActiveBrand]                 = useState<string | null>(null);
   const [activePriceRange, setActivePriceRange]       = useState<string | null>(null);
+  const [activeCollection, setActiveCollection]       = useState<string | null>(null);
   const [searchQuery, setSearchQuery]                 = useState('');
   const [sortBy, setSortBy]                           = useState('Featured');
   const [openDropdown, setOpenDropdown]               = useState<DropdownId>(null);
@@ -272,6 +304,7 @@ export function Shop() {
     const sort       = searchParams.get('sort');
     const q          = searchParams.get('q');
     const group      = searchParams.get('group');
+    const collection = searchParams.get('collection');
 
     if (category)   setActiveCategory(category);
     if (skinType)   setActiveSkinType(skinType);
@@ -279,6 +312,7 @@ export function Shop() {
     if (priceRange) setActivePriceRange(priceRange);
     if (sort)       setSortBy(sort);
     if (q)          setSearchQuery(q);
+    if (collection) setActiveCollection(collection);
     if (group) {
       const matched = CATEGORY_GROUPS.find(g => g.label.toLowerCase() === group.toLowerCase());
       if (matched) setActiveCategoryGroup(matched.label);
@@ -294,24 +328,39 @@ export function Shop() {
     [products]
   );
 
-  const activeGroupSlugs = CATEGORY_GROUPS.find(g => g.label === activeCategoryGroup)?.slugs ?? null;
+  const activeGroupKeywords = CATEGORY_GROUPS.find(g => g.label === activeCategoryGroup)?.keywords ?? null;
 
   const filteredProducts = products.filter(p => {
-    if (activeGroupSlugs) {
-      const catSlug = p.categories?.slug ?? '';
+    if (activeGroupKeywords) {
       const catName = (p.categories?.name ?? '').toLowerCase();
-      const matchesGroup = activeGroupSlugs.some(s => catSlug === s || catName.includes(s.replace(/-/g, ' ')));
+      const matchesGroup = activeGroupKeywords.some(k => catName.includes(k));
       if (!matchesGroup) return false;
     }
-    if (activeCategory && p.categories?.name !== activeCategory) return false;
+    if (activeCategory && p.categories?.name !== activeCategory) {
+      // Fall back to keyword matching — handles curated navbar labels that drifted from the real category name
+      const keywords = PRODUCT_CATEGORY_KEYWORDS[activeCategory];
+      const catName = (p.categories?.name ?? '').toLowerCase();
+      if (!keywords || !keywords.some(k => catName.includes(k))) return false;
+    }
     if (activeBrand && p.brand !== activeBrand) return false;
     if (activeConcern) {
       const concerns = p.skin_concerns ?? [];
       if (!concerns.some(c => c.toLowerCase().includes(activeConcern.toLowerCase()))) return false;
     }
     if (activeSkinType && activeSkinType !== 'All') {
+      // Navbar sends labels like "Normal Skin"; skin_concerns values are just "Normal" — strip the suffix
+      const normalizedSkinType = activeSkinType.toLowerCase().replace(/\s*skin$/, '').trim();
       const concerns = p.skin_concerns ?? [];
-      if (!concerns.some(c => c.toLowerCase().includes(activeSkinType.toLowerCase()))) return false;
+      if (!concerns.some(c => c.toLowerCase().includes(normalizedSkinType))) return false;
+    }
+    if (activeCollection) {
+      const keywords = COLLECTION_CATEGORY_KEYWORDS[activeCollection];
+      if (keywords) {
+        const catName = (p.categories?.name ?? '').toLowerCase();
+        if (!keywords.some(k => catName.includes(k))) return false;
+      }
+      // 'New Arrivals' and 'Bestsellers' don't filter the set — they re-sort it below.
+      // 'Professional Grade' / 'Eco-Friendly' have no backing product field yet, so no filter is applied.
     }
     const price = Number(p.price);
     if (activePriceRange === 'Under KES 2,500' && price >= 2500) return false;
@@ -331,10 +380,17 @@ export function Shop() {
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     if (sortBy === 'Price: Low to High') return Number(a.price) - Number(b.price);
     if (sortBy === 'Price: High to Low') return Number(b.price) - Number(a.price);
+    if (sortBy === 'Newest' || activeCollection === 'New Arrivals') return b.id - a.id;
+    if (activeCollection === 'Bestsellers') {
+      const ratingCountA = Number(a.product_avg_ratings?.rating_count || 0);
+      const ratingCountB = Number(b.product_avg_ratings?.rating_count || 0);
+      if (ratingCountB !== ratingCountA) return ratingCountB - ratingCountA;
+      return Number(b.product_avg_ratings?.average_rating || 0) - Number(a.product_avg_ratings?.average_rating || 0);
+    }
     return 0;
   });
 
-  const hasActiveFilters = !!(searchQuery || activeCategory || activeSkinType || activeBrand || activePriceRange || activeConcern);
+  const hasActiveFilters = !!(searchQuery || activeCategory || activeSkinType || activeBrand || activePriceRange || activeConcern || activeCollection);
 
   const clearAllFilters = () => {
     setActiveCategory(null);
@@ -344,6 +400,7 @@ export function Shop() {
     setSearchQuery('');
     setActiveConcern(null);
     setActiveCategoryGroup('All');
+    setActiveCollection(null);
     setOpenDropdown(null);
   };
 
@@ -358,13 +415,13 @@ export function Shop() {
       <div className="max-w-[1600px] mx-auto px-4 md:px-8">
 
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <div className="flex items-baseline justify-between gap-4 pb-4 border-b border-black/[0.08] mb-0">
+        <div className="flex items-baseline justify-between gap-4 pb-2.5 md:pb-4 border-b border-black/[0.08] mb-0">
           <div className="flex items-baseline gap-4">
             <h1
               className="font-serif italic text-black leading-none"
               style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', letterSpacing: '-0.02em' }}
             >
-              Shop Collection
+              {activeCollection || 'Shop Collection'}
             </h1>
             {!loading && (
               <span className="hidden sm:inline text-[11px] text-gray-400 tracking-wide">
