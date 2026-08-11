@@ -411,14 +411,14 @@ export function Shop() {
     }`;
 
   return (
-    <div className="pt-[100px] md:pt-[130px] pb-16 bg-[#F2F1F8] min-h-screen overflow-x-hidden">
+    <div className="pt-[118px] md:pt-[130px] pb-16 bg-[#F2F1F8] min-h-screen overflow-x-hidden">
       <div className="max-w-[1600px] mx-auto px-4 md:px-8">
 
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <div className="flex items-baseline justify-between gap-4 pb-2.5 md:pb-4 border-b border-black/[0.08] mb-0">
+        <div className="flex items-baseline justify-center md:justify-between gap-4 pb-2.5 md:pb-4 border-b border-black/[0.08] mb-0">
           <div className="flex items-baseline gap-4">
             <h1
-              className="font-serif italic text-black leading-none"
+              className="font-serif italic text-black leading-none text-center md:text-left"
               style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', letterSpacing: '-0.02em' }}
             >
               {activeCollection || 'Shop Collection'}

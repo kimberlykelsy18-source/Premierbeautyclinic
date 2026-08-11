@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
-import { Star, ShieldCheck, Truck, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight, Heart, Share2, CheckCircle } from 'lucide-react';
+import { Star, ShieldCheck, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight, Heart, Share2, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { toast } from 'sonner';
@@ -332,11 +332,7 @@ export function ProductDetail() {
                 <p className="text-gray-600 text-[14px] md:text-[16px] leading-relaxed mb-4 md:mb-6">
                   {product.description ?? 'No description available.'}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                  <div className="flex items-center space-x-3 text-[12px] md:text-[13px] font-medium">
-                    <Truck className="w-4 h-4 md:w-5 md:h-5 text-[#6D4C91]" />
-                    <span>Free Shipping over KES 5k</span>
-                  </div>
+                <div className="grid grid-cols-1 gap-3 md:gap-4">
                   <div className="flex items-center space-x-3 text-[12px] md:text-[13px] font-medium">
                     <ShieldCheck className="w-4 h-4 md:w-5 md:h-5 text-[#6D4C91]" />
                     <span>Dermatologist Tested</span>

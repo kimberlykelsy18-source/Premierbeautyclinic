@@ -123,10 +123,8 @@ export function Navbar() {
           transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
           className="inline-block text-[12px] font-bold uppercase tracking-widest"
         >
-          <span className="mx-8">FREE SHIPPING ON ORDERS OVER KES 5,000</span>
           <span className="mx-8">BOOK A VIRTUAL CONSULTATION WITH OUR DERMATOLOGISTS</span>
           <span className="mx-8">NEW ARRIVALS: HYDRATING MILKY CLEANSER NOW IN STOCK</span>
-          <span className="mx-8">FREE SHIPPING ON ORDERS OVER KES 5,000</span>
           <span className="mx-8">BOOK A VIRTUAL CONSULTATION WITH OUR DERMATOLOGISTS</span>
           <span className="mx-8">NEW ARRIVALS: HYDRATING MILKY CLEANSER NOW IN STOCK</span>
         </motion.div>
@@ -164,7 +162,7 @@ export function Navbar() {
             <img
               src={logo}
               alt="Premier Beauty Clinic"
-              className="h-8 md:h-12 w-auto object-contain"
+              className="h-11 md:h-16 w-auto object-contain"
             />
           </Link>
 

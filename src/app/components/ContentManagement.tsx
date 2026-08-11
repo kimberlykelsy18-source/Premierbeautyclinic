@@ -39,7 +39,7 @@ export function ContentManagement() {
 
   // Marquee Promotions State
   const [marqueePromotions, setMarqueePromotions] = useState<MarqueePromotion[]>([
-    { id: '1', text: '🎉 Free Shipping on Orders Over KES 5,000', active: true },
+    { id: '1', text: '🎉 Free Shipping on Orders Over KES 5,000', active: false },
     { id: '2', text: '✨ New Arrivals: Discover Our Latest Skincare Collection', active: true },
     { id: '3', text: '💝 15% Off First-Time Consultations - Use Code: GLOW15', active: false },
   ]);
