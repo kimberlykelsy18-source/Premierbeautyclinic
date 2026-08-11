@@ -309,7 +309,7 @@ export function Home() {
               </Link>
             </div>
 
-            <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4">
+            <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide touch-pan-x -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4">
               {newArrivals.map((product, index) => {
                 const avgRating = Number(product.product_avg_ratings?.average_rating || 0);
                 return (
@@ -392,7 +392,7 @@ export function Home() {
               </Link>
             </div>
 
-            <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4">
+            <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide touch-pan-x -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4">
               {kits.map((kit, index) => (
                 <motion.div
                   key={kit.id}
@@ -536,7 +536,7 @@ export function Home() {
 
             <div
               ref={reviewsScrollRef}
-              className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0"
+              className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide touch-pan-x -mx-4 px-4 md:mx-0 md:px-0"
             >
               {featuredReviews.map((review) => (
                 <div
