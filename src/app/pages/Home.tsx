@@ -1,19 +1,9 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, ChevronRight, ShoppingBag, Star } from 'lucide-react';
+import { ArrowRight, ChevronRight, MessageCircle, ShoppingBag, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { apiFetch } from '../lib/api';
 import { LazyImage } from '../components/LazyImage';
-
-interface PromoSlide {
-  id: string;
-  title: string;
-  subtitle: string | null;
-  image_url: string;
-  cta_text: string;
-  cta_link: string;
-  sort_order: number;
-}
 
 interface KitProduct {
   id: number;
@@ -69,20 +59,239 @@ const TREATMENTS_BANNER_IMAGES = [
   'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786566786000-quote-wall-3.jpg',
 ];
 
-const FALLBACK_SLIDE: PromoSlide = {
-  id: 'fallback',
-  title: 'Premier Beauty Clinic',
-  subtitle: 'Nairobi\'s trusted skin clinic. Shop products or book a treatment',
-  image_url: 'https://images.unsplash.com/photo-1663271451789-a770bfbcb12a?w=1080&q=80&auto=format&fit=crop',
-  cta_text: 'Shop Now',
-  cta_link: '/shop',
-  sort_order: 0,
-};
+// Premier Routines — curated multi-product routine shots, replacing the old rotating
+// hero. "Shop Now" doesn't add to cart (these are groupings, not a single SKU) — it
+// opens WhatsApp with the routine name pre-filled, same handoff pattern used sitewide
+// since card/M-Pesa checkout was paused (see Checkout.tsx / WhatsAppButton.tsx).
+const WHATSAPP_NUMBER = '254768679646';
+
+interface Routine {
+  title: string;
+  description: string;
+  image: string;
+  bg: string;
+}
+
+const ROUTINES: Routine[] = [
+  {
+    title: 'Clear Skin Reset',
+    description: 'Benzoyl peroxide, an Effaclar cleanser and a K-beauty toner team up to calm breakouts and clear congestion.',
+    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628585960-Premier_Poducts_377.jpg',
+    bg: '#E8EDE3',
+  },
+  {
+    title: 'Deep Hydration Ritual',
+    description: 'Cleansing oil, an intensive balm and SPF layer together for skin that drinks in moisture and stays protected.',
+    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628586680-Premier_Poducts_382.jpg',
+    bg: '#E3EBF2',
+  },
+  {
+    title: 'Calm & Repair',
+    description: 'Cica-powered creams and a gentle oil-to-foam cleanser soothe redness and help skin bounce back.',
+    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628587141-Premier_Poducts_384.jpg',
+    bg: '#F2E7E5',
+  },
+  {
+    title: 'Everyday Essentials',
+    description: 'A purifying cleanser, daily SPF and a gentle exfoliant — the steps that keep skin balanced, every single day.',
+    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628587935-Premier_Poducts_388.jpg',
+    bg: '#F5EFE4',
+  },
+  {
+    title: 'Smooth & Resurface',
+    description: 'A glycolic peel and a urea-rich cream work through rough, bumpy texture for skin that feels newly smooth.',
+    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628588451-Premier_Poducts_391.jpg',
+    bg: '#F5E9DD',
+  },
+  {
+    title: 'Glow & Hydrate',
+    description: 'An aloe cleanser and a gluta-hya lotion pair up for that soft, dewy, ready-for-anything glow.',
+    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628589012-Premier_Poducts_397.jpg',
+    bg: '#EDE6F5',
+  },
+];
+
+function routineWhatsAppLink(title: string) {
+  const message = `Hi! I'd like to shop the "${title}" routine from Premier Beauty Clinic 💜`;
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+}
 
 // Shared by the treatments/shop promo banners — quiet slow crossfade through a set of photos.
 // Images are absolute inset-0 (all sharing the same box), so they're mounted progressively as the
 // rotation reaches them rather than all at once — otherwise native lazy-loading fetches all of them
 // the instant the shared box scrolls into view, since it can't tell them apart by position.
+// Shared card-row layout for the three new homepage rows (Consultations, Best Sellers,
+// Treatments) — same visual language as the existing New Arrivals section (left untouched
+// on purpose), just parameterised so it isn't copy-pasted three times.
+function ProductRowSection({
+  kicker, title, subtitle, ctaLabel, ctaTo, badge, products, bg = 'bg-white',
+}: {
+  kicker: string; title: string; subtitle: string; ctaLabel: string; ctaTo: string; badge: string;
+  products: KitProduct[]; bg?: string;
+}) {
+  if (products.length === 0) return null;
+  return (
+    <section className={`py-16 md:py-24 ${bg}`}>
+      <div className="max-w-7xl mx-auto px-4 md:px-8">
+        <div className="flex items-end justify-between mb-10">
+          <div>
+            <p className="text-[#6D4C91] text-xs font-bold uppercase tracking-widest mb-2">{kicker}</p>
+            <h2 className="text-[26px] md:text-[38px] font-serif italic leading-tight">{title}</h2>
+            <p className="text-gray-500 mt-2 text-sm md:text-base">{subtitle}</p>
+          </div>
+          <Link to={ctaTo} className="hidden sm:inline-flex items-center text-sm font-bold text-[#6D4C91] hover:underline gap-1 shrink-0">
+            {ctaLabel} <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide touch-pan-x -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4">
+          {products.map((product, index) => {
+            const avgRating = Number(product.product_avg_ratings?.average_rating || 0);
+            return (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.06 }}
+                className="snap-start shrink-0 w-60 md:w-auto"
+              >
+                <Link
+                  to={`/shop/${product.id}`}
+                  className="group block bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100"
+                >
+                  <div className="relative aspect-square overflow-hidden bg-[#F2F1F8]">
+                    {product.images?.[0] ? (
+                      <LazyImage
+                        src={product.images[0]}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ShoppingBag className="w-10 h-10 text-[#6D4C91]/30" />
+                      </div>
+                    )}
+                    <div className="absolute top-3 left-0 bg-[#1A1A1A] text-white text-[10px] font-bold pl-3 pr-3.5 py-1.5 rounded-r-full uppercase tracking-widest shadow-sm">
+                      {badge}
+                    </div>
+                    <div className="absolute inset-x-3 bottom-3 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                      <span className="block text-center bg-white/95 backdrop-blur-sm text-gray-900 text-[11px] font-bold uppercase tracking-widest py-2 rounded-full">
+                        View Product
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    {product.categories?.name && (
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{product.categories.name}</p>
+                    )}
+                    <p className="font-bold text-sm leading-tight mb-2 line-clamp-2">
+                      {product.name}
+                      {product.size && <span className="text-gray-400 font-medium"> · {product.size}</span>}
+                    </p>
+                    {avgRating > 0 && (
+                      <div className="flex items-center gap-1 mb-2">
+                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                        <span className="text-xs text-gray-500">{avgRating.toFixed(1)}</span>
+                      </div>
+                    )}
+                    <p className="text-sm font-bold text-[#6D4C91]">KES {Number(product.price).toLocaleString()}</p>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <div className="text-center mt-8 sm:hidden">
+          <Link to={ctaTo} className="inline-flex items-center text-sm font-bold text-[#6D4C91] hover:underline gap-1">
+            {ctaLabel} <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Same row layout as ProductRowSection, for services (Consultations, Treatments) —
+// links to booking instead of a product page, shows duration instead of a rating.
+function ServiceRowSection({
+  kicker, title, subtitle, ctaLabel, ctaTo, badge, services, bg = 'bg-[#F2F1F8]',
+}: {
+  kicker: string; title: string; subtitle: string; ctaLabel: string; ctaTo: string; badge: string;
+  services: HomeService[]; bg?: string;
+}) {
+  if (services.length === 0) return null;
+  return (
+    <section className={`py-16 md:py-24 ${bg}`}>
+      <div className="max-w-7xl mx-auto px-4 md:px-8">
+        <div className="flex items-end justify-between mb-10">
+          <div>
+            <p className="text-[#6D4C91] text-xs font-bold uppercase tracking-widest mb-2">{kicker}</p>
+            <h2 className="text-[26px] md:text-[38px] font-serif italic leading-tight">{title}</h2>
+            <p className="text-gray-500 mt-2 text-sm md:text-base">{subtitle}</p>
+          </div>
+          <Link to={ctaTo} className="hidden sm:inline-flex items-center text-sm font-bold text-[#6D4C91] hover:underline gap-1 shrink-0">
+            {ctaLabel} <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide touch-pan-x -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4">
+          {services.map((service, index) => (
+            <motion.div
+              key={service.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: index * 0.06 }}
+              className="snap-start shrink-0 w-60 md:w-auto"
+            >
+              <Link
+                to={`/book?service=${service.id}`}
+                className="group block bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100"
+              >
+                <div className="relative aspect-square overflow-hidden bg-[#F2F1F8]">
+                  {service.images?.[0] ? (
+                    <LazyImage
+                      src={service.images[0]}
+                      alt={service.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : null}
+                  <div className="absolute top-3 left-0 bg-[#1A1A1A] text-white text-[10px] font-bold pl-3 pr-3.5 py-1.5 rounded-r-full uppercase tracking-widest shadow-sm">
+                    {badge}
+                  </div>
+                  <div className="absolute inset-x-3 bottom-3 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                    <span className="block text-center bg-[#6D4C91] text-white text-[11px] font-bold uppercase tracking-widest py-2 rounded-full">
+                      Book Now
+                    </span>
+                  </div>
+                </div>
+                <div className="p-4">
+                  {service.category && (
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{service.category}</p>
+                  )}
+                  <p className="font-bold text-sm leading-tight mb-2 line-clamp-2">{service.name}</p>
+                  {service.duration_minutes > 0 && (
+                    <p className="text-xs text-gray-500 mb-2">{service.duration_minutes} min</p>
+                  )}
+                  <p className="text-sm font-bold text-[#6D4C91]">KES {Number(service.base_price).toLocaleString()}</p>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="text-center mt-8 sm:hidden">
+          <Link to={ctaTo} className="inline-flex items-center text-sm font-bold text-[#6D4C91] hover:underline gap-1">
+            {ctaLabel} <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function CrossfadeBanner({ images, intervalMs = 4500 }: { images: string[]; intervalMs?: number }) {
   const [index, setIndex] = useState(0);
   const [mounted, setMounted] = useState<Set<number>>(() => new Set([0]));
@@ -121,15 +330,12 @@ function CrossfadeBanner({ images, intervalMs = 4500 }: { images: string[]; inte
 }
 
 export function Home() {
-  const [slides, setSlides]                     = useState<PromoSlide[]>([]);
-  const [activeSlide, setActiveSlide]           = useState(0);
-  const [loadingSlides, setLoadingSlides]       = useState(true);
   const [storefrontContent, setStorefrontContent] = useState<StorefrontContent>({ marquee_items: [], hero: {}, features: [] });
   const [kits, setKits]                         = useState<KitProduct[]>([]);
   const [newArrivals, setNewArrivals]           = useState<KitProduct[]>([]);
+  const [bestSellers, setBestSellers]           = useState<KitProduct[]>([]);
   const [featuredReviews, setFeaturedReviews]   = useState<FeaturedReview[]>([]);
   const [services, setServices]                 = useState<HomeService[]>([]);
-  const [isHeroPaused, setIsHeroPaused]         = useState(false);
   const reviewsScrollRef = useRef<HTMLDivElement>(null);
 
   const scrollReviews = (direction: 1 | -1) => {
@@ -146,11 +352,6 @@ export function Home() {
   }, [newArrivals, kits]);
 
   useEffect(() => {
-    apiFetch('/promo-carousel')
-      .then((data: PromoSlide[]) => setSlides(data && data.length > 0 ? data : [FALLBACK_SLIDE]))
-      .catch(() => setSlides([FALLBACK_SLIDE]))
-      .finally(() => setLoadingSlides(false));
-
     apiFetch('/storefront-content')
       .then((data: StorefrontContent) => setStorefrontContent(data))
       .catch(() => {});
@@ -168,6 +369,30 @@ export function Home() {
         );
         const byNewest = [...nonKits].sort((a, b) => b.id - a.id);
         setNewArrivals(byNewest.slice(0, 8));
+
+        // Best sellers — same "most reviewed, then highest rated" ranking Shop.tsx uses
+        // for its own Bestsellers collection sort. The storefront has no review/order
+        // history yet (0 reviewed products, 1 order ever placed) for this to rank by, so
+        // until that data exists, fall back to a "flagship" proxy — most-photographed,
+        // then highest-priced — swapping to the real ranking automatically once reviews
+        // start coming in.
+        const byPopularity = [...nonKits]
+          .filter(p => Number(p.product_avg_ratings?.rating_count || 0) > 0)
+          .sort((a, b) => {
+            const countA = Number(a.product_avg_ratings?.rating_count || 0);
+            const countB = Number(b.product_avg_ratings?.rating_count || 0);
+            if (countB !== countA) return countB - countA;
+            return Number(b.product_avg_ratings?.average_rating || 0) - Number(a.product_avg_ratings?.average_rating || 0);
+          });
+        const ranked = byPopularity.length > 0
+          ? byPopularity
+          : [...nonKits].sort((a, b) => {
+              const imagesA = a.images?.length || 0;
+              const imagesB = b.images?.length || 0;
+              if (imagesB !== imagesA) return imagesB - imagesA;
+              return Number(b.price) - Number(a.price);
+            });
+        setBestSellers(ranked.slice(0, 8));
       })
       .catch(() => {});
 
@@ -180,138 +405,52 @@ export function Home() {
       .catch(() => {});
   }, []);
 
-  const goNext = useCallback(() => setActiveSlide(i => (i + 1) % Math.max(slides.length, 1)), [slides.length]);
-
-  // Auto-rotate carousel every 5 seconds, pausing on hover
-  useEffect(() => {
-    if (slides.length <= 1 || isHeroPaused) return;
-    const timer = setInterval(goNext, 5000);
-    return () => clearInterval(timer);
-  }, [slides.length, goNext, isHeroPaused]);
-
-  const displaySlides = slides.length > 0 ? slides : [FALLBACK_SLIDE];
-
   // Homepage only shows the affordable tier as cards; higher-value programs live on the Services page.
   const pricedServices = services.filter(s => s.base_price > 0 && s.base_price <= SERVICE_PRICE_CEILING);
+
+  // Consultations row — imaging/analysis services, shown before any treatment is picked.
+  const consultationServices = services.filter(s => s.category === 'Imaging & Consultation');
+  // Treatments row — the rest of the priced catalog, excluding consultations (already their own row above).
+  const treatmentServices = pricedServices.filter(s => s.category !== 'Imaging & Consultation').slice(0, 8);
 
   return (
     <div className="bg-[#F2F1F8]">
 
-      {/* ── Section 1: Split-panel hero ──────────────────────────────────────────
-          No top padding on the page here — the hero's own dark background runs
-          right up under the fixed navbar, so there's no visible page-bg gap above
-          it. Clearance from the navbar is handled inside the text panel instead. */}
-      <section
-        className="grid grid-cols-1 lg:grid-cols-[minmax(0,42%)_1fr] bg-[#1A1A1A]"
-        onMouseEnter={() => setIsHeroPaused(true)}
-        onMouseLeave={() => setIsHeroPaused(false)}
-      >
-        {/* Text panel — all copy + nav chrome lives here, never on top of the photo */}
-        <div className="order-2 lg:order-1 relative flex flex-col justify-center px-6 sm:px-10 lg:px-14 xl:px-16 pt-8 pb-12 lg:pt-[170px] lg:pb-14 lg:min-h-[88vh]">
-          {loadingSlides ? (
-            <div className="space-y-4 max-w-md">
-              <div className="h-3 w-32 bg-white/10 rounded-full animate-pulse" />
-              <div className="h-10 w-full bg-white/10 rounded-lg animate-pulse" />
-              <div className="h-4 w-3/4 bg-white/10 rounded-full animate-pulse" />
-              <div className="h-11 w-40 bg-white/10 rounded-full animate-pulse mt-2" />
-            </div>
-          ) : (
-            <>
-              <motion.h1
-                key={`title-${activeSlide}`}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
-                className="font-serif italic text-white leading-[1.08] mb-4"
-                style={{ fontSize: 'clamp(1.75rem, 3.4vw, 2.75rem)' }}
-              >
-                {displaySlides[activeSlide]?.title}
-              </motion.h1>
-
-              {displaySlides[activeSlide]?.subtitle && (
-                <motion.p
-                  key={`sub-${activeSlide}`}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.08, ease: [0.25, 1, 0.5, 1] }}
-                  className="text-white/65 text-base md:text-lg mb-8 max-w-md leading-relaxed"
-                >
-                  {displaySlides[activeSlide]?.subtitle}
-                </motion.p>
-              )}
-
-              <motion.div
-                key={`cta-${activeSlide}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.14, ease: [0.25, 1, 0.5, 1] }}
-              >
-                <Link
-                  to={displaySlides[activeSlide]?.cta_link ?? '/shop'}
-                  className="inline-flex items-center bg-[#6D4C91] text-white px-7 py-3.5 rounded-full font-bold hover:bg-[#5c3f80] transition-colors duration-300"
-                >
-                  {displaySlides[activeSlide]?.cta_text}
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Link>
-              </motion.div>
-
-              {/* Slide nav — quiet progress bar only, no counter or manual arrows */}
-              {displaySlides.length > 1 && (
-                <div className="flex gap-1.5 max-w-[140px] mt-12 lg:mt-16">
-                  {displaySlides.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setActiveSlide(i)}
-                      aria-label={`Go to slide ${i + 1}`}
-                      className="flex-1 py-3 -my-3 flex items-center"
-                    >
-                      <span className="h-[2px] w-full rounded-full bg-white/15 overflow-hidden block">
-                        {i < activeSlide && <span className="block h-full w-full bg-white/70 rounded-full" />}
-                        {i === activeSlide && (
-                          <motion.span
-                            key={`progress-${activeSlide}`}
-                            className="block h-full bg-white rounded-full"
-                            initial={{ width: '0%' }}
-                            animate={{ width: '100%' }}
-                            transition={{ duration: 5, ease: 'linear' }}
-                          />
-                        )}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+      {/* ── Section 1: Premier Routines — replaces the old rotating hero. No top
+          padding: the dark background runs right up under the fixed navbar, same
+          flush-top treatment the hero used to have. Cards drift slowly and pause
+          on hover so a customer can actually read one before it scrolls away. */}
+      <section className="bg-[#1A1A1A] pt-20 pb-12 md:pt-[152px] md:pb-16 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8 md:mb-10">
+          <p className="text-[#B79FD1] text-xs md:text-sm font-bold uppercase tracking-widest mb-2 md:mb-3">Curated For You</p>
+          <h1 className="text-white font-serif italic text-[28px] md:text-[44px] leading-tight max-w-xl">Premier Routines</h1>
         </div>
 
-        {/* Photo panel — clean full-bleed image, no overlay, no floating chrome */}
-        <div className="order-1 lg:order-2 relative h-[42vh] lg:h-auto lg:min-h-[88vh] overflow-hidden">
-          {loadingSlides ? (
-            <div className="w-full h-full bg-white/5 animate-pulse" />
-          ) : (
-            displaySlides.map((slide, index) => (
-              <motion.div
-                key={slide.id}
-                initial={false}
-                animate={{ opacity: index === activeSlide ? 1 : 0 }}
-                transition={{ duration: 0.7, ease: [0.25, 1, 0.5, 1] }}
-                className="absolute inset-0"
-                style={{ zIndex: index === activeSlide ? 1 : 0 }}
-              >
+        <div className="flex gap-5 md:gap-6 w-max animate-marquee-cards hover:[animation-play-state:paused] pl-4 md:pl-8">
+          {[...ROUTINES, ...ROUTINES].map((routine, index) => (
+            <div key={`${routine.title}-${index}`} className="shrink-0 w-[250px] sm:w-[280px] md:w-[300px] rounded-2xl overflow-hidden">
+              <div className="aspect-square overflow-hidden bg-white">
                 <LazyImage
-                  src={slide.image_url}
-                  alt=""
-                  priority={index === 0}
+                  src={routine.image}
+                  alt={routine.title}
+                  priority={index < ROUTINES.length}
                   className="w-full h-full object-cover"
                 />
-              </motion.div>
-            ))
-          )}
-          {/* Blend the seam — photo fades into the dark panel instead of a hard edge.
-              Mobile: photo sits above the text panel, so the fade lives at the photo's bottom.
-              Desktop: photo sits right of the text panel, so the fade lives at the photo's left. */}
-          <div className="pointer-events-none absolute z-[2] inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#1A1A1A] to-transparent lg:inset-y-0 lg:left-0 lg:right-auto lg:bottom-auto lg:h-full lg:w-28 xl:w-36 lg:bg-gradient-to-r lg:from-[#1A1A1A] lg:to-transparent" />
+              </div>
+              <div className="p-5" style={{ backgroundColor: routine.bg }}>
+                <h3 className="font-bold text-[16px] md:text-[18px] text-[#1A1A1A] mb-1.5 leading-snug">{routine.title}</h3>
+                <p className="text-[12px] md:text-[13px] text-[#1A1A1A]/65 leading-relaxed mb-3">{routine.description}</p>
+                <a
+                  href={routineWhatsAppLink(routine.title)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[#6D4C91] hover:text-[#5a3e79] transition-colors"
+                >
+                  Shop Now <MessageCircle className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -328,6 +467,17 @@ export function Home() {
           </div>
         </div>
       )}
+
+      {/* ── Section 1b: Consultations ─────────────────────────────────────────── */}
+      <ServiceRowSection
+        kicker="Start Here"
+        title="Consultations"
+        subtitle="Get to know your skin before you treat it — imaging, analysis and expert consults."
+        ctaLabel="View All"
+        ctaTo="/services?category=Imaging%20%26%20Consultation"
+        badge="Consult"
+        services={consultationServices}
+      />
 
       {/* ── Section 2: New Arrivals ──────────────────────────────────────────── */}
       {newArrivals.length > 0 && (
@@ -411,6 +561,30 @@ export function Home() {
           </div>
         </section>
       )}
+
+      {/* ── Section 2b: Best Sellers ──────────────────────────────────────────── */}
+      <ProductRowSection
+        kicker="Customer Favorites"
+        title="Best Sellers"
+        subtitle="The products our customers can't stop repurchasing."
+        ctaLabel="Shop All"
+        ctaTo="/shop?collection=Bestsellers"
+        badge="Bestseller"
+        products={bestSellers}
+        bg="bg-[#F2F1F8]"
+      />
+
+      {/* ── Section 2c: Treatments ────────────────────────────────────────────── */}
+      <ServiceRowSection
+        kicker="In-Clinic"
+        title="Popular Treatments"
+        subtitle="Clinically-proven treatments performed by certified professionals."
+        ctaLabel="View All Services"
+        ctaTo="/services"
+        badge="Treatment"
+        services={treatmentServices}
+        bg="bg-white"
+      />
 
       {/* ── Section 3: Shop Our Kits ─────────────────────────────────────────── */}
       {kits.length > 0 && (

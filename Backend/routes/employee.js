@@ -1,5 +1,6 @@
 const express = require('express');
 const path    = require('path');
+const crypto  = require('crypto');
 const { createServiceClient } = require('../config/supabase');
 
 const serviceSupabase = createServiceClient();
@@ -194,8 +195,14 @@ module.exports = ({ supabase, authenticate, requireEmployeePermission, transport
   //     -d '{"name": "Jane Admin", "email": "jane@premierbeauty.com"}'
   router.post('/developer/create-admin', async (req, res) => {
     // ── Guard: verify developer secret ──────────────────────────────────────
+    // Constant-time compare — a plain !== leaks how many leading characters matched
+    // via response-time differences, letting an attacker brute-force the secret byte by byte.
     const secret = req.headers['x-developer-key'];
-    if (!secret || secret !== process.env.DEVELOPER_SECRET) {
+    const expected = process.env.DEVELOPER_SECRET || '';
+    const secretBuf = Buffer.from(String(secret || ''));
+    const expectedBuf = Buffer.from(expected);
+    const valid = secret && secretBuf.length === expectedBuf.length && crypto.timingSafeEqual(secretBuf, expectedBuf);
+    if (!valid) {
       return res.status(403).json({ error: 'Forbidden — invalid or missing developer key.' });
     }
 

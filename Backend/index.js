@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const hpp = require('hpp');
 
 const { supabase, createServiceClient } = require('./config/supabase');
 const { transporter } = require('./config/email');
@@ -48,6 +49,7 @@ app.use(express.json({
   limit: '20mb',
 }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+app.use(hpp()); // strips duplicate query/body params (e.g. ?price=1&price=2) that can bypass validation or crash naive handlers
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -140,6 +142,24 @@ app.use(createPaymentRoutes({ supabase, initiateSTKPush, transporter }));
 // Health check
 app.get('/', (req, res) => {
   res.json({ message: 'Backend Stable ✅' });
+});
+
+// 404 fallback — anything that reached here matched no route
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+// ── Global error handler ──────────────────────────────────────────────────────
+// Catches anything a route's own try/catch missed (sync throws, rejected promises
+// passed to next(), body-parser errors, etc.). Full detail always goes to the
+// server log; the client only ever gets a generic message — never a stack trace
+// or error internals, regardless of NODE_ENV (which isn't reliably set on every
+// host, so we don't gate leakage prevention on it).
+app.use((err, req, res, next) => {
+  console.error(`[error] ${req.method} ${req.originalUrl}:`, err.stack || err);
+  if (res.headersSent) return next(err);
+  const status = Number.isInteger(err.status) ? err.status : 500;
+  res.status(status).json({ error: status === 500 ? 'Internal server error' : (err.message || 'Request failed') });
 });
 
 // ── Critical env-var guard (runs before server starts) ───────────────────────

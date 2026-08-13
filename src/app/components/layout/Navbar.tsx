@@ -47,6 +47,21 @@ const CATEGORIES = [
   }
 ];
 
+// Secondary link bar (desktop) — the site's two journeys (shop + book) plus its real
+// category/collection filters. Uses `group=` (Shop.tsx's broad top-tab filter, matched
+// against CATEGORY_GROUPS) rather than `category=`, which expects an exact fine-grained
+// category name — "Skincare" isn't one, so `category=Skincare` would silently return zero results.
+const SECONDARY_LINKS = [
+  { label: 'All Skincare',   to: '/shop?group=Skincare' },
+  { label: 'Body Care',      to: '/shop?group=Body%20Care' },
+  { label: 'Fragrances',     to: '/shop?group=Fragrances' },
+  { label: 'Wellness',       to: '/shop?group=Wellness' },
+  { label: 'New Arrivals',   to: '/shop?collection=New%20Arrivals' },
+  { label: 'Bestsellers',    to: '/shop?collection=Bestsellers' },
+  { label: 'Starter Kits',   to: '/shop?collection=Starter%20Kits' },
+  { label: 'Services & Treatments', to: '/services' },
+];
+
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
@@ -139,26 +154,13 @@ export function Navbar() {
   const isNavHidden = isHidden && !isMenuOrOverlayOpen;
 
   return (
+    <>
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-out ${isNavHidden ? '-translate-y-full' : 'translate-y-0'}`}
     >
-      {/* Marquee Announcement Bar */}
-      <div className="bg-[#F2F1F8] text-[#1A1A1A] py-2 overflow-hidden whitespace-nowrap border-b border-gray-300">
-        <motion.div 
-          animate={{ x: ["100%", "-100%"] }}
-          transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-          className="inline-block text-[12px] font-bold uppercase tracking-widest"
-        >
-          <span className="mx-8">BOOK A VIRTUAL CONSULTATION WITH OUR DERMATOLOGISTS</span>
-          <span className="mx-8">NEW ARRIVALS: HYDRATING MILKY CLEANSER NOW IN STOCK</span>
-          <span className="mx-8">BOOK A VIRTUAL CONSULTATION WITH OUR DERMATOLOGISTS</span>
-          <span className="mx-8">NEW ARRIVALS: HYDRATING MILKY CLEANSER NOW IN STOCK</span>
-        </motion.div>
-      </div>
-
       {/* Main Navbar */}
       <nav className={`transition-all duration-300 ${isScrolled ? 'bg-[#1A1A1A]/95 backdrop-blur-md shadow-md py-2' : 'bg-[#1A1A1A] py-3 md:py-4'}`}>
-        <div className="max-w-7xl mx-auto px-3 md:px-8 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-3 md:px-8 flex items-center justify-between gap-2">
           {/* Mobile Menu Toggle */}
           <button
             className="md:hidden p-2 -ml-2 z-10 text-white"
@@ -167,21 +169,28 @@ export function Navbar() {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Left Navigation (Desktop) */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link to="/shop" className="text-[14px] font-medium text-white/80 hover:text-white transition-colors uppercase tracking-wider">Shop</Link>
-            <div
-              className="relative group"
-              onMouseEnter={() => setActiveMegaMenu('categories')}
-              onMouseLeave={() => setActiveMegaMenu(null)}
+          {/* Search — desktop pill, left */}
+          <div className="hidden md:flex items-center flex-1 min-w-0 max-w-[190px] lg:max-w-[240px] xl:max-w-xs">
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="group flex items-center w-full bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 rounded-full py-1.5 pl-4 pr-1.5 transition-colors text-left"
             >
-              <button className="text-[14px] font-medium text-white/80 hover:text-white transition-colors flex items-center space-x-1 uppercase tracking-wider">
-                <span>Collections</span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-            </div>
-            <Link to="/services" className="text-[14px] font-medium text-white/80 hover:text-white transition-colors uppercase tracking-wider">Services</Link>
+              <span className="flex-1 min-w-0 truncate text-[13px] text-white/45 group-hover:text-white/70 transition-colors">
+                Search products, treatments…
+              </span>
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#6D4C91] group-hover:bg-[#8B5CF6] transition-colors flex-shrink-0 ml-2">
+                <Search className="w-4 h-4 text-white" />
+              </span>
+            </button>
           </div>
+
+          {/* Search — mobile/tablet icon fallback (pill above takes over at md) */}
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="md:hidden p-2 text-white/80 hover:text-white transition-colors"
+          >
+            <Search className="w-5 h-5" />
+          </button>
 
           {/* Logo */}
           <Link to="/" className="absolute left-1/2 -translate-x-1/2 flex-shrink-0">
@@ -193,23 +202,24 @@ export function Navbar() {
           </Link>
 
           {/* Right Navigation */}
-          <div className="flex items-center space-x-1 md:space-x-4 z-10">
+          <div className="flex items-center gap-0.5 lg:gap-1 z-10 flex-shrink-0">
+            {/* Account — rich label from lg, icon-only below it */}
             <Link
-              to="/book"
-              className="hidden lg:inline-flex items-center gap-1.5 bg-[#6D4C91] text-white text-[12px] font-bold uppercase tracking-widest px-4 py-2 rounded-full hover:bg-[#8B5CF6] transition-colors"
+              to={user ? "/account" : "/login"}
+              className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-full hover:bg-white/[0.06] text-white/80 hover:text-white transition-colors"
             >
-              <Calendar className="w-3.5 h-3.5" />
-              Book Consultation
+              <span className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                <User className="w-3.5 h-3.5" />
+              </span>
+              <span className="text-left leading-tight">
+                <span className="block text-[12px] font-semibold whitespace-nowrap">{user ? 'My Account' : 'Sign In'}</span>
+                <span className="block text-[9px] text-white/45 whitespace-nowrap">Orders & bookings</span>
+              </span>
             </Link>
-            <button
-              onClick={() => setIsSearchOpen(true)}
-              className="p-2 text-white/80 hover:text-white transition-colors"
-            >
-              <Search className="w-5 h-5 md:w-6 md:h-6" />
-            </button>
-            <Link to={user ? "/account" : "/login"} className="p-2 text-white/80 hover:text-white transition-colors hidden sm:block">
+            <Link to={user ? "/account" : "/login"} className="p-2 text-white/80 hover:text-white transition-colors hidden sm:block lg:hidden">
               <User className="w-5 h-5 md:w-6 md:h-6" />
             </Link>
+
             <Link to="/cart" className="p-2 text-white/80 hover:text-white transition-colors relative">
               <ShoppingBag className="w-5 h-5 md:w-6 md:h-6" />
               {cartCount > 0 && (
@@ -236,7 +246,7 @@ export function Navbar() {
                       className="fixed inset-0 z-40"
                       onClick={() => setIsCurrencyDropdownOpen(false)}
                     />
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
@@ -246,7 +256,7 @@ export function Navbar() {
                         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3 px-2">Select Currency</p>
                         <ul className="space-y-1">
                           {CURRENCIES.map(currency => (
-                            <li 
+                            <li
                               key={currency.code}
                               className={`px-3 py-2 rounded-lg hover:bg-[#FDFBF7] cursor-pointer transition-colors ${selectedCurrency.code === currency.code ? 'bg-[#6D4C91] text-white' : ''}`}
                               onClick={() => {
@@ -269,6 +279,42 @@ export function Navbar() {
                   </>
                 )}
               </AnimatePresence>
+            </div>
+
+            <Link
+              to="/book"
+              className="hidden lg:inline-flex items-center gap-1.5 bg-[#6D4C91] text-white text-[12px] font-bold uppercase tracking-widest px-4 py-2 rounded-full hover:bg-[#8B5CF6] transition-colors ml-1"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              Book Consultation
+            </Link>
+          </div>
+        </div>
+
+        {/* Secondary link bar — category/collection/service shortcuts, desktop only.
+            Mobile keeps the same links inside the hamburger drawer's Quick Links section. */}
+        <div className="hidden md:block border-t border-white/10 mt-3 md:mt-2">
+          <div className="max-w-7xl mx-auto px-3 md:px-8">
+            <div className="flex items-center gap-6 lg:gap-7 h-11 overflow-x-auto scrollbar-hide">
+              <div
+                className="relative flex items-center h-full shrink-0"
+                onMouseEnter={() => setActiveMegaMenu('categories')}
+                onMouseLeave={() => setActiveMegaMenu(null)}
+              >
+                <button className="flex items-center gap-1 text-[13px] font-medium text-white/70 hover:text-white transition-colors uppercase tracking-wider whitespace-nowrap">
+                  <span>Brands</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {SECONDARY_LINKS.map(link => (
+                <Link
+                  key={link.label}
+                  to={link.to}
+                  className="text-[13px] font-medium text-white/70 hover:text-white transition-colors uppercase tracking-wider whitespace-nowrap shrink-0"
+                >
+                  {link.label}
+                </Link>
+              ))}
             </div>
           </div>
         </div>
@@ -345,8 +391,13 @@ export function Navbar() {
           )}
         </AnimatePresence>
       </nav>
+    </header>
 
-      {/* Mobile Menu Drawer */}
+      {/* Mobile Menu Drawer — rendered outside <header> deliberately: header has a
+          CSS transform (translate-y) for its scroll-hide animation, and any transform
+          on an ancestor makes fixed-position descendants size against *that* box
+          instead of the viewport. Nested here, the drawer used to collapse to
+          header's own ~100px height instead of covering the full screen. */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -580,6 +631,6 @@ export function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
-    </header>
+    </>
   );
 }

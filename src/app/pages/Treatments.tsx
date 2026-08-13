@@ -220,12 +220,12 @@ export function Services() {
           >
             {/* Blurred cover backdrop fills the wide letterbox strip a portrait photo
                 leaves behind on desktop; hidden on mobile where the box is close enough
-                to the photo's own aspect ratio that a plain cover crop already looks fine. */}
-            <img
-              src={slide.image}
-              alt=""
+                to the photo's own aspect ratio that a plain cover crop already looks fine.
+                CSS background-image (not <img>) so a display:none element never fetches it. */}
+            <div
               aria-hidden="true"
-              className="hidden md:block absolute inset-0 w-full h-full object-cover scale-110 blur-2xl brightness-[0.4]"
+              className="hidden md:block absolute inset-0 bg-cover bg-center scale-110 blur-2xl brightness-[0.4]"
+              style={{ backgroundImage: `url(${slide.image})` }}
             />
             <img
               src={slide.image}
