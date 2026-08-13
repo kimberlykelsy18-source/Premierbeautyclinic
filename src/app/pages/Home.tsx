@@ -207,7 +207,7 @@ export function Home() {
         onMouseLeave={() => setIsHeroPaused(false)}
       >
         {/* Text panel — all copy + nav chrome lives here, never on top of the photo */}
-        <div className="order-2 lg:order-1 relative flex flex-col justify-center px-6 sm:px-10 lg:px-14 xl:px-16 pt-8 pb-12 lg:pt-[170px] lg:pb-14 lg:min-h-[70vh]">
+        <div className="order-2 lg:order-1 relative flex flex-col justify-center px-6 sm:px-10 lg:px-14 xl:px-16 pt-8 pb-12 lg:pt-[170px] lg:pb-14 lg:min-h-[88vh]">
           {loadingSlides ? (
             <div className="space-y-4 max-w-md">
               <div className="h-3 w-32 bg-white/10 rounded-full animate-pulse" />
@@ -286,7 +286,7 @@ export function Home() {
         </div>
 
         {/* Photo panel — clean full-bleed image, no overlay, no floating chrome */}
-        <div className="order-1 lg:order-2 relative h-[42vh] lg:h-auto lg:min-h-[70vh] overflow-hidden">
+        <div className="order-1 lg:order-2 relative h-[42vh] lg:h-auto lg:min-h-[88vh] overflow-hidden">
           {loadingSlides ? (
             <div className="w-full h-full bg-white/5 animate-pulse" />
           ) : (
@@ -630,7 +630,7 @@ export function Home() {
             {/* Treatments banner */}
             <Link
               to="/services"
-              className="group relative rounded-3xl overflow-hidden min-h-[340px] flex items-end"
+              className="group relative rounded-3xl overflow-hidden min-h-[340px] md:min-h-[520px] flex items-end"
             >
               <CrossfadeBanner images={TREATMENTS_BANNER_IMAGES} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent z-0" />
@@ -652,7 +652,7 @@ export function Home() {
             {/* Shop banner */}
             <Link
               to="/shop"
-              className="group relative rounded-3xl overflow-hidden min-h-[340px] flex items-end"
+              className="group relative rounded-3xl overflow-hidden min-h-[340px] md:min-h-[520px] flex items-end"
             >
               <CrossfadeBanner images={shopBannerImages} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent z-0" />

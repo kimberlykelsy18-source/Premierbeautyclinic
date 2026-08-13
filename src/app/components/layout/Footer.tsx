@@ -41,7 +41,7 @@ export function Footer() {
             </p>
             <div className="flex space-x-4">
               <a
-                href="https://www.instagram.com/premierbeautyclinic"
+                href="https://www.instagram.com/premier_beauty_clinic?igsh=NTZsaGw5dXl0Y3c4&utm_source=qr"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 md:w-10 md:h-10 bg-white/10 hover:bg-[#6D4C91] rounded-full flex items-center justify-center transition-all active:scale-90"
@@ -49,7 +49,7 @@ export function Footer() {
                 <Instagram className="w-4 h-4 md:w-5 md:h-5 text-white" />
               </a>
               <a
-                href="https://www.tiktok.com/@premierbeautyclinic"
+                href="https://www.tiktok.com/@premier_beauty_clinic?_r=1&_t=ZS-98q7CMWmW9Q"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 md:w-10 md:h-10 bg-white/10 hover:bg-[#6D4C91] rounded-full flex items-center justify-center transition-all active:scale-90"

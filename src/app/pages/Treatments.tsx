@@ -207,7 +207,7 @@ export function Services() {
       {/* ── Hero Carousel ── no top padding on the page: the dark hero runs right up
           under the fixed navbar (its caption sits at the bottom, well clear of it),
           so there's no visible page-bg gap above it. ──────────────────────────── */}
-      <section className="relative bg-[#1A1A1A] h-[46vh] min-h-[320px] md:h-[58vh] md:min-h-[420px] overflow-hidden">
+      <section className="relative bg-[#1A1A1A] h-[46vh] min-h-[320px] md:h-[72vh] md:min-h-[540px] overflow-hidden">
         {/* Slides */}
         {slides.map((slide, index) => (
           <motion.div
@@ -218,10 +218,19 @@ export function Services() {
             className="absolute inset-0"
             style={{ zIndex: index === activeSlide ? 1 : 0 }}
           >
+            {/* Blurred cover backdrop fills the wide letterbox strip a portrait photo
+                leaves behind on desktop; hidden on mobile where the box is close enough
+                to the photo's own aspect ratio that a plain cover crop already looks fine. */}
             <img
               src={slide.image}
               alt=""
-              className="w-full h-full object-cover"
+              aria-hidden="true"
+              className="hidden md:block absolute inset-0 w-full h-full object-cover scale-110 blur-2xl brightness-[0.4]"
+            />
+            <img
+              src={slide.image}
+              alt=""
+              className="relative w-full h-full object-cover md:object-contain"
             />
           </motion.div>
         ))}
