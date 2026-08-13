@@ -52,8 +52,8 @@ We use cookies to enhance your browsing experience and analyze site traffic. You
 
 If you have questions about this Privacy Policy, please contact us:
 - Email: info@premierbeautyclinic.com
-- Phone: +254 707 259 295
-- Location: Karibu Mall, Kilimani, 1st Floor
+- Phone: +254 768 679 646
+- Location: Karibu Square Mall, Kilimani, 1st Floor
 
 **Changes to This Policy**
 

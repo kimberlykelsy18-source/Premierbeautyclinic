@@ -16,7 +16,7 @@ function WhatsAppIcon({ className }: { className?: string }) {
 
 export function WhatsAppButton() {
   const handleClick = () => {
-    const phoneNumber = '+254707259295';
+    const phoneNumber = '+254768679646';
     const message = 'Hello Premier Beauty Clinic! I would like to inquire about your products and services.';
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');

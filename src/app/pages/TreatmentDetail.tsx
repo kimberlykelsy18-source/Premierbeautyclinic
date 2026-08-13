@@ -404,7 +404,7 @@ export function TreatmentDetail() {
                   Book this service
                 </Link>
                 <a
-                  href="https://wa.me/254707259295"
+                  href="https://wa.me/254768679646"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 inline-flex items-center justify-center gap-2 border border-gray-300 text-gray-800 bg-white px-6 py-3.5 rounded-xl font-semibold text-sm hover:border-gray-400 transition-colors"

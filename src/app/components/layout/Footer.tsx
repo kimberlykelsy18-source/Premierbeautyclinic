@@ -93,11 +93,11 @@ export function Footer() {
             <ul className="space-y-4">
               <li className="flex items-start space-x-3">
                 <MapPin className="w-4 h-4 md:w-5 md:h-5 text-[#6D4C91] flex-shrink-0 mt-0.5" />
-                <span className="text-white/60 text-[13px] md:text-[14px]">Karibu Mall, Kilimani<br />1st Floor, Nairobi</span>
+                <span className="text-white/60 text-[13px] md:text-[14px]">Karibu Square Mall, Kilimani<br />1st Floor, Nairobi</span>
               </li>
               <li className="flex items-start space-x-3">
                 <Phone className="w-4 h-4 md:w-5 md:h-5 text-[#6D4C91] flex-shrink-0 mt-0.5" />
-                <span className="text-white/60 text-[13px] md:text-[14px]">+254 707 259 295</span>
+                <span className="text-white/60 text-[13px] md:text-[14px]">+254 768 679 646</span>
               </li>
               <li className="flex items-start space-x-3">
                 <Mail className="w-4 h-4 md:w-5 md:h-5 text-[#6D4C91] flex-shrink-0 mt-0.5" />

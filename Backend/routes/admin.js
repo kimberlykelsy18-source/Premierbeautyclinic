@@ -205,7 +205,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
             </div>
             <div style="background:#FDFBF7;padding:20px 32px;text-align:center;border-top:1px solid #eee">
               <p style="color:#aaa;font-size:12px;margin:0">© ${new Date().getFullYear()} Premier Beauty Clinic · Nairobi, Kenya</p>
-              <p style="color:#aaa;font-size:12px;margin:6px 0 0">Need to reschedule? Call or WhatsApp us at +254707259295</p>
+              <p style="color:#aaa;font-size:12px;margin:6px 0 0">Need to reschedule? Call or WhatsApp us at +254768679646</p>
             </div>
           </div>
         `,
@@ -547,7 +547,7 @@ module.exports = ({ supabase, serviceSupabase, authenticate, requireEmployeePerm
             </div>
             <div style="background:#FDFBF7;padding:20px 32px;text-align:center;border-top:1px solid #eee">
               <p style="color:#aaa;font-size:12px;margin:0">© ${new Date().getFullYear()} Premier Beauty Clinic · Nairobi, Kenya</p>
-              <p style="color:#aaa;font-size:12px;margin:6px 0 0">Need to reschedule? Call or WhatsApp us at +254707259295</p>
+              <p style="color:#aaa;font-size:12px;margin:6px 0 0">Need to reschedule? Call or WhatsApp us at +254768679646</p>
             </div>
           </div>
         `,

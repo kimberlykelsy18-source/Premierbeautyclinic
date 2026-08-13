@@ -530,7 +530,7 @@ export function SkinConcernPage() {
               Book a Treatment
             </Link>
             <a
-              href="https://wa.me/254707259295"
+              href="https://wa.me/254768679646"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 border-2 border-white/30 text-white px-8 py-4 rounded-xl font-bold text-sm hover:border-white/60 transition-colors"

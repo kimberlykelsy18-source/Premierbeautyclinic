@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Search, ShoppingBag, User, Menu, X, ChevronDown, Phone, Globe, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -49,6 +49,8 @@ const CATEGORIES = [
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
@@ -62,8 +64,27 @@ export function Navbar() {
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Hide the menu while the user is actively scrolling, bring it back once
+    // they stop. This keys off raw wheel/touch input rather than the native
+    // 'scroll' event — Lenis eases each input over ~1s, so 'scroll' keeps
+    // firing well after the user's actual gesture ends, which would make the
+    // reappear-timer track Lenis's animation tail instead of real input.
+    const handleUserScrollInput = () => {
+      setIsHidden(window.scrollY > 100);
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = setTimeout(() => setIsHidden(false), 200);
+    };
+    window.addEventListener('wheel', handleUserScrollInput, { passive: true });
+    window.addEventListener('touchmove', handleUserScrollInput, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('wheel', handleUserScrollInput);
+      window.removeEventListener('touchmove', handleUserScrollInput);
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    };
   }, []);
 
   // Fetch all products once when search overlay first opens; clear query on close
@@ -114,8 +135,13 @@ export function Navbar() {
     navigate(`/shop?${params.toString()}`);
   };
 
+  const isMenuOrOverlayOpen = isMobileMenuOpen || isSearchOpen || !!activeMegaMenu || isCurrencyDropdownOpen;
+  const isNavHidden = isHidden && !isMenuOrOverlayOpen;
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50">
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-out ${isNavHidden ? '-translate-y-full' : 'translate-y-0'}`}
+    >
       {/* Marquee Announcement Bar */}
       <div className="bg-[#F2F1F8] text-[#1A1A1A] py-2 overflow-hidden whitespace-nowrap border-b border-gray-300">
         <motion.div 
@@ -412,7 +438,7 @@ export function Navbar() {
                   </Link>
                   <div className="flex items-center space-x-3 text-gray-600">
                     <Phone className="w-5 h-5" />
-                    <span>+254 707 259 295</span>
+                    <span>+254 768 679 646</span>
                   </div>
                 </div>
               </div>

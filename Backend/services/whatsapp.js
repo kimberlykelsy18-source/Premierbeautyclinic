@@ -3,7 +3,7 @@
 // copy so both /checkout/whatsapp and /appointments/book-whatsapp stay in sync.
 
 // Same number used site-wide by WhatsAppButton.tsx / TreatmentDetail.tsx / SkinConcernPage.tsx
-const CLINIC_WHATSAPP_NUMBER = '254707259295';
+const CLINIC_WHATSAPP_NUMBER = '254768679646';
 
 function buildWhatsAppUrl(message) {
   return `https://wa.me/${CLINIC_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;

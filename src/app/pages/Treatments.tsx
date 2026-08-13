@@ -29,16 +29,24 @@ interface Service {
 // ── Hero image slides — pulled from service images or fallback Unsplash ──────
 const FALLBACK_SLIDES = [
   {
-    image: 'https://images.unsplash.com/photo-1570172619694-1b26a1e0a9b1?w=1080&q=80&auto=format&fit=crop',
-    label: 'Advanced Facials',
+    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/services-hero/1786565117000-services-hero-led-therapy.jpg',
+    label: 'LED Light Therapy',
   },
   {
-    image: 'https://images.unsplash.com/photo-1616394584738-fc6e612d71a9?w=1080&q=80&auto=format&fit=crop',
-    label: 'Chemical Peels',
+    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/services-hero/1786565117000-services-hero-microneedling.jpg',
+    label: 'Microneedling',
   },
   {
-    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1080&q=80&auto=format&fit=crop',
-    label: 'Skin Treatments',
+    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/services-hero/1786565117000-services-hero-real-results.jpg',
+    label: 'Real Results',
+  },
+  {
+    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/services-hero/1786566786000-quote-wall-2.jpg',
+    label: 'Selfcare, Not a Luxury',
+  },
+  {
+    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/services-hero/1786566786000-hair-product.jpg',
+    label: 'Premium Formulations',
   },
 ];
 
@@ -171,6 +179,12 @@ export function Services() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Keep activeSlide in range whenever the slide list itself changes (e.g. the fallback
+  // array gets swapped for a shorter API-driven one) so it never points past the new end.
+  useEffect(() => {
+    setActiveSlide(0);
+  }, [slides]);
+
   const goNext = useCallback(() => setActiveSlide(i => (i + 1) % slides.length), [slides.length]);
   const goPrev = useCallback(() => setActiveSlide(i => (i - 1 + slides.length) % slides.length), [slides.length]);
 
@@ -188,56 +202,94 @@ export function Services() {
   const consultServices = visibleServices.filter(s => s.base_price === 0 || s.base_price > SERVICE_PRICE_CEILING);
 
   return (
-    <div className="pt-[70px] md:pt-[100px] bg-[#F2F1F8] min-h-screen">
+    <div className="bg-[#F2F1F8] min-h-screen">
 
-      {/* ── Hero Carousel ──────────────────────────────────────────────────────── */}
-      <section className="relative bg-gray-900 h-[35vh] md:h-[45vh] overflow-hidden">
+      {/* ── Hero Carousel ── no top padding on the page: the dark hero runs right up
+          under the fixed navbar (its caption sits at the bottom, well clear of it),
+          so there's no visible page-bg gap above it. ──────────────────────────── */}
+      <section className="relative bg-[#1A1A1A] h-[46vh] min-h-[320px] md:h-[58vh] md:min-h-[420px] overflow-hidden">
         {/* Slides */}
         {slides.map((slide, index) => (
           <motion.div
             key={index}
             initial={false}
-            animate={{ opacity: index === activeSlide ? 1 : 0, zIndex: index === activeSlide ? 1 : 0 }}
-            transition={{ duration: 0.7 }}
+            animate={{ opacity: index === activeSlide ? 1 : 0 }}
+            transition={{ duration: 0.9, ease: [0.25, 1, 0.5, 1] }}
             className="absolute inset-0"
+            style={{ zIndex: index === activeSlide ? 1 : 0 }}
           >
             <img
               src={slide.image}
               alt=""
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
           </motion.div>
         ))}
+
+        {/* Legibility scrim — darkest behind the caption, clear toward the top of the photo */}
+        <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
+
+        {/* Caption + progress — one bottom-anchored group, stacked on mobile, side-by-side from md up */}
+        <div className="absolute z-[3] inset-x-4 bottom-6 md:inset-x-10 md:bottom-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="md:max-w-md">
+            <p className="text-white/60 text-[11px] md:text-xs font-bold uppercase tracking-[0.2em] mb-2">In-Clinic</p>
+            <motion.h2
+              key={`svc-label-${activeSlide}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
+              className="font-serif italic text-white leading-[1.1]"
+              style={{ fontSize: 'clamp(1.5rem, 3.4vw, 2.5rem)' }}
+            >
+              {slides[activeSlide]?.label}
+            </motion.h2>
+          </div>
+
+          {/* Progress bars — same quiet language as the home hero carousel */}
+          {slides.length > 1 && (
+            <div className="flex gap-1.5 w-full max-w-[160px] md:mb-1.5 md:shrink-0">
+              {slides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveSlide(i)}
+                  aria-label={`Go to slide ${i + 1}`}
+                  className="flex-1 py-3 -my-3 flex items-center"
+                >
+                  <span className="h-[2px] w-full rounded-full bg-white/20 overflow-hidden block">
+                    {i < activeSlide && <span className="block h-full w-full bg-white/70 rounded-full" />}
+                    {i === activeSlide && (
+                      <motion.span
+                        key={`svc-progress-${activeSlide}`}
+                        className="block h-full bg-white rounded-full"
+                        initial={{ width: '0%' }}
+                        animate={{ width: '100%' }}
+                        transition={{ duration: 5, ease: 'linear' }}
+                      />
+                    )}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Prev / Next */}
         {slides.length > 1 && (
           <>
             <button
               onClick={goPrev}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
+              className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-[3] w-10 h-10 md:w-11 md:h-11 bg-white/10 hover:bg-white/25 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white transition-all"
               aria-label="Previous"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={goNext}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
+              className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-[3] w-10 h-10 md:w-11 md:h-11 bg-white/10 hover:bg-white/25 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white transition-all"
               aria-label="Next"
             >
               <ChevronRightIcon className="w-4 h-4" />
             </button>
-            {/* Dot indicators */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
-              {slides.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveSlide(i)}
-                  className={`transition-all duration-300 rounded-full ${i === activeSlide ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/50 hover:bg-white/80'}`}
-                  aria-label={`Slide ${i + 1}`}
-                />
-              ))}
-            </div>
           </>
         )}
       </section>

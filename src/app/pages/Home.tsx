@@ -58,15 +58,67 @@ interface HomeService {
 // Services priced above this show no price on the homepage — customers select and book a consultation instead
 const SERVICE_PRICE_CEILING = 20000;
 
+// Treatments banner background — quiet slow crossfade through real in-clinic photos
+const TREATMENTS_BANNER_IMAGES = [
+  'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786565117000-banner-treatments-happy-client.jpg',
+  'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786566358000-banner-whatsapp1.jpg',
+  'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786566358000-banner-led-sunglasses.jpg',
+  'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786566358000-banner-consultation.jpg',
+  'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786566786000-quote-wall-1.jpg',
+  'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786566786000-banner-whatsapp2.jpg',
+  'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786566786000-quote-wall-3.jpg',
+];
+
 const FALLBACK_SLIDE: PromoSlide = {
   id: 'fallback',
   title: 'Premier Beauty Clinic',
-  subtitle: 'Nairobi\'s trusted skin clinic — shop products or book a treatment',
+  subtitle: 'Nairobi\'s trusted skin clinic. Shop products or book a treatment',
   image_url: 'https://images.unsplash.com/photo-1663271451789-a770bfbcb12a?w=1080&q=80&auto=format&fit=crop',
   cta_text: 'Shop Now',
   cta_link: '/shop',
   sort_order: 0,
 };
+
+// Shared by the treatments/shop promo banners — quiet slow crossfade through a set of photos.
+// Images are absolute inset-0 (all sharing the same box), so they're mounted progressively as the
+// rotation reaches them rather than all at once — otherwise native lazy-loading fetches all of them
+// the instant the shared box scrolls into view, since it can't tell them apart by position.
+function CrossfadeBanner({ images, intervalMs = 4500 }: { images: string[]; intervalMs?: number }) {
+  const [index, setIndex] = useState(0);
+  const [mounted, setMounted] = useState<Set<number>>(() => new Set([0]));
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const t = setInterval(() => {
+      setIndex(i => {
+        const next = (i + 1) % images.length;
+        setMounted(prev => (prev.has(next) ? prev : new Set(prev).add(next)));
+        return next;
+      });
+    }, intervalMs);
+    return () => clearInterval(t);
+  }, [images.length, intervalMs]);
+
+  return (
+    <div className="absolute inset-0 z-0">
+      {images.map((src, i) => mounted.has(i) && (
+        <motion.div
+          key={src}
+          initial={false}
+          animate={{ opacity: i === index ? 1 : 0 }}
+          transition={{ duration: 1.2, ease: 'easeInOut' }}
+          className="absolute inset-0"
+        >
+          <LazyImage
+            src={src}
+            alt=""
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
 
 export function Home() {
   const [slides, setSlides]                     = useState<PromoSlide[]>([]);
@@ -78,7 +130,6 @@ export function Home() {
   const [featuredReviews, setFeaturedReviews]   = useState<FeaturedReview[]>([]);
   const [services, setServices]                 = useState<HomeService[]>([]);
   const [isHeroPaused, setIsHeroPaused]         = useState(false);
-  const [shopBannerIndex, setShopBannerIndex]   = useState(0);
   const reviewsScrollRef = useRef<HTMLDivElement>(null);
 
   const scrollReviews = (direction: 1 | -1) => {
@@ -93,12 +144,6 @@ export function Home() {
     const unique = [...new Set(imgs)].slice(0, 6);
     return unique.length > 0 ? unique : ['https://images.unsplash.com/photo-1556228720-195a672e8a03?w=900&q=80&auto=format&fit=crop'];
   }, [newArrivals, kits]);
-
-  useEffect(() => {
-    if (shopBannerImages.length <= 1) return;
-    const t = setInterval(() => setShopBannerIndex(i => (i + 1) % shopBannerImages.length), 4500);
-    return () => clearInterval(t);
-  }, [shopBannerImages.length]);
 
   useEffect(() => {
     apiFetch('/promo-carousel')
@@ -136,7 +181,6 @@ export function Home() {
   }, []);
 
   const goNext = useCallback(() => setActiveSlide(i => (i + 1) % Math.max(slides.length, 1)), [slides.length]);
-  const goPrev = useCallback(() => setActiveSlide(i => (i - 1 + slides.length) % Math.max(slides.length, 1)), [slides.length]);
 
   // Auto-rotate carousel every 5 seconds, pausing on hover
   useEffect(() => {
@@ -151,16 +195,19 @@ export function Home() {
   const pricedServices = services.filter(s => s.base_price > 0 && s.base_price <= SERVICE_PRICE_CEILING);
 
   return (
-    <div className="pt-[70px] md:pt-[100px] bg-[#F2F1F8]">
+    <div className="bg-[#F2F1F8]">
 
-      {/* ── Section 1: Split-panel hero ──────────────────────────────────────── */}
+      {/* ── Section 1: Split-panel hero ──────────────────────────────────────────
+          No top padding on the page here — the hero's own dark background runs
+          right up under the fixed navbar, so there's no visible page-bg gap above
+          it. Clearance from the navbar is handled inside the text panel instead. */}
       <section
         className="grid grid-cols-1 lg:grid-cols-[minmax(0,42%)_1fr] bg-[#1A1A1A]"
         onMouseEnter={() => setIsHeroPaused(true)}
         onMouseLeave={() => setIsHeroPaused(false)}
       >
         {/* Text panel — all copy + nav chrome lives here, never on top of the photo */}
-        <div className="order-2 lg:order-1 relative flex flex-col justify-center px-6 sm:px-10 lg:px-14 xl:px-16 py-12 lg:py-0 lg:min-h-[70vh]">
+        <div className="order-2 lg:order-1 relative flex flex-col justify-center px-6 sm:px-10 lg:px-14 xl:px-16 pt-8 pb-12 lg:pt-[170px] lg:pb-14 lg:min-h-[70vh]">
           {loadingSlides ? (
             <div className="space-y-4 max-w-md">
               <div className="h-3 w-32 bg-white/10 rounded-full animate-pulse" />
@@ -170,18 +217,13 @@ export function Home() {
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-2 mb-5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6]" />
-                <span className="text-white/50 text-xs font-bold uppercase tracking-[0.2em]">Premier Beauty Clinic</span>
-              </div>
-
               <motion.h1
                 key={`title-${activeSlide}`}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
                 className="font-serif italic text-white leading-[1.08] mb-4"
-                style={{ fontSize: 'clamp(2rem, 4vw, 3.25rem)' }}
+                style={{ fontSize: 'clamp(1.75rem, 3.4vw, 2.75rem)' }}
               >
                 {displaySlides[activeSlide]?.title}
               </motion.h1>
@@ -213,41 +255,30 @@ export function Home() {
                 </Link>
               </motion.div>
 
-              {/* Slide nav — counter + prev/next + progress, all off the photo */}
+              {/* Slide nav — quiet progress bar only, no counter or manual arrows */}
               {displaySlides.length > 1 && (
-                <div className="flex items-center gap-5 mt-12 lg:mt-16">
-                  <div className="flex items-center gap-3 text-white/40">
-                    <button onClick={goPrev} aria-label="Previous slide" className="hover:text-white transition-colors">
-                      <ChevronRight className="w-4 h-4 rotate-180" />
-                    </button>
-                    <span className="text-xs font-semibold tabular-nums text-white/70">
-                      {String(activeSlide + 1).padStart(2, '0')} / {String(displaySlides.length).padStart(2, '0')}
-                    </span>
-                    <button onClick={goNext} aria-label="Next slide" className="hover:text-white transition-colors">
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="flex-1 flex gap-1.5 max-w-[140px]">
-                    {displaySlides.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setActiveSlide(i)}
-                        aria-label={`Go to slide ${i + 1}`}
-                        className="h-[2px] flex-1 rounded-full bg-white/15 overflow-hidden"
-                      >
-                        {i < activeSlide && <div className="h-full w-full bg-white/70 rounded-full" />}
+                <div className="flex gap-1.5 max-w-[140px] mt-12 lg:mt-16">
+                  {displaySlides.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveSlide(i)}
+                      aria-label={`Go to slide ${i + 1}`}
+                      className="flex-1 py-3 -my-3 flex items-center"
+                    >
+                      <span className="h-[2px] w-full rounded-full bg-white/15 overflow-hidden block">
+                        {i < activeSlide && <span className="block h-full w-full bg-white/70 rounded-full" />}
                         {i === activeSlide && (
-                          <motion.div
+                          <motion.span
                             key={`progress-${activeSlide}`}
-                            className="h-full bg-white rounded-full"
+                            className="block h-full bg-white rounded-full"
                             initial={{ width: '0%' }}
                             animate={{ width: '100%' }}
                             transition={{ duration: 5, ease: 'linear' }}
                           />
                         )}
-                      </button>
-                    ))}
-                  </div>
+                      </span>
+                    </button>
+                  ))}
                 </div>
               )}
             </>
@@ -277,6 +308,10 @@ export function Home() {
               </motion.div>
             ))
           )}
+          {/* Blend the seam — photo fades into the dark panel instead of a hard edge.
+              Mobile: photo sits above the text panel, so the fade lives at the photo's bottom.
+              Desktop: photo sits right of the text panel, so the fade lives at the photo's left. */}
+          <div className="pointer-events-none absolute z-[2] inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#1A1A1A] to-transparent lg:inset-y-0 lg:left-0 lg:right-auto lg:bottom-auto lg:h-full lg:w-28 xl:w-36 lg:bg-gradient-to-r lg:from-[#1A1A1A] lg:to-transparent" />
         </div>
       </section>
 
@@ -302,7 +337,7 @@ export function Home() {
               <div>
                 <p className="text-[#6D4C91] text-xs font-bold uppercase tracking-widest mb-2">Just Landed</p>
                 <h2 className="text-[26px] md:text-[38px] font-serif italic leading-tight">New Arrivals</h2>
-                <p className="text-gray-500 mt-2 text-sm md:text-base">Fresh additions to our skincare range — be the first to try them.</p>
+                <p className="text-gray-500 mt-2 text-sm md:text-base">Fresh additions to our skincare range. Be the first to try them.</p>
               </div>
               <Link to="/shop" className="hidden sm:inline-flex items-center text-sm font-bold text-[#6D4C91] hover:underline gap-1 shrink-0">
                 Shop All <ArrowRight className="w-4 h-4" />
@@ -385,7 +420,7 @@ export function Home() {
               <div>
                 <p className="text-[#6D4C91] text-xs font-bold uppercase tracking-widest mb-2">Curated Bundles</p>
                 <h2 className="text-[26px] md:text-[38px] font-serif italic leading-tight">Shop Our Kits</h2>
-                <p className="text-gray-500 mt-2 text-sm md:text-base">Complete skincare routines — everything you need in one bundle.</p>
+                <p className="text-gray-500 mt-2 text-sm md:text-base">Complete skincare routines: everything you need in one bundle.</p>
               </div>
               <Link to="/shop" className="hidden sm:inline-flex items-center text-sm font-bold text-[#6D4C91] hover:underline gap-1 shrink-0">
                 View All <ArrowRight className="w-4 h-4" />
@@ -597,19 +632,15 @@ export function Home() {
               to="/services"
               className="group relative rounded-3xl overflow-hidden min-h-[340px] flex items-end"
             >
-              <LazyImage
-                src="https://images.unsplash.com/photo-1570172619694-1b26a1e0a9b1?w=900&q=80&auto=format&fit=crop"
-                alt="Facial treatment"
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-              <div className="relative p-8 md:p-10 text-white">
+              <CrossfadeBanner images={TREATMENTS_BANNER_IMAGES} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent z-0" />
+              <div className="relative z-10 p-8 md:p-10 text-white">
                 <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-3">In-Clinic</p>
                 <h2 className="text-2xl md:text-3xl font-bold mb-3 leading-tight">
-                  {storefrontContent.promo_banner?.title || 'Explore Our Treatments'}
+                  {storefrontContent.promo_banner?.title || 'Feel The Glow Radiate'}
                 </h2>
                 <p className="text-sm md:text-base mb-6 text-white/85 max-w-sm">
-                  {storefrontContent.promo_banner?.subtitle || 'Clinically-proven facials, chemical peels & advanced skin treatments performed by certified professionals.'}
+                  {storefrontContent.promo_banner?.subtitle || "From facials to advanced peels, our certified therapists craft every treatment around your skin's unique needs."}
                 </p>
                 <span className="inline-flex items-center bg-white text-[#6D4C91] px-6 py-3 rounded-full font-bold group-hover:bg-gray-100 transition-colors">
                   View Services
@@ -623,24 +654,7 @@ export function Home() {
               to="/shop"
               className="group relative rounded-3xl overflow-hidden min-h-[340px] flex items-end"
             >
-              <div className="absolute inset-0 z-0">
-                {shopBannerImages.map((src, i) => (
-                  <motion.div
-                    key={src}
-                    initial={false}
-                    animate={{ opacity: i === shopBannerIndex ? 1 : 0 }}
-                    transition={{ duration: 1.2, ease: 'easeInOut' }}
-                    className="absolute inset-0"
-                  >
-                    <LazyImage
-                      src={src}
-                      alt=""
-                      priority={i === 0}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </motion.div>
-                ))}
-              </div>
+              <CrossfadeBanner images={shopBannerImages} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent z-0" />
               <div className="relative z-10 p-8 md:p-10 text-white">
                 <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-3">Online Store</p>

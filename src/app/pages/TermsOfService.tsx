@@ -86,8 +86,8 @@ These Terms are governed by the laws of Kenya. Any disputes shall be resolved in
 
 For questions about these Terms of Service:
 - Email: info@premierbeautyclinic.com
-- Phone: +254 707 259 295
-- Location: Karibu Mall, Kilimani, 1st Floor
+- Phone: +254 768 679 646
+- Location: Karibu Square Mall, Kilimani, 1st Floor
 
 **Severability**
 
