@@ -85,6 +85,12 @@ const COLLECTION_CATEGORY_KEYWORDS: Record<string, string[]> = {
   'Skincare Kits':  ['kit'],
 };
 
+// 'Korean Products' filters by brand rather than category — Medicube and Anua are the
+// only K-beauty brands currently stocked.
+const COLLECTION_BRANDS: Record<string, string[]> = {
+  'Korean Products': ['Medicube', 'Anua'],
+};
+
 type DropdownId = 'category' | 'skinType' | 'brand' | 'price' | 'sort' | null;
 
 // ─── Motion variants ─────────────────────────────────────────────────────────
@@ -359,6 +365,8 @@ export function Shop() {
         const catName = (p.categories?.name ?? '').toLowerCase();
         if (!keywords.some(k => catName.includes(k))) return false;
       }
+      const collectionBrands = COLLECTION_BRANDS[activeCollection];
+      if (collectionBrands && !collectionBrands.includes(p.brand ?? '')) return false;
       // 'New Arrivals' and 'Bestsellers' don't filter the set — they re-sort it below.
       // 'Professional Grade' / 'Eco-Friendly' have no backing product field yet, so no filter is applied.
     }

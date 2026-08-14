@@ -12,6 +12,7 @@ interface KitProduct {
   price: string;
   images: string[] | null;
   product_group: string | null;
+  brand: string | null;
   categories: { name: string; slug: string } | null;
   product_avg_ratings: { average_rating: string; rating_count: string } | null;
 }
@@ -332,7 +333,7 @@ function CrossfadeBanner({ images, intervalMs = 4500 }: { images: string[]; inte
 export function Home() {
   const [storefrontContent, setStorefrontContent] = useState<StorefrontContent>({ marquee_items: [], hero: {}, features: [] });
   const [kits, setKits]                         = useState<KitProduct[]>([]);
-  const [newArrivals, setNewArrivals]           = useState<KitProduct[]>([]);
+  const [koreanProducts, setKoreanProducts]     = useState<KitProduct[]>([]);
   const [bestSellers, setBestSellers]           = useState<KitProduct[]>([]);
   const [featuredReviews, setFeaturedReviews]   = useState<FeaturedReview[]>([]);
   const [services, setServices]                 = useState<HomeService[]>([]);
@@ -344,12 +345,12 @@ export function Home() {
 
   // Shop banner background — quiet slow crossfade through real product photos, no visible controls
   const shopBannerImages = useMemo(() => {
-    const imgs = [...newArrivals, ...kits]
+    const imgs = [...koreanProducts, ...kits]
       .map(p => p.images?.[0])
       .filter((src): src is string => !!src);
     const unique = [...new Set(imgs)].slice(0, 6);
     return unique.length > 0 ? unique : ['https://images.unsplash.com/photo-1556228720-195a672e8a03?w=900&q=80&auto=format&fit=crop'];
-  }, [newArrivals, kits]);
+  }, [koreanProducts, kits]);
 
   useEffect(() => {
     apiFetch('/storefront-content')
@@ -363,12 +364,13 @@ export function Home() {
         );
         setKits(kitProducts.slice(0, 8));
 
-        // New arrivals: highest IDs (most recently added), exclude kits
         const nonKits = (data || []).filter(
           p => p.product_group !== 'starter_kits' && p.categories?.slug !== 'starter-kits'
         );
-        const byNewest = [...nonKits].sort((a, b) => b.id - a.id);
-        setNewArrivals(byNewest.slice(0, 8));
+
+        // Korean Products: Medicube and Anua only
+        const korean = nonKits.filter(p => p.brand === 'Medicube' || p.brand === 'Anua');
+        setKoreanProducts(korean.slice(0, 8));
 
         // Best sellers — same "most reviewed, then highest rated" ranking Shop.tsx uses
         // for its own Bestsellers collection sort. The storefront has no review/order
@@ -479,88 +481,16 @@ export function Home() {
         services={consultationServices}
       />
 
-      {/* ── Section 2: New Arrivals ──────────────────────────────────────────── */}
-      {newArrivals.length > 0 && (
-        <section className="py-16 md:py-24 bg-white">
-          <div className="max-w-7xl mx-auto px-4 md:px-8">
-            <div className="flex items-end justify-between mb-10">
-              <div>
-                <p className="text-[#6D4C91] text-xs font-bold uppercase tracking-widest mb-2">Just Landed</p>
-                <h2 className="text-[26px] md:text-[38px] font-serif italic leading-tight">New Arrivals</h2>
-                <p className="text-gray-500 mt-2 text-sm md:text-base">Fresh additions to our skincare range. Be the first to try them.</p>
-              </div>
-              <Link to="/shop" className="hidden sm:inline-flex items-center text-sm font-bold text-[#6D4C91] hover:underline gap-1 shrink-0">
-                Shop All <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-
-            <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide touch-pan-x -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4">
-              {newArrivals.map((product, index) => {
-                const avgRating = Number(product.product_avg_ratings?.average_rating || 0);
-                return (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: index * 0.06 }}
-                    className="snap-start shrink-0 w-60 md:w-auto"
-                  >
-                    <Link
-                      to={`/shop/${product.id}`}
-                      className="group block bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300"
-                    >
-                      <div className="relative aspect-square overflow-hidden bg-[#F2F1F8]">
-                        {product.images?.[0] ? (
-                          <LazyImage
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <ShoppingBag className="w-10 h-10 text-[#6D4C91]/30" />
-                          </div>
-                        )}
-                        <div className="absolute top-3 left-0 bg-[#1A1A1A] text-white text-[10px] font-bold pl-3 pr-3.5 py-1.5 rounded-r-full uppercase tracking-widest shadow-sm">
-                          New
-                        </div>
-                        <div className="absolute inset-x-3 bottom-3 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                          <span className="block text-center bg-white/95 backdrop-blur-sm text-gray-900 text-[11px] font-bold uppercase tracking-widest py-2 rounded-full">
-                            View Product
-                          </span>
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        {product.categories?.name && (
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{product.categories.name}</p>
-                        )}
-                        <p className="font-bold text-sm leading-tight mb-2 line-clamp-2">
-                          {product.name}
-                          {product.size && <span className="text-gray-400 font-medium"> · {product.size}</span>}
-                        </p>
-                        {avgRating > 0 && (
-                          <div className="flex items-center gap-1 mb-2">
-                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                            <span className="text-xs text-gray-500">{avgRating.toFixed(1)}</span>
-                          </div>
-                        )}
-                        <p className="text-sm font-bold text-[#6D4C91]">KES {Number(product.price).toLocaleString()}</p>
-                      </div>
-                    </Link>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            <div className="text-center mt-8 sm:hidden">
-              <Link to="/shop" className="inline-flex items-center text-sm font-bold text-[#6D4C91] hover:underline gap-1">
-                View All Products <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
+      {/* ── Section 2: Korean Products ────────────────────────────────────────── */}
+      <ProductRowSection
+        kicker="K-Beauty"
+        title="Korean Products"
+        subtitle="Cult-favorite Medicube and Anua skincare, straight from Korea."
+        ctaLabel="Shop All"
+        ctaTo="/shop"
+        badge="K-Beauty"
+        products={koreanProducts}
+      />
 
       {/* ── Section 2b: Best Sellers ──────────────────────────────────────────── */}
       <ProductRowSection

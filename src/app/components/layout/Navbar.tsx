@@ -39,7 +39,7 @@ const CATEGORIES = [
   },
   {
     name: 'Shop by Collection',
-    items: ['New Arrivals', 'Bestsellers', 'Starter Kits', 'Skincare Kits', 'Professional Grade', 'Eco-Friendly']
+    items: ['Korean Products', 'Bestsellers', 'Starter Kits', 'Skincare Kits', 'Professional Grade', 'Eco-Friendly']
   },
   {
     name: 'Clinic Services',
@@ -56,7 +56,7 @@ const SECONDARY_LINKS = [
   { label: 'Body Care',      to: '/shop?group=Body%20Care' },
   { label: 'Fragrances',     to: '/shop?group=Fragrances' },
   { label: 'Wellness',       to: '/shop?group=Wellness' },
-  { label: 'New Arrivals',   to: '/shop?collection=New%20Arrivals' },
+  { label: 'Korean Products', to: '/shop?collection=Korean%20Products' },
   { label: 'Bestsellers',    to: '/shop?collection=Bestsellers' },
   { label: 'Starter Kits',   to: '/shop?collection=Starter%20Kits' },
   { label: 'Services & Treatments', to: '/services' },
