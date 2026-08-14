@@ -159,7 +159,7 @@ export function Navbar() {
       className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-out ${isNavHidden ? '-translate-y-full' : 'translate-y-0'}`}
     >
       {/* Main Navbar */}
-      <nav className={`transition-all duration-300 ${isScrolled ? 'bg-[#1A1A1A]/95 backdrop-blur-md shadow-md py-2' : 'bg-[#1A1A1A] py-3 md:py-4'}`}>
+      <nav className={`transition-all duration-300 ${isScrolled ? 'bg-black/95 backdrop-blur-md shadow-md py-2' : 'bg-black py-3 md:py-4'}`}>
         <div className="max-w-7xl mx-auto px-3 md:px-8 flex items-center justify-between gap-2">
           {/* Mobile Menu Toggle */}
           <button
@@ -184,14 +184,6 @@ export function Navbar() {
             </button>
           </div>
 
-          {/* Search — mobile/tablet icon fallback (pill above takes over at md) */}
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="md:hidden p-2 text-white/80 hover:text-white transition-colors"
-          >
-            <Search className="w-5 h-5" />
-          </button>
-
           {/* Logo */}
           <Link to="/" className="absolute left-1/2 -translate-x-1/2 flex-shrink-0">
             <img
@@ -203,6 +195,14 @@ export function Navbar() {
 
           {/* Right Navigation */}
           <div className="flex items-center gap-0.5 lg:gap-1 z-10 flex-shrink-0">
+            {/* Search — mobile/tablet icon fallback (pill above takes over at md) */}
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="md:hidden p-2 text-white/80 hover:text-white transition-colors"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+
             {/* Account — rich label from lg, icon-only below it */}
             <Link
               to={user ? "/account" : "/login"}
@@ -412,35 +412,35 @@ export function Navbar() {
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
-              className="fixed top-0 left-0 bottom-0 w-[80%] max-w-[320px] bg-white z-[60] overflow-y-auto"
+              className="fixed top-0 left-0 bottom-0 w-[80%] max-w-[320px] bg-black z-[60] overflow-y-auto"
             >
               <div className="p-6 flex flex-col h-full">
-                <div className="flex items-center justify-between mb-8">
-                  <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>
+                <div className="relative flex items-center justify-end mb-8">
+                  <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="absolute left-1/2 -translate-x-1/2">
                     <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
                   </Link>
-                  <button onClick={() => setIsMobileMenuOpen(false)}>
+                  <button onClick={() => setIsMobileMenuOpen(false)} className="text-white">
                     <X className="w-6 h-6" />
                   </button>
                 </div>
 
                 <div className="space-y-6">
-                  <Link to="/" className="block text-[18px] font-bold text-[#1A1A1A] active:text-[#6D4C91]" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
-                  <Link to="/shop" className="block text-[18px] font-bold text-[#1A1A1A] active:text-[#6D4C91]" onClick={() => setIsMobileMenuOpen(false)}>Shop Collection</Link>
-                  <Link to="/services" className="block text-[18px] font-bold text-[#1A1A1A] active:text-[#6D4C91]" onClick={() => setIsMobileMenuOpen(false)}>Services & Treatments</Link>
-                  <Link to="/book" className="block text-[18px] font-bold text-[#1A1A1A] active:text-[#6D4C91]" onClick={() => setIsMobileMenuOpen(false)}>Book a Treatment</Link>
-                  
-                  <div className="pt-6 border-t border-gray-100">
-                    <p className="text-[12px] text-gray-400 uppercase tracking-widest mb-4 font-bold">Quick Links</p>
+                  <Link to="/" className="block text-[18px] font-bold text-white active:text-[#8B5CF6]" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
+                  <Link to="/shop" className="block text-[18px] font-bold text-white active:text-[#8B5CF6]" onClick={() => setIsMobileMenuOpen(false)}>Shop Collection</Link>
+                  <Link to="/services" className="block text-[18px] font-bold text-white active:text-[#8B5CF6]" onClick={() => setIsMobileMenuOpen(false)}>Services & Treatments</Link>
+                  <Link to="/book" className="block text-[18px] font-bold text-white active:text-[#8B5CF6]" onClick={() => setIsMobileMenuOpen(false)}>Book a Treatment</Link>
+
+                  <div className="pt-6 border-t border-white/10">
+                    <p className="text-[12px] text-white/40 uppercase tracking-widest mb-4 font-bold">Quick Links</p>
                     <div className="grid grid-cols-1 gap-4">
                       {CATEGORIES.filter(c => c.name !== 'Shop by Brand').map(cat => (
                         <div key={cat.name} className="mb-2">
-                          <p className="text-[13px] font-bold mb-3 text-[#6D4C91]">{cat.name}</p>
+                          <p className="text-[13px] font-bold mb-3 text-[#8B5CF6]">{cat.name}</p>
                           <div className="grid grid-cols-1 gap-2.5 pl-2">
                             {cat.items.map(item => (
                               <button
                                 key={item}
-                                className="text-[13px] text-gray-600 active:text-[#6D4C91] text-left"
+                                className="text-[13px] text-white/70 active:text-[#8B5CF6] text-left"
                                 onClick={() => handleCategoryClick(cat.name, item)}
                               >
                                 {item}
@@ -450,13 +450,13 @@ export function Navbar() {
                         </div>
                       ))}
                       <div className="mb-2">
-                        <p className="text-[13px] font-bold mb-3 text-[#6D4C91]">Shop by Brand</p>
+                        <p className="text-[13px] font-bold mb-3 text-[#8B5CF6]">Shop by Brand</p>
                         <div className="flex flex-wrap gap-1.5 pl-2">
                           {CATEGORIES.find(c => c.name === 'Shop by Brand')!.items.map(brand => (
                             <button
                               key={brand}
                               onClick={() => handleCategoryClick('Shop by Brand', brand)}
-                              className="px-2.5 py-1 bg-[#F2F1F8] border border-gray-200 rounded-full text-[11px] text-gray-600 active:text-[#6D4C91] active:border-[#6D4C91]"
+                              className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-[11px] text-white/70 active:text-[#8B5CF6] active:border-[#8B5CF6]"
                             >
                               {brand}
                             </button>
@@ -482,12 +482,12 @@ export function Navbar() {
                   </div>
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-gray-100">
-                  <Link to={user ? "/account" : "/login"} className="flex items-center space-x-3 text-gray-600 mb-4" onClick={() => setIsMobileMenuOpen(false)}>
+                <div className="mt-auto pt-6 border-t border-white/10">
+                  <Link to={user ? "/account" : "/login"} className="flex items-center space-x-3 text-white/70 mb-4" onClick={() => setIsMobileMenuOpen(false)}>
                     <User className="w-5 h-5" />
                     <span>{user ? "My Account" : "Sign In / Join"}</span>
                   </Link>
-                  <div className="flex items-center space-x-3 text-gray-600">
+                  <div className="flex items-center space-x-3 text-white/70">
                     <Phone className="w-5 h-5" />
                     <span>+254 768 679 646</span>
                   </div>

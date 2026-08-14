@@ -49,6 +49,10 @@ interface HomeService {
 // Services priced above this show no price on the homepage — customers select and book a consultation instead
 const SERVICE_PRICE_CEILING = 20000;
 
+// Best Sellers section — curated product order, Anua TXA serum and the Medicube
+// cleanser leading, followed by the rest in this fixed order.
+const BESTSELLER_IDS = [2242, 2322, 2357, 2363, 2370, 2223, 2094, 2201];
+
 // Treatments banner background — quiet slow crossfade through real in-clinic photos
 const TREATMENTS_BANNER_IMAGES = [
   'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786565117000-banner-treatments-happy-client.jpg',
@@ -372,29 +376,11 @@ export function Home() {
         const korean = nonKits.filter(p => p.brand === 'Medicube' || p.brand === 'Anua');
         setKoreanProducts(korean.slice(0, 8));
 
-        // Best sellers — same "most reviewed, then highest rated" ranking Shop.tsx uses
-        // for its own Bestsellers collection sort. The storefront has no review/order
-        // history yet (0 reviewed products, 1 order ever placed) for this to rank by, so
-        // until that data exists, fall back to a "flagship" proxy — most-photographed,
-        // then highest-priced — swapping to the real ranking automatically once reviews
-        // start coming in.
-        const byPopularity = [...nonKits]
-          .filter(p => Number(p.product_avg_ratings?.rating_count || 0) > 0)
-          .sort((a, b) => {
-            const countA = Number(a.product_avg_ratings?.rating_count || 0);
-            const countB = Number(b.product_avg_ratings?.rating_count || 0);
-            if (countB !== countA) return countB - countA;
-            return Number(b.product_avg_ratings?.average_rating || 0) - Number(a.product_avg_ratings?.average_rating || 0);
-          });
-        const ranked = byPopularity.length > 0
-          ? byPopularity
-          : [...nonKits].sort((a, b) => {
-              const imagesA = a.images?.length || 0;
-              const imagesB = b.images?.length || 0;
-              if (imagesB !== imagesA) return imagesB - imagesA;
-              return Number(b.price) - Number(a.price);
-            });
-        setBestSellers(ranked.slice(0, 8));
+        // Best sellers — curated order (not algorithmic): Anua TXA serum and Medicube
+        // Azelaic acid+niacinamide deep foam cleanser lead, followed by the rest below.
+        const byId = new Map(nonKits.map(p => [p.id, p]));
+        const curated = BESTSELLER_IDS.map(id => byId.get(id)).filter((p): p is KitProduct => !!p);
+        setBestSellers(curated);
       })
       .catch(() => {});
 

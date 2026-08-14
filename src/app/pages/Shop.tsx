@@ -423,7 +423,7 @@ export function Shop() {
       <div className="max-w-[1600px] mx-auto px-4 md:px-8">
 
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <div className="flex items-baseline justify-center md:justify-between gap-4 pb-2.5 md:pb-4 border-b border-black/[0.08] mb-0">
+        <div className="flex items-baseline justify-center md:justify-between gap-4 pt-2.5 md:pt-4 pb-2.5 md:pb-4 border-b border-black/[0.08] mb-0">
           <div className="flex items-baseline gap-4">
             <h1
               className="font-serif italic text-black leading-none text-center md:text-left"
