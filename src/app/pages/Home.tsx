@@ -1,9 +1,19 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, ChevronRight, MessageCircle, ShoppingBag, Star } from 'lucide-react';
+import { ArrowRight, ChevronRight, ShoppingBag, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { apiFetch } from '../lib/api';
 import { LazyImage } from '../components/LazyImage';
+
+interface PromoSlide {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  image_url: string;
+  cta_text: string;
+  cta_link: string;
+  sort_order: number;
+}
 
 interface KitProduct {
   id: number;
@@ -53,6 +63,16 @@ const SERVICE_PRICE_CEILING = 20000;
 // cleanser leading, followed by the rest in this fixed order.
 const BESTSELLER_IDS = [2242, 2322, 2357, 2363, 2370, 2223, 2094, 2201];
 
+const FALLBACK_SLIDE: PromoSlide = {
+  id: 'fallback',
+  title: 'Premier Beauty Clinic',
+  subtitle: "Nairobi's trusted skin clinic — shop products or book a treatment",
+  image_url: 'https://images.unsplash.com/photo-1663271451789-a770bfbcb12a?w=1080&q=80&auto=format&fit=crop',
+  cta_text: 'Shop Now',
+  cta_link: '/shop',
+  sort_order: 0,
+};
+
 // Treatments banner background — quiet slow crossfade through real in-clinic photos
 const TREATMENTS_BANNER_IMAGES = [
   'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786565117000-banner-treatments-happy-client.jpg',
@@ -63,63 +83,6 @@ const TREATMENTS_BANNER_IMAGES = [
   'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786566786000-banner-whatsapp2.jpg',
   'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/banners/1786566786000-quote-wall-3.jpg',
 ];
-
-// Premier Routines — curated multi-product routine shots, replacing the old rotating
-// hero. "Shop Now" doesn't add to cart (these are groupings, not a single SKU) — it
-// opens WhatsApp with the routine name pre-filled, same handoff pattern used sitewide
-// since card/M-Pesa checkout was paused (see Checkout.tsx / WhatsAppButton.tsx).
-const WHATSAPP_NUMBER = '254768679646';
-
-interface Routine {
-  title: string;
-  description: string;
-  image: string;
-  bg: string;
-}
-
-const ROUTINES: Routine[] = [
-  {
-    title: 'Clear Skin Reset',
-    description: 'Benzoyl peroxide, an Effaclar cleanser and a K-beauty toner team up to calm breakouts and clear congestion.',
-    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628585960-Premier_Poducts_377.jpg',
-    bg: '#E8EDE3',
-  },
-  {
-    title: 'Deep Hydration Ritual',
-    description: 'Cleansing oil, an intensive balm and SPF layer together for skin that drinks in moisture and stays protected.',
-    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628586680-Premier_Poducts_382.jpg',
-    bg: '#E3EBF2',
-  },
-  {
-    title: 'Calm & Repair',
-    description: 'Cica-powered creams and a gentle oil-to-foam cleanser soothe redness and help skin bounce back.',
-    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628587141-Premier_Poducts_384.jpg',
-    bg: '#F2E7E5',
-  },
-  {
-    title: 'Everyday Essentials',
-    description: 'A purifying cleanser, daily SPF and a gentle exfoliant — the steps that keep skin balanced, every single day.',
-    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628587935-Premier_Poducts_388.jpg',
-    bg: '#F5EFE4',
-  },
-  {
-    title: 'Smooth & Resurface',
-    description: 'A glycolic peel and a urea-rich cream work through rough, bumpy texture for skin that feels newly smooth.',
-    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628588451-Premier_Poducts_391.jpg',
-    bg: '#F5E9DD',
-  },
-  {
-    title: 'Glow & Hydrate',
-    description: 'An aloe cleanser and a gluta-hya lotion pair up for that soft, dewy, ready-for-anything glow.',
-    image: 'https://iveielvhnpcwksfdpecw.supabase.co/storage/v1/object/public/clinic-images/routines/1786628589012-Premier_Poducts_397.jpg',
-    bg: '#EDE6F5',
-  },
-];
-
-function routineWhatsAppLink(title: string) {
-  const message = `Hi! I'd like to shop the "${title}" routine from Premier Beauty Clinic 💜`;
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-}
 
 // Shared by the treatments/shop promo banners — quiet slow crossfade through a set of photos.
 // Images are absolute inset-0 (all sharing the same box), so they're mounted progressively as the
@@ -335,6 +298,9 @@ function CrossfadeBanner({ images, intervalMs = 4500 }: { images: string[]; inte
 }
 
 export function Home() {
+  const [slides, setSlides]                     = useState<PromoSlide[]>([]);
+  const [activeSlide, setActiveSlide]           = useState(0);
+  const [loadingSlides, setLoadingSlides]       = useState(true);
   const [storefrontContent, setStorefrontContent] = useState<StorefrontContent>({ marquee_items: [], hero: {}, features: [] });
   const [kits, setKits]                         = useState<KitProduct[]>([]);
   const [koreanProducts, setKoreanProducts]     = useState<KitProduct[]>([]);
@@ -342,6 +308,18 @@ export function Home() {
   const [featuredReviews, setFeaturedReviews]   = useState<FeaturedReview[]>([]);
   const [services, setServices]                 = useState<HomeService[]>([]);
   const reviewsScrollRef = useRef<HTMLDivElement>(null);
+
+  const goNext = useCallback(() => setActiveSlide(i => (i + 1) % Math.max(slides.length, 1)), [slides.length]);
+  const goPrev = useCallback(() => setActiveSlide(i => (i - 1 + slides.length) % Math.max(slides.length, 1)), [slides.length]);
+
+  // Auto-rotate carousel every 5 seconds
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const timer = setInterval(goNext, 5000);
+    return () => clearInterval(timer);
+  }, [slides.length, goNext]);
+
+  const displaySlides = slides.length > 0 ? slides : [FALLBACK_SLIDE];
 
   const scrollReviews = (direction: 1 | -1) => {
     reviewsScrollRef.current?.scrollBy({ left: direction * 340, behavior: 'smooth' });
@@ -357,6 +335,11 @@ export function Home() {
   }, [koreanProducts, kits]);
 
   useEffect(() => {
+    apiFetch('/promo-carousel')
+      .then((data: PromoSlide[]) => setSlides(data && data.length > 0 ? data : [FALLBACK_SLIDE]))
+      .catch(() => setSlides([FALLBACK_SLIDE]))
+      .finally(() => setLoadingSlides(false));
+
     apiFetch('/storefront-content')
       .then((data: StorefrontContent) => setStorefrontContent(data))
       .catch(() => {});
@@ -404,42 +387,124 @@ export function Home() {
   return (
     <div className="bg-[#F2F1F8]">
 
-      {/* ── Section 1: Premier Routines — replaces the old rotating hero. No top
-          padding: the dark background runs right up under the fixed navbar, same
-          flush-top treatment the hero used to have. Cards drift slowly and pause
-          on hover so a customer can actually read one before it scrolls away. */}
-      <section className="bg-[#1A1A1A] pt-20 pb-12 md:pt-[152px] md:pb-16 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8 md:mb-10">
-          <p className="text-[#B79FD1] text-xs md:text-sm font-bold uppercase tracking-widest mb-2 md:mb-3">Curated For You</p>
-          <h1 className="text-white font-serif italic text-[28px] md:text-[44px] leading-tight max-w-xl">Premier Routines</h1>
-        </div>
-
-        <div className="flex gap-5 md:gap-6 w-max animate-marquee-cards hover:[animation-play-state:paused] pl-4 md:pl-8">
-          {[...ROUTINES, ...ROUTINES].map((routine, index) => (
-            <div key={`${routine.title}-${index}`} className="shrink-0 w-[250px] sm:w-[280px] md:w-[300px] rounded-2xl overflow-hidden">
-              <div className="aspect-square overflow-hidden bg-white">
-                <LazyImage
-                  src={routine.image}
-                  alt={routine.title}
-                  priority={index < ROUTINES.length}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-5" style={{ backgroundColor: routine.bg }}>
-                <h3 className="font-bold text-[16px] md:text-[18px] text-[#1A1A1A] mb-1.5 leading-snug">{routine.title}</h3>
-                <p className="text-[12px] md:text-[13px] text-[#1A1A1A]/65 leading-relaxed mb-3">{routine.description}</p>
-                <a
-                  href={routineWhatsAppLink(routine.title)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[#6D4C91] hover:text-[#5a3e79] transition-colors"
+      {/* ── Section 0: Promotional Carousel — admin-managed via Dashboard ▸ Settings ▸ Home Carousel.
+          Split composition: copy sits in a fixed-width panel on the left, the photo bleeds to the
+          viewport edge on the right. The two halves share the same near-black #0E0C12 ground and the
+          image's left edge is mask-faded into it, so the seam reads as a blend rather than a drawn line. */}
+      <section className="relative bg-[#0E0C12] pt-20 md:pt-[100px] overflow-hidden">
+        {loadingSlides ? (
+          <div className="md:flex md:items-stretch animate-pulse">
+            <div className="md:w-[44%] shrink-0 px-6 sm:px-10 md:pl-12 lg:pl-20 md:pr-16 py-14 md:py-28 space-y-4">
+              <div className="h-3 w-24 bg-white/10 rounded-full" />
+              <div className="h-10 w-64 bg-white/10 rounded-lg" />
+              <div className="h-4 w-72 bg-white/10 rounded-lg" />
+              <div className="h-11 w-36 bg-white/10 rounded-full mt-6" />
+            </div>
+            <div className="md:w-[56%] h-[280px] sm:h-[380px] md:h-auto bg-white/5" />
+          </div>
+        ) : (
+          <div className="md:flex md:items-stretch">
+            {/* Copy panel */}
+            <div className="relative z-10 md:w-[44%] shrink-0 flex items-center px-6 sm:px-10 md:pl-12 lg:pl-20 md:pr-14 py-12 md:py-0 md:min-h-[540px]">
+              <div className="w-full max-w-md">
+                <motion.h2
+                  key={`title-${activeSlide}`}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="text-white font-serif italic text-[32px] sm:text-[40px] md:text-[46px] leading-[1.12] mb-4"
                 >
-                  Shop Now <MessageCircle className="w-3.5 h-3.5" />
-                </a>
+                  {displaySlides[activeSlide].title}
+                </motion.h2>
+                {displaySlides[activeSlide].subtitle && (
+                  <motion.p
+                    key={`sub-${activeSlide}`}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.08 }}
+                    className="text-white/70 text-sm md:text-base leading-relaxed mb-8 max-w-sm"
+                  >
+                    {displaySlides[activeSlide].subtitle}
+                  </motion.p>
+                )}
+                <motion.div
+                  key={`cta-${activeSlide}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.16 }}
+                >
+                  <Link
+                    to={displaySlides[activeSlide].cta_link}
+                    className="inline-flex items-center bg-white text-[#1A1A1A] px-7 py-3 rounded-full font-bold text-sm hover:bg-[#6D4C91] hover:text-white transition-colors duration-300"
+                  >
+                    {displaySlides[activeSlide].cta_text}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </motion.div>
+
+                {displaySlides.length > 1 && (
+                  <div className="flex items-center gap-5 mt-12 md:mt-16">
+                    <div className="flex gap-2">
+                      {displaySlides.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setActiveSlide(i)}
+                          className={`transition-all duration-300 rounded-full ${i === activeSlide ? 'w-6 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30 hover:bg-white/60'}`}
+                          aria-label={`Go to slide ${i + 1}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex gap-2 ml-auto">
+                      <button
+                        onClick={goPrev}
+                        className="w-9 h-9 rounded-full border border-white/20 hover:border-white hover:bg-white hover:text-[#1A1A1A] flex items-center justify-center text-white transition-colors"
+                        aria-label="Previous slide"
+                      >
+                        <ChevronRight className="w-4 h-4 rotate-180" />
+                      </button>
+                      <button
+                        onClick={goNext}
+                        className="w-9 h-9 rounded-full border border-white/20 hover:border-white hover:bg-white hover:text-[#1A1A1A] flex items-center justify-center text-white transition-colors"
+                        aria-label="Next slide"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Photo panel — bleeds to the viewport edge, left border mask-faded into the dark ground */}
+            <div className="relative md:w-[56%] h-[280px] sm:h-[380px] md:h-auto md:min-h-[540px] overflow-hidden">
+              <div
+                className="absolute inset-0"
+                style={{
+                  maskImage: 'linear-gradient(to right, transparent, black 14%)',
+                  WebkitMaskImage: 'linear-gradient(to right, transparent, black 14%)',
+                }}
+              >
+                {displaySlides.map((slide, index) => (
+                  <motion.div
+                    key={slide.id}
+                    initial={false}
+                    animate={{ opacity: index === activeSlide ? 1 : 0 }}
+                    transition={{ duration: 0.6 }}
+                    className="absolute inset-0"
+                    style={{ zIndex: index === activeSlide ? 1 : 0 }}
+                  >
+                    <LazyImage
+                      src={slide.image_url}
+                      alt={slide.title}
+                      priority={index === 0}
+                      className="w-full h-full object-cover object-center"
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ── Marquee announcement bar ─────────────────────────────────────────── */}

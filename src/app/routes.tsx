@@ -87,6 +87,7 @@ const ResetPassword   = lazyWithRetry(() => import('./pages/ResetPassword').then
 const OrderSuccess    = lazyWithRetry(() => import('./pages/OrderSuccess').then(m => ({ default: m.OrderSuccess })));
 const TreatmentDetail = lazyWithRetry(() => import('./pages/TreatmentDetail').then(m => ({ default: m.TreatmentDetail })));
 const Services        = lazyWithRetry(() => import('./pages/Treatments').then(m => ({ default: m.Services })));
+const Routines        = lazyWithRetry(() => import('./pages/Routines').then(m => ({ default: m.Routines })));
 const SkinConcernPage = lazyWithRetry(() => import('./pages/SkinConcernPage').then(m => ({ default: m.SkinConcernPage })));
 const NotFound        = lazyWithRetry(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
 
@@ -137,6 +138,7 @@ export const router = createBrowserRouter([
       { path: 'shop/:id',           Component: ProductDetail  },
       { path: 'book',               Component: Book           },
       { path: 'services',            Component: Services        },
+      { path: 'routines',           Component: Routines        },
       { path: 'services/:slug',     Component: TreatmentDetail },
       { path: 'treatments',         Component: Services        },
       { path: 'treatments/:slug',   Component: TreatmentDetail },
