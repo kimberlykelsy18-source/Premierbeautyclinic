@@ -312,12 +312,14 @@ export function Home() {
   const goNext = useCallback(() => setActiveSlide(i => (i + 1) % Math.max(slides.length, 1)), [slides.length]);
   const goPrev = useCallback(() => setActiveSlide(i => (i - 1 + slides.length) % Math.max(slides.length, 1)), [slides.length]);
 
-  // Auto-rotate carousel every 5 seconds
+  // Auto-rotate carousel every 5 seconds — restarts on `activeSlide` too, so a manual
+  // dot/arrow click resets the countdown instead of racing it (without this, a click
+  // right before the 5s mark could get silently overridden a moment later).
   useEffect(() => {
     if (slides.length <= 1) return;
     const timer = setInterval(goNext, 5000);
     return () => clearInterval(timer);
-  }, [slides.length, goNext]);
+  }, [slides.length, goNext, activeSlide]);
 
   const displaySlides = slides.length > 0 ? slides : [FALLBACK_SLIDE];
 
@@ -391,21 +393,21 @@ export function Home() {
           Split composition: copy sits in a fixed-width panel on the left, the photo bleeds to the
           viewport edge on the right. The two halves share the same near-black #0E0C12 ground and the
           image's left edge is mask-faded into it, so the seam reads as a blend rather than a drawn line. */}
-      <section className="relative bg-[#0E0C12] pt-20 md:pt-[100px] overflow-hidden">
+      <section className="relative bg-[#0E0C12] pt-[100px] md:pt-[140px] overflow-hidden">
         {loadingSlides ? (
           <div className="md:flex md:items-stretch animate-pulse">
-            <div className="md:w-[44%] shrink-0 px-6 sm:px-10 md:pl-12 lg:pl-20 md:pr-16 py-14 md:py-28 space-y-4">
+            <div className="md:w-[44%] shrink-0 flex flex-col justify-center px-6 sm:px-10 md:pl-12 lg:pl-20 md:pr-16 py-14 md:py-0 md:h-[440px] lg:h-[560px] space-y-4">
               <div className="h-3 w-24 bg-white/10 rounded-full" />
               <div className="h-10 w-64 bg-white/10 rounded-lg" />
               <div className="h-4 w-72 bg-white/10 rounded-lg" />
               <div className="h-11 w-36 bg-white/10 rounded-full mt-6" />
             </div>
-            <div className="md:w-[56%] h-[280px] sm:h-[380px] md:h-auto bg-white/5" />
+            <div className="md:w-[56%] h-[280px] sm:h-[380px] md:h-[440px] lg:h-[560px] bg-white/5" />
           </div>
         ) : (
           <div className="md:flex md:items-stretch">
             {/* Copy panel */}
-            <div className="relative z-10 md:w-[44%] shrink-0 flex items-center px-6 sm:px-10 md:pl-12 lg:pl-20 md:pr-14 py-12 md:py-0 md:min-h-[540px]">
+            <div className="relative z-10 md:w-[44%] shrink-0 flex items-center px-6 sm:px-10 md:pl-12 lg:pl-20 md:pr-14 py-12 md:py-0 md:h-[440px] lg:h-[560px]">
               <div className="w-full max-w-md">
                 <motion.h2
                   key={`title-${activeSlide}`}
@@ -475,14 +477,13 @@ export function Home() {
               </div>
             </div>
 
-            {/* Photo panel — bleeds to the viewport edge, left border mask-faded into the dark ground */}
-            <div className="relative md:w-[56%] h-[280px] sm:h-[380px] md:h-auto md:min-h-[540px] overflow-hidden">
+            {/* Photo panel — bleeds to the viewport edge on md+, where it sits beside the copy panel and
+                the left-edge mask-fade blends the seam. Below md the panel stacks full-width under the
+                copy instead, so the fade (which only makes sense against a horizontal neighbour) is
+                switched off there — a plain, uncropped-looking photo reads better stacked. */}
+            <div className="relative md:w-[56%] h-[280px] sm:h-[380px] md:h-[440px] lg:h-[560px] overflow-hidden">
               <div
-                className="absolute inset-0"
-                style={{
-                  maskImage: 'linear-gradient(to right, transparent, black 14%)',
-                  WebkitMaskImage: 'linear-gradient(to right, transparent, black 14%)',
-                }}
+                className="absolute inset-0 md:[mask-image:linear-gradient(to_right,transparent,black_14%)] md:[-webkit-mask-image:linear-gradient(to_right,transparent,black_14%)]"
               >
                 {displaySlides.map((slide, index) => (
                   <motion.div
