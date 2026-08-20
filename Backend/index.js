@@ -43,11 +43,7 @@ app.use(cors({
   },
   credentials: true,
 }));
-// Save raw body buffer for Paystack webhook HMAC-SHA512 signature verification
-app.use(express.json({
-  verify: (req, _res, buf) => { req.rawBody = buf; },
-  limit: '20mb',
-}));
+app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use(hpp()); // strips duplicate query/body params (e.g. ?price=1&price=2) that can bypass validation or crash naive handlers
 app.use(helmet({
@@ -59,7 +55,6 @@ app.use(helmet({
       fontSrc:     ["'self'", "https://fonts.gstatic.com"],
       imgSrc:      ["'self'", "data:", "https:", "blob:"],
       connectSrc:  ["'self'", process.env.BACKEND_URL, process.env.VITE_SUPABASE_URL, "https://maps.googleapis.com"],
-      frameSrc:    ["'self'", "https://standard.paystack.co"],
       objectSrc:   ["'none'"],
       upgradeInsecureRequests: [],
     },
@@ -167,7 +162,6 @@ app.use((err, req, res, next) => {
 // Railway marks the deploy as failed instead of silently serving broken APIs.
 const REQUIRED_VARS = [
   'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
-  'PAYSTACK_SECRET_KEY', 'PAYSTACK_PUBLIC_KEY',
   'MPESA_CONSUMER_KEY', 'MPESA_SHORTCODE',
   'SMTP_HOST', 'SMTP_USER',
   'FRONTEND_URL', 'BACKEND_URL',
@@ -186,7 +180,6 @@ app.listen(PORT, () => {
   const envCheck = [
     'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
     'MPESA_CONSUMER_KEY', 'MPESA_SHORTCODE',
-    'PAYSTACK_SECRET_KEY', 'PAYSTACK_PUBLIC_KEY',
     'SMTP_HOST', 'SMTP_USER',
     'FRONTEND_URL', 'BACKEND_URL',
   ];
