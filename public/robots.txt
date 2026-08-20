@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /staff
+Disallow: /account
+Disallow: /checkout
+Disallow: /cart
+Disallow: /order-success
+Disallow: /reset-password
+
+Sitemap: https://premierbeautyclinic.com/sitemap.xml

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useStore } from '../context/StoreContext';
 import { useNavigate, Link, useSearchParams } from 'react-router';
 import { apiFetch } from '../lib/api';
+import { Seo } from '../lib/seo';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface FormField {
@@ -335,6 +336,11 @@ export function Book() {
 
   return (
     <div className="pt-[100px] md:pt-[140px] pb-16 md:pb-24 bg-[#F2F1F8] min-h-screen">
+      <Seo
+        title="Book a Treatment"
+        description="Book a facial, dermaplaning, LED therapy, or skin consultation at Premier Beauty Clinic — Kilimani, Nairobi, Kenya. Fast, easy online booking."
+        path="/book"
+      />
       <div className="max-w-4xl mx-auto px-4 md:px-6">
 
         {/* ── Dynamic Progress Stepper ── */}

@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import logo from '../../assets/logo.png';
 import { apiFetch } from '../lib/api';
+import { Seo } from '../lib/seo';
 
 export function ResetPassword() {
   const navigate = useNavigate();
@@ -65,6 +66,7 @@ export function ResetPassword() {
 
   return (
     <div className="min-h-screen bg-[#F2F1F8] pt-[90px] md:pt-[120px] pb-16 md:pb-24 flex items-start justify-center">
+      <Seo title="Reset Password" path="/reset-password" noindex />
       <div className="w-full max-w-md px-4 md:px-6">
         {/* Logo */}
         <Link to="/" className="flex justify-center mb-6 md:mb-8">

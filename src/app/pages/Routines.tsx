@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { LazyImage } from '../components/LazyImage';
+import { Seo } from '../lib/seo';
 
 // Curated multi-product routine shots. "Shop Now" doesn't add to cart (these are
 // groupings, not a single SKU) — it opens WhatsApp with the routine name pre-filled,
@@ -62,6 +63,11 @@ function routineWhatsAppLink(title: string) {
 export function Routines() {
   return (
     <div className="pt-[100px] md:pt-[140px] pb-24 bg-[#F2F1F8] min-h-screen">
+      <Seo
+        title="Skincare Routines"
+        description="Curated multi-product skincare routines from Premier Beauty Clinic — Clear Skin Reset, Deep Hydration, Calm & Repair, and more. Shop the full routine on WhatsApp."
+        path="/routines"
+      />
       <div className="max-w-6xl mx-auto px-4 md:px-8">
 
         <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#6D4C91] transition-colors mb-8">

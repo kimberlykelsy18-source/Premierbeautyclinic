@@ -5,6 +5,7 @@ import { StarRating } from '../components/ui/StarRating';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { apiFetch } from '../lib/api';
+import { Seo } from '../lib/seo';
 
 interface ServiceAvgRating {
   average_rating: string;
@@ -203,6 +204,11 @@ export function Services() {
 
   return (
     <div className="bg-[#F2F1F8] min-h-screen">
+      <Seo
+        title="Beauty Treatments & Facials"
+        description="Book a facial, dermaplaning, LED therapy, or skin consultation at Premier Beauty Clinic in Kilimani, Nairobi, Kenya. Dermatologist-approved treatments tailored to your skin."
+        path="/services"
+      />
 
       {/* ── Hero Carousel ── no top padding on the page: the dark hero runs right up
           under the fixed navbar (its caption sits at the bottom, well clear of it),

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useFeedback } from '../components/Feedback';
 import { TermsModal } from '../components/TermsModal';
 import { apiFetch } from '../lib/api';
+import { Seo } from '../lib/seo';
 import logo from '../../assets/premier logo-1.png';
 import bgImage from '../../assets/purple-v2.webp';
 
@@ -194,6 +195,7 @@ export function Login() {
       className="fixed inset-0 z-50 flex flex-col md:flex-row overflow-hidden"
       style={{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
     >
+      <Seo title="Log In" path="/login" noindex />
 
       {/* ── LEFT PANEL — transparent, branding floats over full bg ───────── */}
       <div className="relative flex-shrink-0 w-full md:w-[55%] flex flex-col items-center justify-center px-8 py-5 md:py-0 md:min-h-0">

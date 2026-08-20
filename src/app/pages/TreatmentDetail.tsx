@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Clock, Tag, ChevronRight, CheckCircle, ArrowLeft, MessageCircle, FileText, Sparkle, Star, ShoppingBag, X, ArrowRight } from 'lucide-react';
 import { StarRating } from '../components/ui/StarRating';
 import { apiFetch } from '../lib/api';
+import { Seo, breadcrumbJsonLd, serviceJsonLd } from '../lib/seo';
 import { useStore } from '../context/StoreContext';
 import { toast } from 'sonner';
 
@@ -295,6 +296,33 @@ export function TreatmentDetail() {
 
   return (
     <>
+      <Seo
+        title={service.name}
+        description={
+          service.description
+            ? service.description.slice(0, 155)
+            : `Book ${service.name} at Premier Beauty Clinic — Kilimani, Nairobi, Kenya. From KES ${service.base_price.toLocaleString()}.`
+        }
+        path={`/services/${service.slug}`}
+        image={service.images?.[0]}
+        jsonLd={[
+          serviceJsonLd({
+            id: service.id,
+            slug: service.slug,
+            name: service.name,
+            description: service.description,
+            base_price: service.base_price,
+            images: service.images,
+            average_rating: service.service_avg_ratings?.average_rating,
+            rating_count: service.service_avg_ratings?.rating_count,
+          }),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Services', path: '/services' },
+            { name: service.name, path: `/services/${service.slug}` },
+          ]),
+        ]}
+      />
       <div className="pt-[100px] md:pt-[140px] pb-24 bg-[#F2F1F8] min-h-screen">
         <div className="max-w-5xl mx-auto px-4 md:px-8">
 

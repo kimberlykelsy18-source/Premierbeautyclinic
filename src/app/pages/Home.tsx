@@ -4,6 +4,7 @@ import { ArrowRight, ChevronRight, ShoppingBag, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { apiFetch } from '../lib/api';
 import { LazyImage } from '../components/LazyImage';
+import { Seo } from '../lib/seo';
 
 interface PromoSlide {
   id: string;
@@ -388,6 +389,11 @@ export function Home() {
 
   return (
     <div className="bg-[#F2F1F8]">
+      <Seo
+        title="Premier Beauty Clinic | Skincare, Beauty Treatments & Wellness in Nairobi, Kenya"
+        description="Premium, dermatologist-approved skincare and beauty treatments in Kilimani, Nairobi, Kenya. Shop skincare, fragrances & wellness products, or book a facial, dermaplaning, or LED therapy session."
+        path="/"
+      />
 
       {/* ── Section 0: Promotional Carousel — admin-managed via Dashboard ▸ Settings ▸ Home Carousel.
           Split composition: copy sits in a fixed-width panel on the left, the photo bleeds to the

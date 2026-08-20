@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, Loader2, ShoppingBag } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { apiFetch } from '../lib/api';
+import { Seo } from '../lib/seo';
 import logo from '../../assets/logo.png';
 
 type PaymentStatus = 'loading' | 'completed' | 'failed' | 'cancelled' | 'not_found' | 'error';
@@ -59,6 +60,7 @@ export function OrderSuccess() {
 
   return (
     <div className="min-h-screen bg-[#F2F1F8] flex flex-col">
+      <Seo title="Order Confirmation" path="/order-success" noindex />
       {/* Mini Header */}
       <header className="py-6 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex justify-center">

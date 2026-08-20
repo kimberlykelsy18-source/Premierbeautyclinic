@@ -111,8 +111,22 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 md:mt-16 pt-6 md:pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+        <div className="mt-12 md:mt-16 pt-6 md:pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
           <p className="text-white/40 text-[11px] md:text-[12px]">© {new Date().getFullYear()} Premier Beauty Clinic. All rights reserved.</p>
+          <p className="text-white/40 text-[11px] md:text-[12px]">
+            Powered by{' '}
+            <a
+              href="https://northbitlabs.tech"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold transition-colors"
+              style={{ color: '#3A5C1A' }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#4D7724')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#3A5C1A')}
+            >
+              Northbit Labs
+            </a>
+          </p>
           <div className="flex space-x-6">
             <Link to="/privacy" className="text-white/40 hover:text-white/80 text-[11px] md:text-[12px] transition-colors">Privacy Policy</Link>
             <Link to="/terms" className="text-white/40 hover:text-white/80 text-[11px] md:text-[12px] transition-colors">Terms of Service</Link>

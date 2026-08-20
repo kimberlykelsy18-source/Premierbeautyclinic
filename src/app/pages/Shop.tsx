@@ -5,6 +5,7 @@ import { useStore } from '../context/StoreContext';
 import { Link, useSearchParams } from 'react-router';
 import { useFeedback } from '../components/Feedback';
 import { apiFetch } from '../lib/api';
+import { Seo } from '../lib/seo';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface ApiProduct {
@@ -420,6 +421,11 @@ export function Shop() {
 
   return (
     <div className="pt-[118px] md:pt-[130px] pb-16 bg-[#F2F1F8] min-h-screen overflow-x-hidden">
+      <Seo
+        title="Shop Skincare, Fragrances & Wellness Products"
+        description="Shop dermatologist-approved skincare, fragrances, body care, and wellness products at Premier Beauty Clinic — Kilimani, Nairobi, Kenya. Fast delivery, WhatsApp ordering."
+        path="/shop"
+      />
       <div className="max-w-[1600px] mx-auto px-4 md:px-8">
 
         {/* ── Header ──────────────────────────────────────────────────── */}

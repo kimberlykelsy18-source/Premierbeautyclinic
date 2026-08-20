@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { Seo, faqPageJsonLd } from '../lib/seo';
 
 interface FaqItem {
   id: number;
@@ -35,6 +36,16 @@ export function FAQ() {
 
   return (
     <div className="min-h-screen pt-24 md:pt-32 pb-12 md:pb-20 px-4 md:px-8 bg-[#F2F1F8]">
+      <Seo
+        title="Frequently Asked Questions"
+        description="Answers to common questions about Premier Beauty Clinic's products, services, delivery, and booking policies in Nairobi, Kenya."
+        path="/faq"
+        jsonLd={
+          faqs.length > 0
+            ? faqPageJsonLd(faqs.map(f => ({ question: f.question, answer: f.answer })))
+            : undefined
+        }
+      />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12 md:mb-16">

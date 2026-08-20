@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { ArrowLeft, Calendar, ShoppingBag, CheckCircle, ChevronRight, Sparkle, Star } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { Seo, breadcrumbJsonLd } from '../lib/seo';
 import { useStore } from '../context/StoreContext';
 import { toast } from 'sonner';
 
@@ -386,6 +387,15 @@ export function SkinConcernPage() {
 
   return (
     <div className="pt-[100px] md:pt-[140px] pb-24 bg-[#F2F1F8] min-h-screen">
+      <Seo
+        title={`${concern.label} Treatment & Products`}
+        description={concern.tagline || concern.intro?.slice(0, 155)}
+        path={`/skin-concern/${slug}`}
+        jsonLd={breadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: concern.label, path: `/skin-concern/${slug}` },
+        ])}
+      />
       <div className="max-w-6xl mx-auto px-4 md:px-8">
 
         {/* Breadcrumb */}

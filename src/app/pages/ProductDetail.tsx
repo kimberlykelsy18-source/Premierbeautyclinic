@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { toast } from 'sonner';
 import { apiFetch } from '../lib/api';
+import { Seo, breadcrumbJsonLd, productJsonLd } from '../lib/seo';
 
 // ─── Review types ───────────────────────────────────────────────────────────
 interface Review {
@@ -189,6 +190,37 @@ export function ProductDetail() {
 
   return (
     <div className="pt-[100px] md:pt-[140px] pb-16 md:pb-24 bg-[#F2F1F8] min-h-screen">
+      {product && (
+        <Seo
+          title={`${product.name}${product.brand ? ` by ${product.brand}` : ''}`}
+          description={
+            product.description
+              ? product.description.slice(0, 155)
+              : `Shop ${product.name} at Premier Beauty Clinic — KES ${product.price}. Dermatologist-approved skincare, delivered in Nairobi, Kenya.`
+          }
+          path={`/shop/${product.id}`}
+          image={product.images?.[0]}
+          type="product"
+          jsonLd={[
+            productJsonLd({
+              id: product.id,
+              name: product.name,
+              description: product.description,
+              price: product.price,
+              images: product.images,
+              brand: product.brand,
+              stock: product.stock,
+              average_rating: product.product_avg_ratings?.average_rating,
+              rating_count: product.product_avg_ratings?.rating_count,
+            }),
+            breadcrumbJsonLd([
+              { name: 'Home', path: '/' },
+              { name: 'Shop', path: '/shop' },
+              { name: product.name, path: `/shop/${product.id}` },
+            ]),
+          ]}
+        />
+      )}
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         {/* Breadcrumbs */}
         <nav className="flex items-center space-x-2 text-[10px] md:text-[12px] uppercase tracking-widest text-gray-400 mb-6 md:mb-10">

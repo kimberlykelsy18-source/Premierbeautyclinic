@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { Mail, Lock, User, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Seo } from '../lib/seo';
 
 export function Signup() {
   const [email, setEmail] = useState('');
@@ -22,7 +23,8 @@ export function Signup() {
 
   return (
     <div className="min-h-screen pt-[120px] pb-24 bg-[#FDFBF7] flex items-center justify-center px-4">
-      <motion.div 
+      <Seo title="Sign Up" path="/signup" noindex />
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md w-full bg-white p-8 md:p-12 rounded-[32px] shadow-sm border border-gray-100"

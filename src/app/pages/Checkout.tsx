@@ -7,6 +7,7 @@ import { useFeedback } from '../components/Feedback';
 import { ButtonWithLoading } from '../components/Loading';
 import logo from '../../assets/logo.png';
 import { apiFetch } from '../lib/api';
+import { Seo } from '../lib/seo';
 
 export function Checkout() {
   const { cart, formatPrice, getShippingFee, shippingRegions, clearCart, user, updateUser, token, sessionId } = useStore();
@@ -145,6 +146,7 @@ export function Checkout() {
 
   return (
     <div className="min-h-screen bg-[#F2F1F8]">
+      <Seo title="Checkout" path="/checkout" noindex />
       {/* Mini Header */}
       <header className="py-6 md:py-8 border-b border-gray-100 mb-8 md:mb-12">
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex justify-between items-center">

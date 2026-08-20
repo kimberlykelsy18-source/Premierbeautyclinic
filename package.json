@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "dev:dashboard": "vite --config vite.dashboard.config.ts",
-    "build": "vite build",
-    "build:store": "vite build",
+    "sitemap": "node scripts/generate-sitemap.mjs",
+    "build": "npm run sitemap && vite build",
+    "build:store": "npm run sitemap && vite build",
     "build:dashboard": "vite build --config vite.dashboard.config.ts",
     "build:all": "npm run build:store && npm run build:dashboard"
   },

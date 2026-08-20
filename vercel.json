@@ -5,6 +5,17 @@
     { "source": "/staff/login", "destination": "/staff/index.html" },
     { "source": "/staff/(.*)", "destination": "/staff/index.html" },
     { "source": "/staff",      "destination": "/staff/index.html" },
+
+    { "source": "/shop/:id",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Pinterest|SkypeUriPreview|vkShare|redditbot|Iframely|Embedly|W3C_Validator).*" }],
+      "destination": "/api/og?type=product&id=:id" },
+    { "source": "/services/:slug",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Pinterest|SkypeUriPreview|vkShare|redditbot|Iframely|Embedly|W3C_Validator).*" }],
+      "destination": "/api/og?type=service&slug=:slug" },
+    { "source": "/treatments/:slug",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Pinterest|SkypeUriPreview|vkShare|redditbot|Iframely|Embedly|W3C_Validator).*" }],
+      "destination": "/api/og?type=service&slug=:slug" },
+
     { "source": "/(.*)",       "destination": "/index.html" }
   ]
 }

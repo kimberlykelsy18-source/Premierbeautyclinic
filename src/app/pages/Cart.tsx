@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router';
 import { ShoppingBag, X, Plus, Minus, ArrowRight, Truck, ShieldCheck } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { Seo } from '../lib/seo';
 
 export function Cart() {
   const { cart, removeFromCart, updateQuantity, formatPrice } = useStore();
@@ -12,6 +13,7 @@ export function Cart() {
   if (cart.length === 0) {
     return (
       <div className="pt-[200px] pb-40 text-center bg-[#F2F1F8] min-h-screen">
+        <Seo title="Your Cart" path="/cart" noindex />
         <div className="max-w-md mx-auto px-8">
           <div className="w-24 h-24 bg-[#FDFBF7] rounded-full flex items-center justify-center mx-auto mb-8">
             <ShoppingBag className="w-10 h-10 text-gray-300" />
@@ -28,6 +30,7 @@ export function Cart() {
 
   return (
     <div className="pt-[100px] md:pt-[140px] pb-16 md:pb-24 bg-[#F2F1F8] min-h-screen">
+      <Seo title="Your Cart" path="/cart" noindex />
       <div className="max-w-6xl mx-auto px-4 md:px-8">
         <h1 className="text-[36px] md:text-[52px] font-serif mb-8 md:mb-12 italic">Your Cart</h1>
 
