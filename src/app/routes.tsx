@@ -5,6 +5,7 @@ import { ArrowLeft, RefreshCw } from 'lucide-react';
 // ── Layouts (eager — needed immediately for every route) ──────────────────────
 import { Root } from './Root';
 import { DashboardLayout } from './pages/dashboard/DashboardLayout';
+import { SITE_LIVE } from './siteConfig';
 
 // ── Chunk-reload helper ───────────────────────────────────────────────────────
 // After a new Vercel deployment, old hashed chunk filenames no longer exist.
@@ -90,6 +91,7 @@ const Services        = lazyWithRetry(() => import('./pages/Treatments').then(m 
 const Routines        = lazyWithRetry(() => import('./pages/Routines').then(m => ({ default: m.Routines })));
 const SkinConcernPage = lazyWithRetry(() => import('./pages/SkinConcernPage').then(m => ({ default: m.SkinConcernPage })));
 const NotFound        = lazyWithRetry(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
+const ComingSoon      = lazyWithRetry(() => import('./pages/ComingSoon').then(m => ({ default: m.ComingSoon })));
 
 // ── Dashboard pages (lazy — only loaded when staff navigates to /staff) ───────
 const DashboardLogin        = lazyWithRetry(() => import('./pages/DashboardLogin').then(m => ({ default: m.DashboardLogin })));
@@ -128,31 +130,39 @@ export const router = createBrowserRouter([
   },
 
   // ── Customer store ────────────────────────────────────────────────────────
+  // While SITE_LIVE is false (final client payment pending), every customer
+  // path renders the ComingSoon page instead. Flip the flag in siteConfig.ts
+  // to restore the routes below — nothing else needs to change.
   {
     path: '/',
     Component: Root,
     ErrorBoundary: RouteError,
-    children: [
-      { index: true,                Component: Home           },
-      { path: 'shop',               Component: Shop           },
-      { path: 'shop/:id',           Component: ProductDetail  },
-      { path: 'book',               Component: Book           },
-      { path: 'services',            Component: Services        },
-      { path: 'routines',           Component: Routines        },
-      { path: 'services/:slug',     Component: TreatmentDetail },
-      { path: 'treatments',         Component: Services        },
-      { path: 'treatments/:slug',   Component: TreatmentDetail },
-      { path: 'skin-concern/:slug', Component: SkinConcernPage },
-      { path: 'cart',               Component: Cart           },
-      { path: 'checkout',           Component: Checkout       },
-      { path: 'login',              Component: Login          },
-      { path: 'account',            Component: Account        },
-      { path: 'faq',                Component: FAQ            },
-      { path: 'privacy',            Component: PrivacyPolicy  },
-      { path: 'terms',              Component: TermsOfService },
-      { path: 'reset-password',     Component: ResetPassword  },
-      { path: 'order-success',      Component: OrderSuccess   },
-      { path: '*',                  Component: NotFound       },
-    ],
+    children: SITE_LIVE
+      ? [
+          { index: true,                Component: Home           },
+          { path: 'shop',               Component: Shop           },
+          { path: 'shop/:id',           Component: ProductDetail  },
+          { path: 'book',               Component: Book           },
+          { path: 'services',            Component: Services        },
+          { path: 'routines',           Component: Routines        },
+          { path: 'services/:slug',     Component: TreatmentDetail },
+          { path: 'treatments',         Component: Services        },
+          { path: 'treatments/:slug',   Component: TreatmentDetail },
+          { path: 'skin-concern/:slug', Component: SkinConcernPage },
+          { path: 'cart',               Component: Cart           },
+          { path: 'checkout',           Component: Checkout       },
+          { path: 'login',              Component: Login          },
+          { path: 'account',            Component: Account        },
+          { path: 'faq',                Component: FAQ            },
+          { path: 'privacy',            Component: PrivacyPolicy  },
+          { path: 'terms',              Component: TermsOfService },
+          { path: 'reset-password',     Component: ResetPassword  },
+          { path: 'order-success',      Component: OrderSuccess   },
+          { path: '*',                  Component: NotFound       },
+        ]
+      : [
+          { index: true, Component: ComingSoon },
+          { path: '*',   Component: ComingSoon },
+        ],
   },
 ]);

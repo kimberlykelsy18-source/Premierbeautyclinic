@@ -4,6 +4,7 @@ import { Footer } from "./components/layout/Footer";
 import { WhatsAppButton } from "./components/WhatsAppButton";
 import { useEffect } from "react";
 import { useSmoothScroll } from "./hooks/useSmoothScroll";
+import { SITE_LIVE } from "./siteConfig";
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
@@ -13,7 +14,9 @@ const BARE_ROUTES = ['/login'];
 
 export function Root() {
   const { pathname } = useLocation();
-  const isBareRoute = BARE_ROUTES.includes(pathname);
+  // While the site is gated behind ComingSoon, every customer path is bare —
+  // that page renders its own full-screen chrome.
+  const isBareRoute = !SITE_LIVE || BARE_ROUTES.includes(pathname);
   const lenisRef = useSmoothScroll();
 
   useEffect(() => {
